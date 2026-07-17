@@ -31,6 +31,7 @@ SENSITIVE_ENTITY_FRAGMENTS = (
 @dataclass(frozen=True)
 class PermissionPolicy:
     autonomy_mode: str = "observe"
+    climate_entity: str = "climate.thermal_control"
 
     def can_read(self, entity_id: str) -> bool:
         return entity_id.startswith(READ_PREFIXES)
@@ -40,20 +41,29 @@ class PermissionPolicy:
         return any(fragment in lowered for fragment in SENSITIVE_ENTITY_FRAGMENTS)
 
     def can_execute(self, tool_name: str) -> bool:
-        # Versione 0.1: nessun comando operativo, indipendentemente dalla modalità.
-        return False
+        return (
+            self.autonomy_mode in {"confirm", "limited"}
+            and tool_name == "turn_off_climate"
+        )
+
+    def can_control_entity(self, entity_id: str) -> bool:
+        return self.can_execute("turn_off_climate") and entity_id == self.climate_entity
 
     def public_summary(self) -> dict:
         return {
             "mode": self.autonomy_mode,
-            "read_only": True,
-            "allowed_actions": [],
+            "read_only": self.autonomy_mode == "observe",
+            "allowed_actions": (
+                ["spegnimento climatizzatore"]
+                if self.can_execute("turn_off_climate")
+                else []
+            ),
+            "confirmation_required": self.autonomy_mode == "confirm",
             "blocked_categories": [
                 "parametri batteria",
                 "parametri ventilazione inverter",
                 "firmware ESPHome",
                 "modifica YAML",
-                "riavvio o spegnimento",
+                "riavvio o spegnimento di sistema",
             ],
         }
-

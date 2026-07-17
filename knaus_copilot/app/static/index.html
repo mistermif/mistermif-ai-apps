@@ -6,117 +6,374 @@
   <base href="./">
   <title>mistermif AI</title>
   <style>
-    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
-    body { margin: 0; background: #0b1220; color: #eef4ff; }
-    main { max-width: 980px; margin: auto; padding: 22px; }
-    header { display:flex; justify-content:space-between; gap:16px; align-items:center; }
-    h1 { margin:0; font-size:1.55rem; }
-    .badge { padding:7px 11px; border-radius:999px; background:#17304a; color:#8fd3ff; }
-    .grid { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-top:18px; }
-    .card { background:#111d2e; border:1px solid #22344b; border-radius:16px; padding:16px; }
-    #messages { height:52vh; overflow:auto; display:flex; flex-direction:column; gap:10px; }
-    .msg { padding:11px 13px; border-radius:13px; white-space:pre-wrap; line-height:1.4; }
-    .user { align-self:flex-end; background:#175f83; max-width:80%; }
-    .assistant { align-self:flex-start; background:#1c2b40; max-width:88%; }
-    form { display:flex; gap:9px; margin-top:12px; }
-    textarea { flex:1; resize:vertical; min-height:48px; max-height:150px; border-radius:12px;
-      border:1px solid #36506f; padding:11px; background:#0d1725; color:#fff; }
-    button { border:0; border-radius:12px; padding:0 18px; background:#32a4d9; color:#04111a;
-      font-weight:700; cursor:pointer; }
-    ul { padding-left:19px; }
-    small { color:#9cb0c8; }
-    .danger { color:#ffbd8c; }
-    @media(max-width:760px){ .grid{grid-template-columns:1fr} #messages{height:48vh} }
+    :root {
+      color-scheme: dark;
+      font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+      --bg: #030711;
+      --panel: #07101d;
+      --panel-2: #091522;
+      --line: rgba(88, 113, 156, .42);
+      --cyan: #00d9ff;
+      --blue: #006dff;
+      --purple: #854cff;
+      --pink: #ff00c8;
+      --red: #ff1768;
+      --green: #00e676;
+      --text: #f6f8ff;
+      --muted: #aeb9d8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 0% 20%, rgba(177, 0, 255, .2), transparent 29%),
+        radial-gradient(circle at 100% 0%, rgba(0, 217, 255, .17), transparent 31%),
+        linear-gradient(135deg, #02050d 0%, #050a16 46%, #060516 100%);
+    }
+    body::before {
+      content: "MISTERMIF AI   CARAVAN COPILOT   MISTERMIF AI";
+      position: fixed;
+      inset: -25%;
+      transform: rotate(-38deg);
+      font-size: clamp(42px, 7vw, 84px);
+      line-height: 2.2;
+      letter-spacing: 5px;
+      color: rgba(255, 255, 255, .018);
+      font-weight: 1000;
+      white-space: pre-wrap;
+      pointer-events: none;
+    }
+    .app {
+      width: min(1240px, calc(100vw - 24px));
+      margin: 12px auto 32px;
+      position: relative;
+      z-index: 1;
+    }
+    .shell {
+      overflow: hidden;
+      border: 1px solid rgba(0, 217, 255, .44);
+      border-right-color: rgba(255, 0, 200, .58);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(4, 10, 20, .96), rgba(2, 6, 14, .99));
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .42), 0 0 34px rgba(0, 217, 255, .05);
+    }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 28px 30px;
+      border-bottom: 1px solid rgba(0, 217, 255, .24);
+      background:
+        radial-gradient(circle at 8% 50%, rgba(0, 217, 255, .14), transparent 31%),
+        radial-gradient(circle at 92% 0%, rgba(255, 0, 200, .14), transparent 34%),
+        #020713;
+    }
+    .brand { display: flex; align-items: center; gap: 17px; }
+    .brand-mark {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(0, 217, 255, .58);
+      border-right-color: rgba(255, 0, 200, .68);
+      border-radius: 15px;
+      font-size: 30px;
+      background: linear-gradient(135deg, rgba(0, 217, 255, .13), rgba(255, 0, 200, .1));
+      box-shadow: 0 0 24px rgba(0, 217, 255, .12), 0 0 22px rgba(255, 0, 200, .08);
+    }
+    .brand-mark img { width: 52px; height: 52px; object-fit: contain; border-radius: 12px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 3px; font-size: clamp(25px, 3vw, 36px); letter-spacing: -.6px; }
+    .tagline { margin: 0; color: var(--muted); }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 13px;
+      border: 1px solid rgba(0, 217, 255, .38);
+      border-radius: 999px;
+      color: #dffbff;
+      background: rgba(0, 217, 255, .07);
+      font-size: 13px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 14px rgba(0, 230, 118, .85); }
+    .content { padding: 20px; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+    .metric, .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(7, 16, 31, .84), rgba(4, 9, 19, .95));
+      box-shadow: 0 0 18px rgba(0, 217, 255, .045);
+    }
+    .metric { padding: 14px 16px; }
+    .metric small { display: block; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 800; }
+    .metric strong { display: block; margin-top: 5px; font-size: 17px; }
+    .cyan { color: var(--cyan); }
+    .pink { color: #ff55dc; }
+    .green { color: #00ff90; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); gap: 18px; }
+    .panel { padding: 18px; }
+    .panel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+    .panel-icon {
+      width: 43px;
+      height: 37px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #9b37ff;
+      border-radius: 9px;
+      color: #e276ff;
+      background: rgba(96, 37, 255, .08);
+      font-size: 20px;
+    }
+    h2 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: .5px; }
+    #messages {
+      height: min(49vh, 520px);
+      min-height: 330px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid rgba(95, 123, 170, .28);
+      border-radius: 13px;
+      background: rgba(2, 7, 19, .72);
+    }
+    .msg { max-width: 88%; padding: 12px 14px; border-radius: 13px; white-space: pre-wrap; line-height: 1.48; }
+    .user {
+      align-self: flex-end;
+      color: white;
+      border: 1px solid rgba(255, 0, 200, .34);
+      background: linear-gradient(135deg, rgba(0, 109, 255, .72), rgba(201, 0, 114, .76));
+    }
+    .assistant {
+      align-self: flex-start;
+      border: 1px solid rgba(0, 217, 255, .3);
+      background: linear-gradient(135deg, rgba(0, 217, 255, .09), rgba(133, 76, 255, .1));
+    }
+    form { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 12px; }
+    textarea {
+      min-height: 54px;
+      max-height: 150px;
+      resize: vertical;
+      border: 1px solid rgba(0, 217, 255, .42);
+      border-right-color: rgba(255, 0, 200, .46);
+      border-radius: 11px;
+      padding: 13px;
+      color: var(--text);
+      background: #020713;
+      font: inherit;
+      outline: none;
+    }
+    textarea:focus { box-shadow: 0 0 0 3px rgba(0, 217, 255, .11), 0 0 20px rgba(255, 0, 200, .08); }
+    button {
+      min-width: 104px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 11px;
+      padding: 0 18px;
+      color: #020713;
+      background: linear-gradient(90deg, var(--cyan) 0%, #6d8dff 48%, var(--pink) 100%);
+      box-shadow: 0 0 22px rgba(0, 109, 255, .2), 0 0 20px rgba(255, 0, 200, .12);
+      font-weight: 1000;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .action-confirm { align-self: flex-start; min-height: 42px; margin-top: -4px; color: #fff; }
+    .permissions { display: grid; gap: 10px; }
+    .permission {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 11px;
+      border-bottom: 1px solid rgba(88, 113, 156, .24);
+    }
+    .permission:last-child { border-bottom: 0; }
+    .permission b { display: block; font-size: 14px; }
+    .permission small { color: var(--muted); }
+    .shield { color: var(--green); font-size: 20px; text-align: center; }
+    .warning {
+      margin: 15px 0 0;
+      padding: 12px;
+      border: 1px solid rgba(255, 23, 104, .45);
+      border-radius: 11px;
+      color: #ff9bb9;
+      background: rgba(255, 23, 104, .08);
+      font-size: 13px;
+      font-weight: 750;
+    }
+    #details { margin-top: 15px; color: var(--muted); line-height: 1.7; }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 20px;
+      border-top: 1px solid rgba(255, 255, 255, .07);
+      color: var(--muted);
+      background: linear-gradient(90deg, rgba(4, 9, 19, .96), rgba(8, 11, 26, .98));
+      font-size: 12px;
+    }
+    .footer strong { color: var(--cyan); }
+    @media (max-width: 820px) {
+      .hero { align-items: flex-start; flex-direction: column; padding: 22px; }
+      .metrics, .grid { grid-template-columns: 1fr; }
+      .content { padding: 14px; }
+      form { grid-template-columns: 1fr; }
+      button { min-height: 50px; }
+      #messages { height: 46vh; }
+    }
   </style>
 </head>
 <body>
-<main>
-  <header>
-    <div><h1>🚐 mistermif AI</h1><small>Il copilota intelligente della caravan</small></div>
-    <span class="badge" id="status">Connessione…</span>
-  </header>
-  <div class="grid">
-    <section class="card">
-      <div id="messages">
-        <div class="msg assistant">Ciao. In questa prima versione posso osservare, ricordare e spiegare, ma non eseguire comandi.</div>
-      </div>
-      <form id="chat-form">
-        <textarea id="message" placeholder="Chiedi come sta la caravan…" required></textarea>
-        <button type="submit">Invia</button>
-      </form>
-    </section>
-    <aside class="card">
-      <h3>Autorizzazioni v0.1</h3>
-      <ul>
-        <li>Lettura sensori autorizzati</li>
-        <li>Chat e memoria locale</li>
-        <li>Analisi energia e meteo</li>
-      </ul>
-      <p class="danger">Nessun comando operativo è abilitato.</p>
-      <hr>
-      <div id="details"><small>Caricamento stato…</small></div>
-    </aside>
+  <div class="app">
+    <div class="shell">
+      <header class="hero">
+        <div class="brand">
+          <div class="brand-mark"><img src="caravan-eyes.png" alt="Caravan sorridente con occhi"></div>
+          <div>
+            <h1>mistermif <span class="cyan">AI</span></h1>
+            <p class="tagline">Il copilota intelligente della caravan</p>
+          </div>
+        </div>
+        <div class="status"><span class="dot"></span><span id="status">Connessione…</span></div>
+      </header>
+
+      <main class="content">
+        <section class="metrics" aria-label="Stato del sistema">
+          <div class="metric"><small>Modalità</small><strong class="cyan">Osservazione</strong></div>
+          <div class="metric"><small>Home Assistant</small><strong id="ha-summary" class="pink">Verifica…</strong></div>
+          <div class="metric"><small>Autonomia</small><strong id="autonomy-summary" class="green">Protetta</strong></div>
+        </section>
+
+        <div class="grid">
+          <section class="panel">
+            <div class="panel-head"><div class="panel-icon">✦</div><h2>Assistente caravan</h2></div>
+            <div id="messages" aria-live="polite">
+              <div class="msg assistant">Ciao. Posso osservare la caravan, ricordare informazioni e spiegarti cosa sta succedendo. Se autorizzato, posso anche spegnere il climatizzatore.</div>
+            </div>
+            <form id="chat-form">
+              <textarea id="message" placeholder="Chiedi come sta la caravan…" required></textarea>
+              <button type="submit">INVIA</button>
+            </form>
+          </section>
+
+          <aside class="panel">
+            <div class="panel-head"><div class="panel-icon">⌾</div><h2>Autorizzazioni v0.2</h2></div>
+            <div class="permissions">
+              <div class="permission"><span class="shield">✓</span><div><b>Lettura filtrata</b><small>Solo sensori autorizzati</small></div></div>
+              <div class="permission"><span class="shield">✓</span><div><b>Memoria locale</b><small>Chat e note in SQLite</small></div></div>
+              <div class="permission"><span class="shield">✓</span><div><b>Controllo limitato</b><small>Solo spegnimento climatizzatore</small></div></div>
+            </div>
+            <p class="warning">⚠ Solo il climatizzatore autorizzato può essere spento. Batteria, inverter, ventilazione, firmware e YAML restano protetti.</p>
+            <div id="details"><small>Caricamento stato…</small></div>
+          </aside>
+        </div>
+      </main>
+
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.2.0 · CONTROLLO LIMITATO</span></footer>
+    </div>
   </div>
-</main>
-<script>
-  const messages = document.querySelector("#messages");
-  const form = document.querySelector("#chat-form");
-  const input = document.querySelector("#message");
-  function add(text, role) {
-    const el = document.createElement("div");
-    el.className = `msg ${role}`;
-    el.textContent = text;
-    messages.appendChild(el);
-    messages.scrollTop = messages.scrollHeight;
-  }
-  async function api(path, options={}) {
-    const response = await fetch(path, {
-      ...options,
-      headers: {"Content-Type":"application/json", ...(options.headers||{})}
-    });
-    if (!response.ok) throw new Error((await response.json()).detail || response.statusText);
-    return response.json();
-  }
-  async function refresh() {
-    try {
-      const data = await api("api/status");
-      document.querySelector("#status").textContent =
-        data.home_assistant.connected ? "Home Assistant collegato" : "Modalità preparazione";
+
+  <script>
+    const messages = document.querySelector("#messages");
+    const form = document.querySelector("#chat-form");
+    const input = document.querySelector("#message");
+
+    function add(text, role) {
+      const element = document.createElement("div");
+      element.className = `msg ${role}`;
+      element.textContent = text;
+      messages.appendChild(element);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addConfirmation(action) {
+      const button = document.createElement("button");
+      button.className = "action-confirm";
+      button.textContent = action.label;
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        button.textContent = "Esecuzione…";
+        try {
+          await api("api/actions/execute", {
+            method: "POST",
+            body: JSON.stringify({name: action.name, confirmed: true})
+          });
+          add("Climatizzatore spento correttamente.", "assistant");
+          button.remove();
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = action.label;
+          add(`Comando non eseguito: ${error.message}`, "assistant");
+        }
+      });
+      messages.appendChild(button);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {"Content-Type": "application/json", ...(options.headers || {})}
+      });
+      if (!response.ok) throw new Error((await response.json()).detail || response.statusText);
+      return response.json();
+    }
+
+    function showDetails(lines) {
       const details = document.querySelector("#details");
       details.replaceChildren();
       const summary = document.createElement("small");
-      summary.append(
-        `Modello: ${data.model}`,
-        document.createElement("br"),
-        `Entità visibili: ${data.home_assistant.visible_entities || 0}`,
-        document.createElement("br"),
-        `OpenAI: ${data.openai_configured ? "configurato" : "da configurare"}`
-      );
+      lines.forEach((line, index) => {
+        if (index) summary.appendChild(document.createElement("br"));
+        summary.append(line);
+      });
       details.appendChild(summary);
-    } catch (error) {
-      document.querySelector("#status").textContent = "Anteprima locale";
-      const details = document.querySelector("#details");
-      details.replaceChildren();
-      const message = document.createElement("small");
-      message.textContent =
-        "I dati reali saranno disponibili quando l'app sarà avviata dentro Home Assistant.";
-      details.appendChild(message);
     }
-  }
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = "";
-    add(text, "user");
-    try {
-      const data = await api("api/chat", {method:"POST", body:JSON.stringify({message:text})});
-      add(data.answer, "assistant");
-    } catch (error) {
-      add(`Errore: ${error.message}`, "assistant");
+
+    async function refresh() {
+      try {
+        const data = await api("api/status");
+        const connected = data.home_assistant.connected;
+        document.querySelector("#status").textContent = connected ? "Sistema collegato" : "Modalità preparazione";
+        document.querySelector("#ha-summary").textContent = connected ? "Collegato" : "In preparazione";
+        document.querySelector("#autonomy-summary").textContent =
+          data.permissions.mode === "observe" ? "Solo osservazione" :
+          data.permissions.mode === "confirm" ? "Con conferma" : "Limitata";
+        showDetails([
+          `Modello: ${data.model}`,
+          `Entità visibili: ${data.home_assistant.visible_entities || 0}`,
+          `OpenAI: ${data.openai_configured ? "configurato" : "da configurare"}`
+        ]);
+      } catch (error) {
+        document.querySelector("#status").textContent = "Anteprima locale";
+        document.querySelector("#ha-summary").textContent = "Demo grafica";
+        showDetails(["I dati reali compariranno quando l'app sarà avviata dentro Home Assistant."]);
+      }
     }
-  });
-  refresh();
-</script>
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      add(text, "user");
+      try {
+        const data = await api("api/chat", {method: "POST", body: JSON.stringify({message: text})});
+        add(data.answer, "assistant");
+        if (data.pending_action) addConfirmation(data.pending_action);
+      } catch (error) {
+        add(`Anteprima: la chat sarà attiva dentro Home Assistant. (${error.message})`, "assistant");
+      }
+    });
+
+    refresh();
+  </script>
 </body>
 </html>
