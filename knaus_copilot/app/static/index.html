@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="./">
+  <title>Knaus Copilot</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #0b1220; color: #eef4ff; }
+    main { max-width: 980px; margin: auto; padding: 22px; }
+    header { display:flex; justify-content:space-between; gap:16px; align-items:center; }
+    h1 { margin:0; font-size:1.55rem; }
+    .badge { padding:7px 11px; border-radius:999px; background:#17304a; color:#8fd3ff; }
+    .grid { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-top:18px; }
+    .card { background:#111d2e; border:1px solid #22344b; border-radius:16px; padding:16px; }
+    #messages { height:52vh; overflow:auto; display:flex; flex-direction:column; gap:10px; }
+    .msg { padding:11px 13px; border-radius:13px; white-space:pre-wrap; line-height:1.4; }
+    .user { align-self:flex-end; background:#175f83; max-width:80%; }
+    .assistant { align-self:flex-start; background:#1c2b40; max-width:88%; }
+    form { display:flex; gap:9px; margin-top:12px; }
+    textarea { flex:1; resize:vertical; min-height:48px; max-height:150px; border-radius:12px;
+      border:1px solid #36506f; padding:11px; background:#0d1725; color:#fff; }
+    button { border:0; border-radius:12px; padding:0 18px; background:#32a4d9; color:#04111a;
+      font-weight:700; cursor:pointer; }
+    ul { padding-left:19px; }
+    small { color:#9cb0c8; }
+    .danger { color:#ffbd8c; }
+    @media(max-width:760px){ .grid{grid-template-columns:1fr} #messages{height:48vh} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>🚐 Knaus Copilot</h1><small>Assistente personale della caravan</small></div>
+    <span class="badge" id="status">Connessione…</span>
+  </header>
+  <div class="grid">
+    <section class="card">
+      <div id="messages">
+        <div class="msg assistant">Ciao. In questa prima versione posso osservare, ricordare e spiegare, ma non eseguire comandi.</div>
+      </div>
+      <form id="chat-form">
+        <textarea id="message" placeholder="Chiedi come sta la caravan…" required></textarea>
+        <button type="submit">Invia</button>
+      </form>
+    </section>
+    <aside class="card">
+      <h3>Autorizzazioni v0.1</h3>
+      <ul>
+        <li>Lettura sensori autorizzati</li>
+        <li>Chat e memoria locale</li>
+        <li>Analisi energia e meteo</li>
+      </ul>
+      <p class="danger">Nessun comando operativo è abilitato.</p>
+      <hr>
+      <div id="details"><small>Caricamento stato…</small></div>
+    </aside>
+  </div>
+</main>
+<script>
+  const messages = document.querySelector("#messages");
+  const form = document.querySelector("#chat-form");
+  const input = document.querySelector("#message");
+  function add(text, role) {
+    const el = document.createElement("div");
+    el.className = `msg ${role}`;
+    el.textContent = text;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+  }
+  async function api(path, options={}) {
+    const response = await fetch(path, {
+      ...options,
+      headers: {"Content-Type":"application/json", ...(options.headers||{})}
+    });
+    if (!response.ok) throw new Error((await response.json()).detail || response.statusText);
+    return response.json();
+  }
+  async function refresh() {
+    try {
+      const data = await api("api/status");
+      document.querySelector("#status").textContent =
+        data.home_assistant.connected ? "Home Assistant collegato" : "Modalità preparazione";
+      const details = document.querySelector("#details");
+      details.replaceChildren();
+      const summary = document.createElement("small");
+      summary.append(
+        `Modello: ${data.model}`,
+        document.createElement("br"),
+        `Entità visibili: ${data.home_assistant.visible_entities || 0}`,
+        document.createElement("br"),
+        `OpenAI: ${data.openai_configured ? "configurato" : "da configurare"}`
+      );
+      details.appendChild(summary);
+    } catch (error) {
+      document.querySelector("#status").textContent = "Errore";
+    }
+  }
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    add(text, "user");
+    try {
+      const data = await api("api/chat", {method:"POST", body:JSON.stringify({message:text})});
+      add(data.answer, "assistant");
+    } catch (error) {
+      add(`Errore: ${error.message}`, "assistant");
+    }
+  });
+  refresh();
+</script>
+</body>
+</html>

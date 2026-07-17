@@ -1,0 +1,2 @@
+"""Knaus Copilot add-on."""
+

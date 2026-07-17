@@ -1,0 +1,16 @@
+configuration:
+  openai_api_key:
+    name: "OpenAI API key"
+    description: "Key used for AI chat. It is never stored in this repository."
+  model:
+    name: "OpenAI model"
+    description: "Model used to generate responses."
+  autonomy_mode:
+    name: "Autonomy mode"
+    description: "All modes remain read-only in version 0.1."
+  max_context_entities:
+    name: "Maximum entities"
+    description: "Maximum Home Assistant entities included in context."
+  log_level:
+    name: "Log level"
+    description: "Amount of detail written to the app logs."
