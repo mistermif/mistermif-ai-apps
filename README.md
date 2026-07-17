@@ -45,13 +45,16 @@ Sensori e automazioni Home Assistant
 La memoria è conservata localmente in SQLite nel volume privato dell'app. Solo il
 contesto filtrato necessario alla conversazione viene inviato all'API OpenAI.
 
-## Sicurezza della versione 0.1
+## Sicurezza e autonomia
 
-La prima versione è intenzionalmente **sola lettura**:
+La modalità predefinita resta **sola lettura**. Dalla versione 0.2 è disponibile
+un primo comando strettamente autorizzato:
 
 - legge soltanto un insieme filtrato di stati Home Assistant;
 - non monta la cartella `/config`;
-- non chiama servizi e non esegue comandi;
+- può spegnere soltanto l'entità climatizzatore configurata;
+- in modalità `confirm` richiede una conferma nell'interfaccia;
+- in modalità `limited` può eseguire lo spegnimento richiesto direttamente;
 - non modifica batteria, inverter, ventilazione, firmware o YAML;
 - conserva chat e memorie nel volume privato `/data`;
 - riceve la chiave OpenAI esclusivamente dalle opzioni protette dell'app.
@@ -62,7 +65,8 @@ configurazioni personali di Home Assistant.
 ## Roadmap
 
 - **0.1 — Osservazione:** chat, memoria e lettura filtrata degli stati.
-- **0.2 — Diagnostica:** meteo, anomalie, sensori offline e registro eventi.
+- **0.2 — Controllo limitato:** spegnimento autorizzato del climatizzatore.
+- **0.2.x — Diagnostica:** meteo, anomalie, sensori offline e registro eventi.
 - **0.3 — Conferma:** proposte operative eseguibili solo dopo approvazione.
 - **0.4 — Energia:** strumenti autorizzati per Energy Pilot e gestione dei carichi.
 - **0.5 — Collegamento Mac:** interfaccia controllata per Codex.

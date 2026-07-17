@@ -7,7 +7,10 @@ configuration:
     description: "Modello usato per generare le risposte."
   autonomy_mode:
     name: "Modalità di autonomia"
-    description: "Nella versione 0.1 tutte le modalità restano in sola lettura."
+    description: "Osservazione, conferma manuale o controllo limitato."
+  climate_entity:
+    name: "Entità climatizzatore autorizzata"
+    description: "Unico apparato controllabile in questa versione."
   max_context_entities:
     name: "Numero massimo di entità"
     description: "Limite delle entità Home Assistant incluse nel contesto."

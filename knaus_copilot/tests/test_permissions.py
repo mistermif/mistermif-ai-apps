@@ -18,7 +18,12 @@ class PermissionPolicyTest(TestCase):
             )
         )
 
-    def test_no_action_is_executable_in_version_one(self):
-        policy = PermissionPolicy("limited")
-        self.assertFalse(policy.can_execute("set_sbu"))
+    def test_observe_mode_cannot_execute_actions(self):
+        self.assertFalse(PermissionPolicy("observe").can_execute("turn_off_climate"))
 
+    def test_limited_mode_can_only_turn_off_authorized_climate(self):
+        policy = PermissionPolicy("limited", "climate.caravan")
+        self.assertTrue(policy.can_execute("turn_off_climate"))
+        self.assertTrue(policy.can_control_entity("climate.caravan"))
+        self.assertFalse(policy.can_control_entity("climate.casa"))
+        self.assertFalse(policy.can_execute("set_sbu"))

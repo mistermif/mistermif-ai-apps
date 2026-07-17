@@ -11,6 +11,7 @@ class Settings:
     openai_api_key: str
     model: str = "gpt-5.4-mini"
     autonomy_mode: str = "observe"
+    climate_entity: str = "climate.thermal_control"
     max_context_entities: int = 80
     log_level: str = "info"
     data_dir: Path = Path("/data")
@@ -42,6 +43,9 @@ class Settings:
             openai_api_key=api_key,
             model=str(options.get("model", "gpt-5.4-mini")),
             autonomy_mode=mode,
+            climate_entity=str(
+                options.get("climate_entity", "climate.thermal_control")
+            ),
             max_context_entities=max_context_entities,
             log_level=str(options.get("log_level", "info")),
             data_dir=data_dir,

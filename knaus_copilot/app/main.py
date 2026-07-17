@@ -4,6 +4,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
+import httpx
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -24,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger("mistermif-ai")
 
 memory = MemoryStore(settings.data_dir / "knaus_copilot.sqlite3")
-policy = PermissionPolicy(settings.autonomy_mode)
+policy = PermissionPolicy(settings.autonomy_mode, settings.climate_entity)
 ha = HomeAssistantClient(
     settings.ha_base_url,
     settings.supervisor_token,
@@ -49,7 +50,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="mistermif AI", version="0.1.1", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.2.0", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -61,6 +62,11 @@ class MemoryRequest(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     content: str = Field(min_length=1, max_length=8000)
     shared: bool = False
+
+
+class ActionRequest(BaseModel):
+    name: str
+    confirmed: bool = False
 
 
 def user_identity(
@@ -78,7 +84,7 @@ async def index() -> FileResponse:
 @app.get("/api/status")
 async def status() -> dict:
     return {
-        "version": "0.1.1",
+        "version": "0.2.0",
         "model": settings.model,
         "openai_configured": bool(settings.openai_api_key),
         "permissions": policy.public_summary(),
@@ -125,12 +131,51 @@ async def chat(
     user_id, display_name = user_identity(
         x_remote_user_id, x_remote_user_display_name
     )
+    normalized = payload.message.casefold()
+    requests_climate_off = (
+        ("spegni" in normalized or "disattiva" in normalized)
+        and ("clima" in normalized or "climatizzatore" in normalized)
+    )
+    if requests_climate_off and policy.can_execute("turn_off_climate"):
+        if policy.autonomy_mode == "confirm":
+            return {
+                "answer": (
+                    "Posso spegnere il climatizzatore autorizzato. "
+                    "Premi Conferma per eseguire il comando."
+                ),
+                "user": display_name,
+                "pending_action": {
+                    "name": "turn_off_climate",
+                    "label": "Conferma spegnimento clima",
+                },
+            }
+        try:
+            action_result = await ha.turn_off_climate()
+        except (PermissionError, RuntimeError, httpx.HTTPError) as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            "answer": "Ho spento il climatizzatore autorizzato.",
+            "user": display_name,
+            "action_result": action_result,
+        }
     try:
         answer = await agent.chat(user_id, payload.message, await ha.states())
     except Exception as exc:
         logger.exception("Errore durante la conversazione")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"answer": answer, "user": display_name}
+
+
+@app.post("/api/actions/execute")
+async def execute_action(payload: ActionRequest) -> dict:
+    if payload.name != "turn_off_climate":
+        raise HTTPException(status_code=403, detail="Azione non autorizzata")
+    if policy.autonomy_mode != "confirm" or not payload.confirmed:
+        raise HTTPException(status_code=403, detail="Conferma esplicita richiesta")
+    try:
+        return await ha.turn_off_climate()
+    except (PermissionError, RuntimeError, httpx.HTTPError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 if __name__ == "__main__":

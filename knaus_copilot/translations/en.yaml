@@ -7,7 +7,10 @@ configuration:
     description: "Model used to generate responses."
   autonomy_mode:
     name: "Autonomy mode"
-    description: "All modes remain read-only in version 0.1."
+    description: "Observation, manual confirmation, or limited control."
+  climate_entity:
+    name: "Authorized climate entity"
+    description: "The only controllable appliance in this version."
   max_context_entities:
     name: "Maximum entities"
     description: "Maximum Home Assistant entities included in context."

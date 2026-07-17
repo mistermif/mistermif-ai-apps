@@ -64,3 +64,17 @@ class HomeAssistantClient:
         except (httpx.HTTPError, ValueError) as exc:
             return {"connected": False, "error": str(exc)}
 
+    async def turn_off_climate(self) -> dict:
+        entity_id = self.policy.climate_entity
+        if not self.token:
+            raise RuntimeError("Home Assistant non è collegato")
+        if not self.policy.can_control_entity(entity_id):
+            raise PermissionError("Climatizzatore non autorizzato")
+        async with httpx.AsyncClient(timeout=12) as client:
+            response = await client.post(
+                f"{self.base_url}/services/climate/turn_off",
+                headers=self.headers,
+                json={"entity_id": entity_id},
+            )
+            response.raise_for_status()
+        return {"ok": True, "entity_id": entity_id, "service": "climate.turn_off"}
