@@ -21,7 +21,7 @@ logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("knaus-copilot")
+logger = logging.getLogger("mistermif-ai")
 
 memory = MemoryStore(settings.data_dir / "knaus_copilot.sqlite3")
 policy = PermissionPolicy(settings.autonomy_mode)
@@ -42,14 +42,14 @@ agent = KnausAgent(
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info(
-        "Knaus Copilot avviato: modalità=%s, modello=%s",
+        "mistermif AI avviato: modalità=%s, modello=%s",
         settings.autonomy_mode,
         settings.model,
     )
     yield
 
 
-app = FastAPI(title="Knaus Copilot", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.1.1", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -78,7 +78,7 @@ async def index() -> FileResponse:
 @app.get("/api/status")
 async def status() -> dict:
     return {
-        "version": "0.1.0",
+        "version": "0.1.1",
         "model": settings.model,
         "openai_configured": bool(settings.openai_api_key),
         "permissions": policy.public_summary(),
@@ -141,4 +141,3 @@ if __name__ == "__main__":
         proxy_headers=True,
         forwarded_allow_ips="*",
     )
-

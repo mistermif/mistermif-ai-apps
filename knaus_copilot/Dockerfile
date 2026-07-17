@@ -4,7 +4,7 @@ ARG BUILD_ARCH
 ARG BUILD_VERSION
 
 LABEL \
-  io.hass.name="Knaus Copilot" \
+  io.hass.name="mistermif AI" \
   io.hass.description="Assistente AI personale per la caravan" \
   io.hass.arch="aarch64|amd64|armv7" \
   io.hass.type="app" \
