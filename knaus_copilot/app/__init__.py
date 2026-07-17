@@ -1,2 +1,1 @@
-"""Knaus Copilot add-on."""
-
+"""mistermif AI Home Assistant app."""

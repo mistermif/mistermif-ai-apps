@@ -1,4 +1,4 @@
-# Knaus Copilot 0.1
+# mistermif AI 0.1
 
 ## Installazione futura
 
@@ -6,7 +6,7 @@
 2. Copiare `knaus-copilot` in `/addons/knaus_copilot`.
 3. Aprire **Impostazioni → Add-on → Store degli add-on**.
 4. Dal menu, scegliere **Controlla aggiornamenti**.
-5. Aprire **Add-on locali → Knaus Copilot** e installare.
+5. Aprire **App locali → mistermif AI** e installare.
 6. Nella configurazione inserire la chiave OpenAI API.
 7. Avviare l'add-on e abilitare **Mostra nella barra laterale**.
 
@@ -15,7 +15,7 @@ essere scritta nei file YAML di Home Assistant o nel repository Git.
 
 ## Comportamento della versione 0.1
 
-Knaus Copilot può leggere un insieme limitato di entità e costruire un contesto
+mistermif AI può leggere un insieme limitato di entità e costruire un contesto
 per la conversazione. Non può chiamare servizi Home Assistant.
 
 La modalità `observe`, `confirm` o `limited` è già presente nell'interfaccia di
@@ -32,4 +32,3 @@ dell'add-on. Le memorie possono essere private per utente oppure condivise.
 Se Home Assistant non è raggiungibile o la chiave OpenAI non è configurata,
 l'interfaccia continua ad avviarsi e mostra chiaramente la modalità di
 preparazione.
-

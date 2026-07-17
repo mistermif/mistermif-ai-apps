@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <base href="./">
-  <title>Knaus Copilot</title>
+  <title>mistermif AI</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
     body { margin: 0; background: #0b1220; color: #eef4ff; }
@@ -32,7 +32,7 @@
 <body>
 <main>
   <header>
-    <div><h1>🚐 Knaus Copilot</h1><small>Assistente personale della caravan</small></div>
+    <div><h1>🚐 mistermif AI</h1><small>Il copilota intelligente della caravan</small></div>
     <span class="badge" id="status">Connessione…</span>
   </header>
   <div class="grid">
@@ -94,7 +94,13 @@
       );
       details.appendChild(summary);
     } catch (error) {
-      document.querySelector("#status").textContent = "Errore";
+      document.querySelector("#status").textContent = "Anteprima locale";
+      const details = document.querySelector("#details");
+      details.replaceChildren();
+      const message = document.createElement("small");
+      message.textContent =
+        "I dati reali saranno disponibili quando l'app sarà avviata dentro Home Assistant.";
+      details.appendChild(message);
     }
   }
   form.addEventListener("submit", async event => {

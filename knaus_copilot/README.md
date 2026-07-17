@@ -1,6 +1,6 @@
-# Knaus Copilot
+# mistermif AI
 
-Add-on personale Home Assistant per la supervisione intelligente della caravan.
+App personale Home Assistant per la supervisione intelligente della caravan.
 
 La versione `0.1.0` è intenzionalmente **sola lettura**:
 
@@ -43,4 +43,3 @@ OpenAI dalla pagina dell'add-on.
 - `0.4`: strumenti Energy Pilot esplicitamente autorizzati;
 - `0.5`: endpoint MCP per Codex sul Mac;
 - `0.6`: uscita vocale opzionale.
-
