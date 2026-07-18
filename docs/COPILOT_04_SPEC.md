@@ -200,6 +200,21 @@ esplicita. Devono essere disponibili cancellazione per singolo viaggio,
 retention configurabile, esportazione e backup. Le richieste al modello remoto
 devono ricevere soltanto il contesto necessario.
 
+## Apprendimento delle abitudini
+
+Il sistema conserva localmente episodi composti da contesto, decisione, risultato
+e feedback. Cerca ricorrenze di orario, luogo, giorno, stagione e risorse senza
+trasformare un singolo episodio in una regola.
+
+Le routine predittive possono preparare risorse prima di cucina, partenza,
+raffreddamento o altri usi abituali. Ogni routine include frequenza, confidenza,
+finestra temporale, contesti validi, scadenza e possibilità di sospensione o
+cancellazione.
+
+Prima dell'attivazione una nuova ipotesi viene verificata sui dati storici e in
+modalità ombra. L'apprendimento può adattare soltanto parametri non critici entro
+margini autorizzati e non può ridurre le protezioni di persone o animali.
+
 ## Fasi di realizzazione
 
 1. database strutturato e macchina a stati del viaggio;

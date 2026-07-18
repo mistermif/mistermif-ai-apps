@@ -22,6 +22,7 @@ class SettingsTest(TestCase):
 
             self.assertEqual("", settings.openai_api_key)
             self.assertEqual("observe", settings.autonomy_mode)
+            self.assertEqual("local_only", settings.privacy_mode)
 
     def test_context_limit_is_clamped(self):
         with TemporaryDirectory() as directory:

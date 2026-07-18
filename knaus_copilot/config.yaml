@@ -1,5 +1,5 @@
 name: "mistermif AI"
-version: "0.3.1"
+version: "0.3.2"
 slug: "knaus_copilot"
 description: "Assistente AI personale per supervisione, memoria e diario della caravan."
 url: "https://github.com/mistermif/mistermif-ai-apps"
@@ -25,6 +25,7 @@ options:
   autonomy_mode: "observe"
   climate_entity: "climate.thermal_control"
   notification_service: "notify.notify"
+  privacy_mode: "local_only"
   workspace_enabled: true
   max_context_entities: 80
   log_level: "info"
@@ -34,6 +35,7 @@ schema:
   autonomy_mode: "list(observe|confirm|limited)"
   climate_entity: "match(^climate\\.[a-z0-9_]+$)"
   notification_service: "match(^notify\\.[a-z0-9_]+$)"
+  privacy_mode: "list(local_only|redacted_cloud)"
   workspace_enabled: bool
   max_context_entities: "int(10,200)"
   log_level: "list(debug|info|warning|error)"

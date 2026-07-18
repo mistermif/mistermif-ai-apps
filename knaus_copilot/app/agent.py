@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
+from .privacy import PrivacyFilter
 
 
 SYSTEM_INSTRUCTIONS = """
@@ -63,11 +64,18 @@ class KnausAgent:
         model: str,
         memory: MemoryStore,
         policy: PermissionPolicy,
+        privacy_mode: str = "local_only",
     ):
         self.model = model
         self.memory = memory
         self.policy = policy
-        self.client = AsyncOpenAI(api_key=api_key) if api_key else None
+        self.privacy_mode = privacy_mode
+        self.privacy = PrivacyFilter()
+        self.client = (
+            AsyncOpenAI(api_key=api_key)
+            if api_key and privacy_mode == "redacted_cloud"
+            else None
+        )
 
     async def chat(
         self,
@@ -77,22 +85,31 @@ class KnausAgent:
     ) -> str:
         self.memory.add_message(user_id, "user", message)
         if self.client is None:
-            answer = (
-                "La chiave OpenAI API non è ancora configurata. "
-                "La memoria locale e la lettura di Home Assistant sono operative."
-            )
+            if self.privacy_mode == "local_only":
+                answer = (
+                    "La modalità privacy locale è attiva: nessun contenuto viene "
+                    "inviato a un modello cloud. Memoria e analisi locali restano operative."
+                )
+            else:
+                answer = (
+                    "La chiave OpenAI API non è ancora configurata. "
+                    "La memoria locale e la lettura di Home Assistant sono operative."
+                )
             self.memory.add_message(user_id, "assistant", answer)
             return answer
 
         history = self.memory.recent_messages(user_id, limit=16)
         memories = self.memory.list_memories(user_id, limit=20)
         context = {
-            "home_assistant": ha_states,
-            "memories": memories,
+            "home_assistant": self.privacy.sanitize_states(ha_states),
+            "memories": self.privacy.sanitize_memories(memories),
             "permissions": self.policy.public_summary(),
         }
         conversation = [
-            {"role": item["role"], "content": item["content"]}
+            {
+                "role": item["role"],
+                "content": self.privacy.sanitize_text(item["content"]),
+            }
             for item in history[:-1]
         ]
         conversation.append(
@@ -100,7 +117,7 @@ class KnausAgent:
                 "role": "user",
                 "content": (
                     f"CONTESTO ATTUALE:\n{json.dumps(context, ensure_ascii=False)}"
-                    f"\n\nRICHIESTA:\n{message}"
+                    f"\n\nRICHIESTA:\n{self.privacy.sanitize_text(message)}"
                 ),
             }
         )
