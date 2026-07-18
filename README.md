@@ -1,57 +1,87 @@
 # mistermif AI
 
-**mistermif AI** è un assistente intelligente locale per Home Assistant,
-progettato inizialmente per una caravan con impianto energetico, sensori
-ambientali, GPS, meteo e automazioni.
+**mistermif AI** è un copilota intelligente per caravan basato su Home
+Assistant. Unisce sensori, energia, GPS, meteo, memoria locale e conversazione
+AI per spiegare cosa accade a bordo, inviare avvisi e coordinare esclusivamente
+le azioni autorizzate.
 
-L'obiettivo non è sostituire le automazioni di sicurezza con decisioni
-imprevedibili. Il progetto aggiunge un livello superiore capace di osservare,
-ricordare, spiegare e, soltanto entro permessi espliciti, proporre o coordinare
-azioni.
+Il progetto nasce su una caravan Knaus, ma l'architettura è pensata per essere
+configurabile e adattabile ad altri camper e caravan.
 
-## Dove vogliamo arrivare
+> Il progetto è in sviluppo attivo. La versione corrente fornisce la base sicura
+> del copilota; viaggio, campeggi, frigorifero e analisi avanzate sono specificati
+> per la versione 0.4 ma non sono ancora tutti operativi.
 
-Il progetto vuole diventare un vero copilota digitale della caravan:
+## Perché esiste
 
-- controllare lo stato generale di energia, batteria, inverter e climatizzazione;
-- individuare dati incoerenti, sensori offline e comportamenti anomali;
-- seguire meteo e posizione GPS e segnalare condizioni importanti;
-- ricordare richieste, preferenze, interventi e recensioni dei campeggi;
-- riconoscere campeggi già visitati e ricordarne corrente disponibile, servizi,
-  accessibilità, note personali e strategie energetiche usate;
-- assistere nella ricerca di ricambi verificando modello, anno, codice componente
-  e compatibilità prima di proporre l'acquisto;
-- spiegare in linguaggio naturale cosa sta accadendo e perché;
-- dialogare attraverso una chat integrata in Home Assistant;
-- comunicare con Codex sul Mac tramite un'interfaccia controllata;
-- in futuro, parlare attraverso l'impianto audio della caravan;
-- proporre azioni e attuarle solo quando la politica di autorizzazione lo permette.
+In una caravan i dati sono distribuiti tra inverter, batteria, sensori, clima,
+frigorifero, meteo e dispositivi diversi. Mistermif AI aggiunge un livello
+superiore capace di:
 
-Le automazioni locali continueranno a gestire le reazioni rapide e deterministiche,
-come protezioni elettriche e termiche. L'AI si occuperà di supervisione, contesto,
-diagnostica e assistenza.
+- osservare un contesto filtrato di Home Assistant;
+- ricordare conversazioni, preferenze e informazioni utili;
+- trasformare misure e previsioni in spiegazioni comprensibili;
+- inviare consigli, avvertimenti e notifiche;
+- eseguire soltanto azioni inserite esplicitamente nella politica di sicurezza;
+- preparare file e correzioni in uno spazio separato dal sistema centrale.
 
-## Come funziona
+Le protezioni elettriche e termiche urgenti restano automazioni locali,
+deterministiche e indipendenti dall'AI e da Internet.
+
+## Cosa funziona oggi — versione 0.3.1
+
+- interfaccia web integrabile nella barra laterale di Home Assistant;
+- chat OpenAI, quando viene configurata una chiave API;
+- lettura filtrata delle entità Home Assistant autorizzate;
+- memoria locale SQLite per conversazioni e note;
+- workspace isolato sotto `/config/mistermif_ai`;
+- backup controllato di `configuration.yaml` prima dell'inserimento dell'include;
+- registro delle modifiche e inventario con hash SHA-256;
+- interruttore persistente per bloccare il potere decisionale;
+- spegnimento del solo climatizzatore configurato;
+- notifiche tramite un servizio Home Assistant `notify.*` configurato;
+- blocco di BMS, firmware, ventilazione inverter e parametri critici.
+
+## Cosa è progettato per la 0.4
+
+- profilo conversazionale del mezzo e dei suoi apparati;
+- diario viaggi e contachilometri stimato dal GPS;
+- rilevamento automatico di partenza, arrivo e sosta prolungata;
+- riconoscimento di campeggi e aree dalle coordinate;
+- memoria di piazzola, ampere, orientamento ed esposizione solare;
+- preparazione del viaggio usando meteo ed esperienze precedenti;
+- monitoraggio e analisi del frigorifero e delle sue ventole;
+- riepiloghi giornalieri di energia, temperature e comfort;
+- allerte per vento, temporali, gelo, caldo e condensa;
+- ricerca guidata di ricambi con verifica della compatibilità;
+- autoriparazione limitata alla cartella dedicata, con test e ripristino.
+
+La specifica dettagliata è disponibile in
+[`docs/COPILOT_04_SPEC.md`](docs/COPILOT_04_SPEC.md).
+
+## Architettura
 
 ```text
 Sensori e automazioni Home Assistant
-                │
-                ▼
-       filtro delle autorizzazioni
-                │
-                ▼
-           mistermif AI
-       ┌────────┼─────────┐
-       ▼        ▼         ▼
-     chat     memoria   analisi AI
+                 │
+                 ▼
+        filtro delle autorizzazioni
+                 │
+        ┌────────┴────────┐
+        ▼                 ▼
+ automazioni rapide   mistermif AI
+ e deterministiche    ├─ chat
+                      ├─ memoria locale
+                      ├─ analisi e consigli
+                      └─ azioni autorizzate
 ```
 
-La memoria è conservata localmente in SQLite nel volume privato dell'app. Solo il
-contesto filtrato necessario alla conversazione viene inviato all'API OpenAI.
+Solo il contesto necessario viene inviato all'API OpenAI. Database, memoria e
+file operativi restano locali, salvo esportazione richiesta dall'utente.
 
 ## Workspace isolato
 
-Ogni file creato o modificato dall'assistente viene conservato sotto:
+I file creati dall'assistente vengono conservati in:
 
 ```text
 /config/mistermif_ai/
@@ -66,61 +96,68 @@ Ogni file creato o modificato dall'assistente viene conservato sotto:
 └── manifest/
 ```
 
-L'assistente non può scrivere fuori da questa cartella. Prima di collegare il
-workspace crea una copia di `configuration.yaml`; nel file centrale aggiunge
-soltanto:
+Prima di collegare il workspace viene salvata una copia di
+`configuration.yaml`. Nel file centrale può essere aggiunto, dopo conferma,
+soltanto il collegamento:
 
 ```yaml
 homeassistant:
   packages: !include_dir_named mistermif_ai/packages
 ```
 
-Se esiste già una configurazione `packages`, l'operazione si blocca e richiede
-un intervento manuale. Ogni scrittura viene registrata in `log/changes.jsonl` e
-inventariata con hash SHA-256 in `manifest/files.json`.
+Se esiste già una configurazione `packages`, l'operazione si blocca. Ogni file
+creato nel workspace viene registrato e inventariato.
 
 ## Sicurezza e autonomia
 
-La modalità predefinita resta **sola lettura**. Dalla versione 0.2 è disponibile
-un primo comando strettamente autorizzato:
+L'interruttore generale consente di fermare immediatamente tutte le azioni
+operative. Quando è bloccato, osservazione, conversazione, diagnosi e notifiche
+possono rimanere disponibili.
 
-- legge soltanto un insieme filtrato di stati Home Assistant;
-- non monta la cartella `/config`;
-- può spegnere soltanto l'entità climatizzatore configurata;
-- in modalità `confirm` richiede una conferma nell'interfaccia;
-- in modalità `limited` può eseguire lo spegnimento richiesto direttamente;
-- non modifica batteria, inverter, ventilazione, firmware o YAML;
-- conserva chat e memorie nel volume privato `/data`;
-- riceve la chiave OpenAI esclusivamente dalle opzioni protette dell'app.
+Mistermif AI può lavorare liberamente soltanto nella propria cartella. Qualsiasi
+modifica esterna deve sempre essere spiegata e approvata singolarmente. Prima
+della conferma deve indicare:
 
-Il repository non contiene token, password, indirizzi privati, coordinate GPS o
-configurazioni personali di Home Assistant.
+- motivo della modifica;
+- file o configurazioni coinvolti;
+- rischi ed effetti attesi;
+- backup e procedura di ripristino.
 
-## Roadmap
+Firmware, BMS, protezioni elettriche e parametri critici dell'inverter non fanno
+parte dell'autoriparazione generale.
 
-- **0.1 — Osservazione:** chat, memoria e lettura filtrata degli stati.
-- **0.2 — Controllo limitato:** spegnimento autorizzato del climatizzatore.
-- **0.3 — Workspace isolato:** include controllato, backup, log e manifest.
-- **0.3.x — Diagnostica:** meteo, anomalie, sensori offline e registro eventi.
-- **0.3 — Conferma:** proposte operative eseguibili solo dopo approvazione.
-- **0.4 — Energia:** strumenti autorizzati per Energy Pilot e gestione dei carichi.
-- **0.4.x — Viaggi:** memoria campeggi, GPS, meteo, preferenze e schede di sosta.
-- **0.4.x — Park4night:** connettore ufficiale subordinato alla disponibilità di
-  API o autorizzazione del fornitore; nessuno scraping o aggiramento dell'account.
-- **0.4.x — Ricambi:** ricerca assistita su cataloghi ufficiali, archivio dei
-  componenti installati e verifica guidata della compatibilità.
-- **0.5 — Collegamento Mac:** interfaccia controllata per Codex.
-- **0.6 — Voce opzionale:** notifiche vocali attraverso l'audio della caravan.
+Il contratto completo è in [`SECURITY.md`](SECURITY.md).
 
-I parametri critici di batteria, inverter, ventilazione e firmware resteranno
-esclusi dall'autonomia generale e richiederanno sempre procedure dedicate.
+## Campeggi, Park4night e memoria di viaggio
+
+Il copilota è progettato per ricordare campeggi visitati, accessibilità,
+corrente disponibile, servizi, piazzole, orientamento e strategie energetiche.
+
+Park4night è previsto come fonte importante, ma non è stata individuata una API
+pubblica per sviluppatori. L'integrazione verrà realizzata soltanto tramite API,
+partnership o altra autorizzazione ufficiale. Sono esclusi scraping, elusione
+dell'abbonamento e copia del database.
+
+## Ricambi per caravan e camper
+
+La ricerca assistita deve verificare costruttore, modello, anno, apparecchio,
+codice componente, misure e connettori. Ogni risultato viene classificato come:
+
+- compatibilità verificata dal produttore;
+- equivalente documentato;
+- candidato ancora da verificare.
+
+Gas, freni, telaio, 230 V e dispositivi di sicurezza richiedono particolare
+cautela e verifica professionale quando prevista. Nessun acquisto viene eseguito
+automaticamente.
+
+Ulteriori dettagli sono in [`docs/EXPERTISE.md`](docs/EXPERTISE.md).
 
 ## Installazione
 
-> La versione 0.1 è destinata a test controllati. Crea prima un backup completo
-> di Home Assistant.
+> Prima dei test crea e conserva un backup completo di Home Assistant.
 
-1. Apri **Impostazioni → App → Store delle app** in Home Assistant.
+1. Apri **Impostazioni → App → Store delle app**.
 2. Apri il menu dei repository.
 3. Aggiungi:
 
@@ -129,21 +166,35 @@ esclusi dall'autonomia generale e richiederanno sempre procedure dedicate.
    ```
 
 4. Aggiorna lo store e installa **mistermif AI**.
-5. Inserisci la chiave OpenAI API nella configurazione dell'app.
-6. Avvia l'app e abilita **Mostra nella barra laterale**.
+5. Configura la chiave OpenAI e le entità autorizzate.
+6. Imposta il servizio `notify.*` desiderato.
+7. Avvia l'app e abilita **Mostra nella barra laterale**.
+
+## Documentazione e presentazione
+
+- [Specifica funzionale del copilota 0.4](docs/COPILOT_04_SPEC.md)
+- [Competenze viaggio e ricambi](docs/EXPERTISE.md)
+- [Contratto di sicurezza](SECURITY.md)
+- [Presentazione PowerPoint del progetto](outputs/mistermif-ai-presentazione.pptx)
+
+## Roadmap
+
+- **0.1:** chat, memoria e lettura filtrata;
+- **0.2:** primo controllo autorizzato del climatizzatore;
+- **0.3:** workspace isolato, backup, manifest, kill switch e notifiche;
+- **0.4:** viaggi, campeggi, meteo, frigorifero, energia e comfort;
+- **0.5:** collegamento controllato con Codex sul Mac;
+- **0.6:** voce opzionale attraverso l'impianto audio.
+
+## Privacy
+
+Il repository non contiene token, password, indirizzi privati, coordinate GPS o
+configurazioni personali di Home Assistant. Percorsi e coordinate sono dati
+sensibili: nella futura versione 0.4 resteranno locali e saranno esportabili o
+cancellabili dall'utente.
 
 ## Stato del progetto
 
-Il progetto è in sviluppo attivo. Le funzionalità operative verranno aggiunte
-gradualmente, accompagnate da permessi espliciti, test e possibilità di
-disattivazione.
-
-### Integrazione Park4night
-
-Park4night è previsto come fonte importante per campeggi e aree attrezzate. Il
-sito offre ricerca delle soste, coordinate e funzioni avanzate con Park4night+,
-ma al momento non è stata individuata una API pubblica per sviluppatori. Il
-progetto implementerà quindi soltanto un collegamento autorizzato dal fornitore.
-Fino ad allora mistermif AI potrà conservare localmente schede e recensioni
-personali, aprire collegamenti Park4night e analizzare le informazioni fornite
-dall'utente senza replicare il loro database.
+Mistermif AI non è ancora un prodotto finito. È una base funzionante sviluppata
+per iterazioni controllate: ogni nuova capacità deve avere permessi espliciti,
+test, registrazione delle decisioni e possibilità di disattivazione.
