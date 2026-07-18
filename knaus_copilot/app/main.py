@@ -15,6 +15,7 @@ from .config import Settings
 from .home_assistant import HomeAssistantClient
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
+from .workspace import WorkspaceError, WorkspaceManager
 
 
 settings = Settings.load()
@@ -38,6 +39,7 @@ agent = KnausAgent(
     memory,
     policy,
 )
+workspace = WorkspaceManager(settings.homeassistant_config_dir)
 
 
 @asynccontextmanager
@@ -47,10 +49,12 @@ async def lifespan(_: FastAPI):
         settings.autonomy_mode,
         settings.model,
     )
+    if settings.workspace_enabled:
+        workspace.bootstrap()
     yield
 
 
-app = FastAPI(title="mistermif AI", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.3.0", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -69,6 +73,10 @@ class ActionRequest(BaseModel):
     confirmed: bool = False
 
 
+class WorkspaceInstallRequest(BaseModel):
+    confirmed: bool = False
+
+
 def user_identity(
     user_id: str | None,
     user_name: str | None,
@@ -84,11 +92,12 @@ async def index() -> FileResponse:
 @app.get("/api/status")
 async def status() -> dict:
     return {
-        "version": "0.2.0",
+        "version": "0.3.0",
         "model": settings.model,
         "openai_configured": bool(settings.openai_api_key),
         "permissions": policy.public_summary(),
         "home_assistant": await ha.health(),
+        "workspace": workspace.summary() if settings.workspace_enabled else None,
     }
 
 
@@ -176,6 +185,19 @@ async def execute_action(payload: ActionRequest) -> dict:
         return await ha.turn_off_climate()
     except (PermissionError, RuntimeError, httpx.HTTPError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/workspace/install")
+async def install_workspace(payload: WorkspaceInstallRequest) -> dict:
+    if not settings.workspace_enabled:
+        raise HTTPException(status_code=403, detail="Workspace disabilitato")
+    if not payload.confirmed:
+        raise HTTPException(status_code=403, detail="Conferma esplicita richiesta")
+    try:
+        workspace.bootstrap()
+        return workspace.install_include()
+    except WorkspaceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 if __name__ == "__main__":

@@ -11,6 +11,9 @@ configuration:
   climate_entity:
     name: "Authorized climate entity"
     description: "The only controllable appliance in this version."
+  workspace_enabled:
+    name: "Isolated workspace"
+    description: "Allows file creation only inside /config/mistermif_ai."
   max_context_entities:
     name: "Maximum entities"
     description: "Maximum Home Assistant entities included in context."

@@ -11,6 +11,9 @@ configuration:
   climate_entity:
     name: "Entità climatizzatore autorizzata"
     description: "Unico apparato controllabile in questa versione."
+  workspace_enabled:
+    name: "Workspace isolato"
+    description: "Consente di creare file soltanto in /config/mistermif_ai."
   max_context_entities:
     name: "Numero massimo di entità"
     description: "Limite delle entità Home Assistant incluse nel contesto."
