@@ -6,6 +6,17 @@ from app.memory import MemoryStore
 
 
 class MemoryStoreTest(TestCase):
+    def test_runtime_setting_is_persisted(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "memory.sqlite3"
+            store = MemoryStore(path)
+
+            self.assertEqual("false", store.get_setting("autonomy_enabled", "false"))
+            store.set_setting("autonomy_enabled", "true")
+
+            reopened = MemoryStore(path)
+            self.assertEqual("true", reopened.get_setting("autonomy_enabled"))
+
     def test_messages_are_returned_in_chronological_order(self):
         with TemporaryDirectory() as directory:
             store = MemoryStore(Path(directory) / "memory.sqlite3")

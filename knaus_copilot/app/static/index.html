@@ -186,6 +186,15 @@
     button:hover { filter: brightness(1.12); transform: translateY(-1px); }
     .action-confirm { align-self: flex-start; min-height: 42px; margin-top: -4px; color: #fff; }
     .workspace-btn { width: 100%; min-height: 44px; margin-top: 12px; color: #020713; }
+    .autonomy-btn {
+      width: 100%; min-height: 54px; margin-top: 12px;
+      background: linear-gradient(135deg, #ff315f, #ff7b54);
+      color: #fff; box-shadow: 0 0 24px rgba(255,49,95,.22);
+    }
+    .autonomy-btn.enabled {
+      background: linear-gradient(135deg, #00d9a6, #00a9ff);
+      color: #020713;
+    }
     .permissions { display: grid; gap: 10px; }
     .permission {
       display: grid;
@@ -270,15 +279,17 @@
               <div class="permission"><span class="shield">✓</span><div><b>Lettura filtrata</b><small>Solo sensori autorizzati</small></div></div>
               <div class="permission"><span class="shield">✓</span><div><b>Memoria locale</b><small>Chat e note in SQLite</small></div></div>
               <div class="permission"><span class="shield">✓</span><div><b>Controllo limitato</b><small>Solo spegnimento climatizzatore</small></div></div>
+              <div class="permission"><span class="shield">✓</span><div><b>Notifiche autonome</b><small>Solo sui canali configurati</small></div></div>
             </div>
-            <p class="warning">⚠ Solo il climatizzatore autorizzato può essere spento. Batteria, inverter, ventilazione, firmware e YAML restano protetti.</p>
+            <p class="warning">⚠ Può lavorare liberamente solo nella propria cartella. Ogni modifica esterna richiede sempre spiegazione e conferma. Batteria, inverter, ventilazione e firmware restano protetti.</p>
+            <button id="autonomy-toggle" class="autonomy-btn" type="button">AUTONOMIA BLOCCATA</button>
             <div id="details"><small>Caricamento stato…</small></div>
             <button id="workspace-install" class="workspace-btn" type="button" hidden>ATTIVA CARTELLA DEDICATA</button>
           </aside>
         </div>
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.3.0 · WORKSPACE ISOLATO</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.3.1 · WORKSPACE ISOLATO</span></footer>
     </div>
   </div>
 
@@ -346,8 +357,13 @@
         document.querySelector("#status").textContent = connected ? "Sistema collegato" : "Modalità preparazione";
         document.querySelector("#ha-summary").textContent = connected ? "Collegato" : "In preparazione";
         document.querySelector("#autonomy-summary").textContent =
-          data.permissions.mode === "observe" ? "Solo osservazione" :
-          data.permissions.mode === "confirm" ? "Con conferma" : "Limitata";
+          data.autonomy_enabled ? "Attiva" : "Bloccata";
+        const autonomyButton = document.querySelector("#autonomy-toggle");
+        autonomyButton.dataset.enabled = String(data.autonomy_enabled);
+        autonomyButton.textContent = data.autonomy_enabled
+          ? "BLOCCA POTERE DECISIONALE"
+          : "ATTIVA POTERE DECISIONALE";
+        autonomyButton.classList.toggle("enabled", !data.autonomy_enabled);
         showDetails([
           `Modello: ${data.model}`,
           `Entità visibili: ${data.home_assistant.visible_entities || 0}`,
@@ -392,6 +408,32 @@
         event.currentTarget.hidden = true;
       } catch (error) {
         add(`Workspace non attivato: ${error.message}`, "assistant");
+        event.currentTarget.disabled = false;
+      }
+    });
+
+    document.querySelector("#autonomy-toggle").addEventListener("click", async event => {
+      const currentlyEnabled = event.currentTarget.dataset.enabled === "true";
+      const enabling = !currentlyEnabled;
+      if (enabling && !window.confirm(
+        "Riattivare il potere decisionale? L'assistente potrà eseguire soltanto le azioni autorizzate."
+      )) return;
+      event.currentTarget.disabled = true;
+      try {
+        await api("api/autonomy", {
+          method: "POST",
+          body: JSON.stringify({enabled: enabling, confirmed: enabling})
+        });
+        add(
+          enabling
+            ? "Potere decisionale riattivato."
+            : "Potere decisionale bloccato. Rimango disponibile in sola osservazione.",
+          "assistant"
+        );
+        await refresh();
+      } catch (error) {
+        add(`Interruttore non aggiornato: ${error.message}`, "assistant");
+      } finally {
         event.currentTarget.disabled = false;
       }
     });

@@ -41,6 +41,8 @@ class PermissionPolicy:
         return any(fragment in lowered for fragment in SENSITIVE_ENTITY_FRAGMENTS)
 
     def can_execute(self, tool_name: str) -> bool:
+        if tool_name == "send_notification":
+            return True
         return (
             self.autonomy_mode in {"confirm", "limited"}
             and tool_name == "turn_off_climate"
@@ -54,9 +56,9 @@ class PermissionPolicy:
             "mode": self.autonomy_mode,
             "read_only": self.autonomy_mode == "observe",
             "allowed_actions": (
-                ["spegnimento climatizzatore"]
+                ["spegnimento climatizzatore", "invio notifiche"]
                 if self.can_execute("turn_off_climate")
-                else []
+                else ["invio notifiche"]
             ),
             "confirmation_required": self.autonomy_mode == "confirm",
             "blocked_categories": [
@@ -66,4 +68,13 @@ class PermissionPolicy:
                 "modifica YAML",
                 "riavvio o spegnimento di sistema",
             ],
+            "external_changes": {
+                "always_require_confirmation": True,
+                "required_explanation": [
+                    "motivo",
+                    "file o configurazione coinvolta",
+                    "rischio",
+                    "backup e ripristino",
+                ],
+            },
         }
