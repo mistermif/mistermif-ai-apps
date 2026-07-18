@@ -38,6 +38,17 @@ L'assistente può inviare notifiche senza conferma esclusivamente attraverso il
 servizio `notify.*` configurato nelle opzioni dell'add-on. Il nome del servizio
 non può essere scelto dinamicamente da una conversazione.
 
+## Privacy
+
+La modalità predefinita è `local_only`: nessun contenuto viene inviato a un
+modello cloud. La modalità `redacted_cloud` è opzionale e filtra coordinate,
+tracker, contatti, indirizzi di rete, token e categorie di memoria locali prima
+della richiesta esterna.
+
+Viaggi, campeggi, piazzole, profilo del mezzo, contatti e abitudini restano
+sempre esclusi dal contesto cloud. Il filtro è una misura di riduzione del
+rischio; la garanzia più forte resta l'elaborazione interamente locale.
+
 ## Autoriparazione
 
 Le correzioni vengono preparate e provate nella cartella dedicata. Se una

@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.3.1
+## Cosa funziona oggi — versione 0.3.2
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - chat OpenAI, quando viene configurata una chiave API;
@@ -59,6 +59,8 @@ deterministiche e indipendenti dall'AI e da Internet.
   apparati, servizi e limiti autorizzati;
 - modalità “animali a bordo” con climatizzazione prioritaria, previsione
   dell'autonomia ed escalation delle notifiche.
+- apprendimento locale delle abitudini e preparazione predittiva delle risorse;
+- modalità privacy locale predefinita, senza invio di dati al cloud.
 
 La specifica dettagliata è disponibile in
 [`docs/COPILOT_04_SPEC.md`](docs/COPILOT_04_SPEC.md).
@@ -81,7 +83,20 @@ Sensori e automazioni Home Assistant
 ```
 
 Solo il contesto necessario viene inviato all'API OpenAI. Database, memoria e
-file operativi restano locali, salvo esportazione richiesta dall'utente.
+file operativi restano locali, salvo esportazione richiesta dall'utente. In
+modalità predefinita `local_only` non viene inviato alcun contenuto al modello
+cloud; la modalità `redacted_cloud` è opzionale e applica filtri preventivi.
+
+## Apprendimento delle abitudini
+
+Il copilota è progettato per riconoscere routine ripetute e preparare il mezzo.
+Se, per esempio, la cucina a induzione viene usata spesso alle 12, può verificare
+prima SOC, produzione, ricarica, limite della colonnina e carichi differibili.
+
+Le abitudini non nascono da un singolo episodio: includono contesto, frequenza,
+confidenza, simulazione storica e modalità ombra. L'utente può correggere,
+sospendere o cancellare ogni apprendimento. Gli adattamenti restano entro i
+margini autorizzati e non possono indebolire protezioni per persone o animali.
 
 ## Workspace isolato
 
@@ -210,6 +225,8 @@ Ulteriori dettagli sono in [`docs/EXPERTISE.md`](docs/EXPERTISE.md).
 - [Specifica funzionale del copilota 0.4](docs/COPILOT_04_SPEC.md)
 - [Competenze viaggio e ricambi](docs/EXPERTISE.md)
 - [Automazioni dinamiche e modalità animali a bordo](docs/DYNAMIC_AUTOMATIONS.md)
+- [Apprendimento locale e routine predittive](docs/LOCAL_LEARNING.md)
+- [Privacy e conservazione locale](docs/PRIVACY.md)
 - [Contratto di sicurezza](SECURITY.md)
 - [Presentazione PowerPoint del progetto](outputs/mistermif-ai-presentazione.pptx)
 

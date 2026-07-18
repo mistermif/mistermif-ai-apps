@@ -13,6 +13,7 @@ class Settings:
     autonomy_mode: str = "observe"
     climate_entity: str = "climate.thermal_control"
     notification_service: str = "notify.notify"
+    privacy_mode: str = "local_only"
     workspace_enabled: bool = True
     homeassistant_config_dir: Path = Path("/homeassistant")
     max_context_entities: int = 80
@@ -35,6 +36,9 @@ class Settings:
         mode = str(options.get("autonomy_mode", "observe"))
         if mode not in {"observe", "confirm", "limited"}:
             mode = "observe"
+        privacy_mode = str(options.get("privacy_mode", "local_only"))
+        if privacy_mode not in {"local_only", "redacted_cloud"}:
+            privacy_mode = "local_only"
 
         try:
             max_context_entities = int(options.get("max_context_entities", 80))
@@ -52,6 +56,7 @@ class Settings:
             notification_service=str(
                 options.get("notification_service", "notify.notify")
             ),
+            privacy_mode=privacy_mode,
             workspace_enabled=bool(options.get("workspace_enabled", True)),
             max_context_entities=max_context_entities,
             log_level=str(options.get("log_level", "info")),

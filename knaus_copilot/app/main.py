@@ -38,6 +38,7 @@ agent = KnausAgent(
     settings.model,
     memory,
     policy,
+    settings.privacy_mode,
 )
 workspace = WorkspaceManager(settings.homeassistant_config_dir)
 
@@ -54,7 +55,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="mistermif AI", version="0.3.1", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.3.2", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -121,9 +122,10 @@ async def caravan_icon() -> FileResponse:
 @app.get("/api/status")
 async def status() -> dict:
     return {
-        "version": "0.3.1",
+        "version": "0.3.2",
         "model": settings.model,
         "openai_configured": bool(settings.openai_api_key),
+        "privacy_mode": settings.privacy_mode,
         "permissions": policy.public_summary(),
         "autonomy_enabled": autonomy_enabled(),
         "home_assistant": await ha.health(),
