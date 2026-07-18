@@ -78,3 +78,25 @@ class HomeAssistantClient:
             )
             response.raise_for_status()
         return {"ok": True, "entity_id": entity_id, "service": "climate.turn_off"}
+
+    async def send_notification(
+        self,
+        service_name: str,
+        title: str,
+        message: str,
+    ) -> dict:
+        if not self.token:
+            raise RuntimeError("Home Assistant non è collegato")
+        if not self.policy.can_execute("send_notification"):
+            raise PermissionError("Invio notifiche non autorizzato")
+        domain, service = service_name.split(".", 1)
+        if domain != "notify" or not service:
+            raise PermissionError("Servizio notifiche non valido")
+        async with httpx.AsyncClient(timeout=12) as client:
+            response = await client.post(
+                f"{self.base_url}/services/{domain}/{service}",
+                headers=self.headers,
+                json={"title": title, "message": message},
+            )
+            response.raise_for_status()
+        return {"ok": True, "service": service_name}

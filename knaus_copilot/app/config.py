@@ -12,6 +12,7 @@ class Settings:
     model: str = "gpt-5.4-mini"
     autonomy_mode: str = "observe"
     climate_entity: str = "climate.thermal_control"
+    notification_service: str = "notify.notify"
     workspace_enabled: bool = True
     homeassistant_config_dir: Path = Path("/homeassistant")
     max_context_entities: int = 80
@@ -47,6 +48,9 @@ class Settings:
             autonomy_mode=mode,
             climate_entity=str(
                 options.get("climate_entity", "climate.thermal_control")
+            ),
+            notification_service=str(
+                options.get("notification_service", "notify.notify")
             ),
             workspace_enabled=bool(options.get("workspace_enabled", True)),
             max_context_entities=max_context_entities,

@@ -47,7 +47,35 @@ class MemoryStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_memories_owner
                     ON memories(owner_id, updated_at DESC);
+
+                CREATE TABLE IF NOT EXISTS runtime_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
+            )
+
+    def get_setting(self, key: str, default: str | None = None) -> str | None:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT value FROM runtime_settings WHERE key = ?",
+                (key,),
+            ).fetchone()
+        return str(row["value"]) if row else default
+
+    def set_setting(self, key: str, value: str) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            db.execute(
+                """
+                INSERT INTO runtime_settings(key, value, updated_at)
+                VALUES(?,?,?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = excluded.updated_at
+                """,
+                (key, value, now),
             )
 
     def add_message(self, user_id: str, role: str, content: str) -> None:

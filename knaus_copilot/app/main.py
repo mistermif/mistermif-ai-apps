@@ -54,7 +54,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="mistermif AI", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.3.1", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -77,6 +77,28 @@ class WorkspaceInstallRequest(BaseModel):
     confirmed: bool = False
 
 
+class AutonomyRequest(BaseModel):
+    enabled: bool
+    confirmed: bool = False
+
+
+class NotificationRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    message: str = Field(min_length=1, max_length=2000)
+
+
+def autonomy_enabled() -> bool:
+    return memory.get_setting("autonomy_enabled", "false") == "true"
+
+
+def require_autonomy() -> None:
+    if not autonomy_enabled():
+        raise HTTPException(
+            status_code=423,
+            detail="Autonomia AI disattivata dall'interruttore generale",
+        )
+
+
 def user_identity(
     user_id: str | None,
     user_name: str | None,
@@ -89,13 +111,21 @@ async def index() -> FileResponse:
     return FileResponse(os.path.join(os.path.dirname(__file__), "static", "index.html"))
 
 
+@app.get("/caravan-eyes.png")
+async def caravan_icon() -> FileResponse:
+    return FileResponse(
+        os.path.join(os.path.dirname(__file__), "static", "caravan-eyes.png")
+    )
+
+
 @app.get("/api/status")
 async def status() -> dict:
     return {
-        "version": "0.3.0",
+        "version": "0.3.1",
         "model": settings.model,
         "openai_configured": bool(settings.openai_api_key),
         "permissions": policy.public_summary(),
+        "autonomy_enabled": autonomy_enabled(),
         "home_assistant": await ha.health(),
         "workspace": workspace.summary() if settings.workspace_enabled else None,
     }
@@ -146,6 +176,7 @@ async def chat(
         and ("clima" in normalized or "climatizzatore" in normalized)
     )
     if requests_climate_off and policy.can_execute("turn_off_climate"):
+        require_autonomy()
         if policy.autonomy_mode == "confirm":
             return {
                 "answer": (
@@ -177,6 +208,7 @@ async def chat(
 
 @app.post("/api/actions/execute")
 async def execute_action(payload: ActionRequest) -> dict:
+    require_autonomy()
     if payload.name != "turn_off_climate":
         raise HTTPException(status_code=403, detail="Azione non autorizzata")
     if policy.autonomy_mode != "confirm" or not payload.confirmed:
@@ -184,6 +216,33 @@ async def execute_action(payload: ActionRequest) -> dict:
     try:
         return await ha.turn_off_climate()
     except (PermissionError, RuntimeError, httpx.HTTPError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/autonomy")
+async def set_autonomy(payload: AutonomyRequest) -> dict:
+    if payload.enabled and not payload.confirmed:
+        raise HTTPException(
+            status_code=403,
+            detail="Conferma esplicita richiesta per riattivare l'autonomia",
+        )
+    memory.set_setting("autonomy_enabled", "true" if payload.enabled else "false")
+    logger.warning(
+        "Interruttore autonomia AI impostato su %s",
+        "ATTIVO" if payload.enabled else "BLOCCATO",
+    )
+    return {"enabled": payload.enabled}
+
+
+@app.post("/api/notifications")
+async def send_notification(payload: NotificationRequest) -> dict:
+    try:
+        return await ha.send_notification(
+            settings.notification_service,
+            payload.title,
+            payload.message,
+        )
+    except (PermissionError, RuntimeError, httpx.HTTPError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
