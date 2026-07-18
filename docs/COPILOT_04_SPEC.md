@@ -135,6 +135,51 @@ Le notifiche possono essere autonome sui canali Home Assistant configurati.
 Devono essere deduplicate, avere priorità e rispettare una pausa minima. Il
 copilota deve distinguere informazione, consiglio, avvertimento e allarme.
 
+## Automazioni dinamiche
+
+Un'automazione dinamica è creata, versionata e spiegata dall'assistente. Riceve
+un obiettivo, un insieme di apparati autorizzati, vincoli rigidi e fattori di
+contesto. Può decidere autonomamente quando agire senza chiedere conferma per
+ogni esecuzione.
+
+Esempio: l'obiettivo “proteggi la batteria e spegni il clima intorno al 30%” può
+considerare SOC, tendenza, corrente, produzione fotovoltaica, ricarica esterna,
+ora, previsione solare, stato di viaggio, temperatura e priorità del clima. Può
+attendere mentre il SOC recupera, anticipare l'intervento quando le fonti stanno
+per terminare o scegliere una soglia leggermente diversa entro il margine
+approvato.
+
+Ogni automazione deve dichiarare:
+
+- obiettivo e apparati autorizzati;
+- dati necessari e comportamento con dati mancanti;
+- margine decisionale e vincoli rigidi non modificabili;
+- tempo minimo fra azioni e isteresi;
+- criteri di escalation e notifica;
+- procedura di test, disattivazione e rollback;
+- log di input, motivazione, comando ed esito verificato.
+
+La creazione nella cartella dedicata è libera. L'attivazione che richiede un
+nuovo collegamento esterno segue sempre la procedura di conferma.
+
+## Modalità animali a bordo
+
+La modalità viene attivata esplicitamente dall'utente e include almeno numero di
+animali, intervallo previsto, contatto reperibile e strategia di emergenza.
+
+Durante la modalità:
+
+- il climatizzatore autorizzato è un carico prioritario;
+- il risparmio energetico non può spegnerlo autonomamente;
+- temperatura e funzionamento reale del clima sono controllati localmente;
+- SOC, tendenza e produzione stimano il tempo residuo prima del rischio;
+- le notifiche iniziano con largo anticipo e aumentano di priorità;
+- perdita di sensori, clima o connettività è trattata come condizione incerta;
+- una persona deve poter raggiungere la caravan o attivare un piano alternativo.
+
+Il sistema non garantisce da solo la sicurezza di persone o animali. Allarmi
+termici locali, sensori ridondanti e supervisione umana restano obbligatori.
+
 ## Autonomia e modifiche
 
 Con l'interruttore generale attivo l'assistente può osservare, analizzare,

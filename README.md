@@ -55,6 +55,10 @@ deterministiche e indipendenti dall'AI e da Internet.
 - allerte per vento, temporali, gelo, caldo e condensa;
 - ricerca guidata di ricambi con verifica della compatibilità;
 - autoriparazione limitata alla cartella dedicata, con test e ripristino.
+- automazioni dinamiche contestuali create dall'assistente entro una lista di
+  apparati, servizi e limiti autorizzati;
+- modalità “animali a bordo” con climatizzazione prioritaria, previsione
+  dell'autonomia ed escalation delle notifiche.
 
 La specifica dettagliata è disponibile in
 [`docs/COPILOT_04_SPEC.md`](docs/COPILOT_04_SPEC.md).
@@ -126,6 +130,37 @@ della conferma deve indicare:
 Firmware, BMS, protezioni elettriche e parametri critici dell'inverter non fanno
 parte dell'autoriparazione generale.
 
+### Automazioni dinamiche
+
+Le automazioni create da Mistermif AI possono avere piena autonomia operativa
+nel perimetro approvato. Non sono semplici soglie: considerano andamento della
+batteria, produzione solare, ricarica esterna, orario, meteo, stato di viaggio,
+temperature e priorità dichiarate dall'utente.
+
+Per esempio, una regola “spegni il clima sotto il 30%” può attendere se la
+batteria sta recuperando grazie al sole o a una fonte esterna, oppure intervenire
+prima se è sera, la produzione è in calo e non sono previste altre fonti. I
+vincoli rigidi di sicurezza restano deterministici e non possono essere rimossi
+dal ragionamento AI.
+
+Ogni automazione dinamica deve essere visibile, versionata, disattivabile,
+registrare dati e motivazione di ogni decisione e offrire ripristino della
+versione precedente. Nuovi apparati o nuove categorie di comando richiedono
+approvazione esplicita.
+
+### Animali a bordo
+
+Quando l'utente dichiara animali a bordo, il clima diventa un carico prioritario
+e non viene spento soltanto per risparmiare batteria. L'assistente deve stimare
+in anticipo l'autonomia, usare sensori ridondanti, controllare che il clima stia
+realmente funzionando e inviare avvisi progressivi prima che la situazione
+diventi critica.
+
+Mistermif AI non sostituisce la supervisione umana né può essere considerato
+l'unico sistema di protezione per persone o animali. Le soglie termiche urgenti,
+gli allarmi locali e un percorso di intervento umano devono funzionare anche
+senza AI o Internet.
+
 Il contratto completo è in [`SECURITY.md`](SECURITY.md).
 
 ## Campeggi, Park4night e memoria di viaggio
@@ -174,6 +209,7 @@ Ulteriori dettagli sono in [`docs/EXPERTISE.md`](docs/EXPERTISE.md).
 
 - [Specifica funzionale del copilota 0.4](docs/COPILOT_04_SPEC.md)
 - [Competenze viaggio e ricambi](docs/EXPERTISE.md)
+- [Automazioni dinamiche e modalità animali a bordo](docs/DYNAMIC_AUTOMATIONS.md)
 - [Contratto di sicurezza](SECURITY.md)
 - [Presentazione PowerPoint del progetto](outputs/mistermif-ai-presentazione.pptx)
 
