@@ -17,6 +17,10 @@ Il progetto vuole diventare un vero copilota digitale della caravan:
 - individuare dati incoerenti, sensori offline e comportamenti anomali;
 - seguire meteo e posizione GPS e segnalare condizioni importanti;
 - ricordare richieste, preferenze, interventi e recensioni dei campeggi;
+- riconoscere campeggi già visitati e ricordarne corrente disponibile, servizi,
+  accessibilità, note personali e strategie energetiche usate;
+- assistere nella ricerca di ricambi verificando modello, anno, codice componente
+  e compatibilità prima di proporre l'acquisto;
 - spiegare in linguaggio naturale cosa sta accadendo e perché;
 - dialogare attraverso una chat integrata in Home Assistant;
 - comunicare con Codex sul Mac tramite un'interfaccia controllata;
@@ -100,6 +104,11 @@ configurazioni personali di Home Assistant.
 - **0.3.x — Diagnostica:** meteo, anomalie, sensori offline e registro eventi.
 - **0.3 — Conferma:** proposte operative eseguibili solo dopo approvazione.
 - **0.4 — Energia:** strumenti autorizzati per Energy Pilot e gestione dei carichi.
+- **0.4.x — Viaggi:** memoria campeggi, GPS, meteo, preferenze e schede di sosta.
+- **0.4.x — Park4night:** connettore ufficiale subordinato alla disponibilità di
+  API o autorizzazione del fornitore; nessuno scraping o aggiramento dell'account.
+- **0.4.x — Ricambi:** ricerca assistita su cataloghi ufficiali, archivio dei
+  componenti installati e verifica guidata della compatibilità.
 - **0.5 — Collegamento Mac:** interfaccia controllata per Codex.
 - **0.6 — Voce opzionale:** notifiche vocali attraverso l'audio della caravan.
 
@@ -128,3 +137,13 @@ esclusi dall'autonomia generale e richiederanno sempre procedure dedicate.
 Il progetto è in sviluppo attivo. Le funzionalità operative verranno aggiunte
 gradualmente, accompagnate da permessi espliciti, test e possibilità di
 disattivazione.
+
+### Integrazione Park4night
+
+Park4night è previsto come fonte importante per campeggi e aree attrezzate. Il
+sito offre ricerca delle soste, coordinate e funzioni avanzate con Park4night+,
+ma al momento non è stata individuata una API pubblica per sviluppatori. Il
+progetto implementerà quindi soltanto un collegamento autorizzato dal fornitore.
+Fino ad allora mistermif AI potrà conservare localmente schede e recensioni
+personali, aprire collegamenti Park4night e analizzare le informazioni fornite
+dall'utente senza replicare il loro database.
