@@ -12,6 +12,8 @@ class Settings:
     model: str = "gpt-5.4-mini"
     autonomy_mode: str = "observe"
     climate_entity: str = "climate.thermal_control"
+    workspace_enabled: bool = True
+    homeassistant_config_dir: Path = Path("/homeassistant")
     max_context_entities: int = 80
     log_level: str = "info"
     data_dir: Path = Path("/data")
@@ -46,9 +48,13 @@ class Settings:
             climate_entity=str(
                 options.get("climate_entity", "climate.thermal_control")
             ),
+            workspace_enabled=bool(options.get("workspace_enabled", True)),
             max_context_entities=max_context_entities,
             log_level=str(options.get("log_level", "info")),
             data_dir=data_dir,
+            homeassistant_config_dir=Path(
+                os.getenv("HOME_ASSISTANT_CONFIG_DIR", "/homeassistant")
+            ),
             supervisor_token=os.getenv("SUPERVISOR_TOKEN", ""),
             ha_base_url=os.getenv(
                 "HOME_ASSISTANT_API_URL", "http://supervisor/core/api"

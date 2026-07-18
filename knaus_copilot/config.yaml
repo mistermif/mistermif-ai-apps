@@ -1,5 +1,5 @@
 name: "mistermif AI"
-version: "0.2.0"
+version: "0.3.0"
 slug: "knaus_copilot"
 description: "Assistente AI personale per supervisione, memoria e diario della caravan."
 url: "https://github.com/mistermif/mistermif-ai-apps"
@@ -16,10 +16,15 @@ panel_icon: "mdi:caravan"
 panel_title: "mistermif AI"
 homeassistant_api: true
 auth_api: true
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /homeassistant
 options:
   model: "gpt-5.4-mini"
   autonomy_mode: "observe"
   climate_entity: "climate.thermal_control"
+  workspace_enabled: true
   max_context_entities: 80
   log_level: "info"
 schema:
@@ -27,5 +32,6 @@ schema:
   model: str
   autonomy_mode: "list(observe|confirm|limited)"
   climate_entity: "match(^climate\\.[a-z0-9_]+$)"
+  workspace_enabled: bool
   max_context_entities: "int(10,200)"
   log_level: "list(debug|info|warning|error)"

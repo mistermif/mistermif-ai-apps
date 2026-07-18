@@ -185,6 +185,7 @@
     }
     button:hover { filter: brightness(1.12); transform: translateY(-1px); }
     .action-confirm { align-self: flex-start; min-height: 42px; margin-top: -4px; color: #fff; }
+    .workspace-btn { width: 100%; min-height: 44px; margin-top: 12px; color: #020713; }
     .permissions { display: grid; gap: 10px; }
     .permission {
       display: grid;
@@ -272,11 +273,12 @@
             </div>
             <p class="warning">⚠ Solo il climatizzatore autorizzato può essere spento. Batteria, inverter, ventilazione, firmware e YAML restano protetti.</p>
             <div id="details"><small>Caricamento stato…</small></div>
+            <button id="workspace-install" class="workspace-btn" type="button" hidden>ATTIVA CARTELLA DEDICATA</button>
           </aside>
         </div>
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.2.0 · CONTROLLO LIMITATO</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.3.0 · WORKSPACE ISOLATO</span></footer>
     </div>
   </div>
 
@@ -349,8 +351,11 @@
         showDetails([
           `Modello: ${data.model}`,
           `Entità visibili: ${data.home_assistant.visible_entities || 0}`,
-          `OpenAI: ${data.openai_configured ? "configurato" : "da configurare"}`
+          `OpenAI: ${data.openai_configured ? "configurato" : "da configurare"}`,
+          `Workspace: ${data.workspace?.include_installed ? "collegato" : "da collegare"}`
         ]);
+        const installButton = document.querySelector("#workspace-install");
+        installButton.hidden = !data.workspace || data.workspace.include_installed;
       } catch (error) {
         document.querySelector("#status").textContent = "Anteprima locale";
         document.querySelector("#ha-summary").textContent = "Demo grafica";
@@ -370,6 +375,24 @@
         if (data.pending_action) addConfirmation(data.pending_action);
       } catch (error) {
         add(`Anteprima: la chat sarà attiva dentro Home Assistant. (${error.message})`, "assistant");
+      }
+    });
+
+    document.querySelector("#workspace-install").addEventListener("click", async event => {
+      if (!window.confirm(
+        "Creare /config/mistermif_ai e aggiungere solo il collegamento packages a configuration.yaml?"
+      )) return;
+      event.currentTarget.disabled = true;
+      try {
+        await api("api/workspace/install", {
+          method: "POST",
+          body: JSON.stringify({confirmed: true})
+        });
+        add("Workspace dedicato attivato. È stato creato anche il backup di configuration.yaml.", "assistant");
+        event.currentTarget.hidden = true;
+      } catch (error) {
+        add(`Workspace non attivato: ${error.message}`, "assistant");
+        event.currentTarget.disabled = false;
       }
     });
 

@@ -45,6 +45,36 @@ Sensori e automazioni Home Assistant
 La memoria è conservata localmente in SQLite nel volume privato dell'app. Solo il
 contesto filtrato necessario alla conversazione viene inviato all'API OpenAI.
 
+## Workspace isolato
+
+Ogni file creato o modificato dall'assistente viene conservato sotto:
+
+```text
+/config/mistermif_ai/
+├── packages/
+├── plance/
+├── automazioni/
+├── script/
+├── template/
+├── helper/
+├── backup/
+├── log/
+└── manifest/
+```
+
+L'assistente non può scrivere fuori da questa cartella. Prima di collegare il
+workspace crea una copia di `configuration.yaml`; nel file centrale aggiunge
+soltanto:
+
+```yaml
+homeassistant:
+  packages: !include_dir_named mistermif_ai/packages
+```
+
+Se esiste già una configurazione `packages`, l'operazione si blocca e richiede
+un intervento manuale. Ogni scrittura viene registrata in `log/changes.jsonl` e
+inventariata con hash SHA-256 in `manifest/files.json`.
+
 ## Sicurezza e autonomia
 
 La modalità predefinita resta **sola lettura**. Dalla versione 0.2 è disponibile
@@ -66,7 +96,8 @@ configurazioni personali di Home Assistant.
 
 - **0.1 — Osservazione:** chat, memoria e lettura filtrata degli stati.
 - **0.2 — Controllo limitato:** spegnimento autorizzato del climatizzatore.
-- **0.2.x — Diagnostica:** meteo, anomalie, sensori offline e registro eventi.
+- **0.3 — Workspace isolato:** include controllato, backup, log e manifest.
+- **0.3.x — Diagnostica:** meteo, anomalie, sensori offline e registro eventi.
 - **0.3 — Conferma:** proposte operative eseguibili solo dopo approvazione.
 - **0.4 — Energia:** strumenti autorizzati per Energy Pilot e gestione dei carichi.
 - **0.5 — Collegamento Mac:** interfaccia controllata per Codex.
