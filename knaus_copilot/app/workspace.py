@@ -20,6 +20,9 @@ WORKSPACE_FOLDERS = (
     "manifest",
 )
 INCLUDE_LINE = "  packages: !include_dir_named mistermif_ai/packages"
+STANDARD_PACKAGES_LINE = "packages: !include_dir_named packages"
+BRIDGE_NAME = "mistermif_ai.yaml"
+BRIDGE_CONTENT = "!include_dir_merge_named ../mistermif_ai/packages\n"
 
 
 class WorkspaceError(RuntimeError):
@@ -104,10 +107,34 @@ class WorkspaceManager:
                     section_end = index
                     break
             section = lines[homeassistant_index + 1 : section_end]
-            if any(line.strip().startswith("packages:") for line in section):
-                raise WorkspaceError(
-                    "La sezione homeassistant/packages esiste già: intervento manuale richiesto"
+            packages_lines = [
+                line.strip()
+                for line in section
+                if line.strip().startswith("packages:")
+            ]
+            if packages_lines:
+                if packages_lines != [STANDARD_PACKAGES_LINE]:
+                    raise WorkspaceError(
+                        "La sezione homeassistant/packages usa una struttura non "
+                        "supportata: intervento manuale richiesto"
+                    )
+                bridge_dir = self.config_dir / "packages"
+                bridge_dir.mkdir(exist_ok=True)
+                bridge = bridge_dir / BRIDGE_NAME
+                if bridge.exists() and bridge.read_text(encoding="utf-8") != BRIDGE_CONTENT:
+                    raise WorkspaceError(
+                        "Il file ponte packages/mistermif_ai.yaml esiste già con "
+                        "contenuto diverso"
+                    )
+                bridge.write_text(BRIDGE_CONTENT, encoding="utf-8")
+                self._journal(
+                    "install_bridge",
+                    {
+                        "file": f"packages/{BRIDGE_NAME}",
+                        "backup": str(backup.relative_to(self.root)),
+                    },
                 )
+                return {"changed": True, "backup": str(backup), "bridge": str(bridge)}
             lines.insert(homeassistant_index + 1, INCLUDE_LINE)
 
         configuration.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
@@ -127,10 +154,16 @@ class WorkspaceManager:
 
     def _include_installed(self) -> bool:
         configuration = self.config_dir / "configuration.yaml"
+        if not configuration.exists():
+            return False
+        text = configuration.read_text(encoding="utf-8")
+        if "mistermif_ai/packages" in text:
+            return True
+        bridge = self.config_dir / "packages" / BRIDGE_NAME
         return (
-            configuration.exists()
-            and "mistermif_ai/packages"
-            in configuration.read_text(encoding="utf-8")
+            STANDARD_PACKAGES_LINE in text
+            and bridge.exists()
+            and bridge.read_text(encoding="utf-8") == BRIDGE_CONTENT
         )
 
     def _journal(self, action: str, details: dict) -> None:

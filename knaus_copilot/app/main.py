@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from .agent import KnausAgent
+from .alerts import public_alert_catalog
 from .config import Settings
 from .home_assistant import HomeAssistantClient
 from .memory import MemoryStore
@@ -55,7 +56,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="mistermif AI", version="0.3.2", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.3.3", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -86,6 +87,20 @@ class AutonomyRequest(BaseModel):
 class NotificationRequest(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     message: str = Field(min_length=1, max_length=2000)
+
+
+class CrewMember(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    role: str = Field(default="equipaggio", min_length=1, max_length=80)
+
+
+class OnboardingRequest(BaseModel):
+    vehicle_type: str = Field(pattern="^(caravan|camper)$")
+    brand: str = Field(min_length=1, max_length=100)
+    model: str = Field(min_length=1, max_length=120)
+    year: int | None = Field(default=None, ge=1950, le=2100)
+    tow_vehicle: str | None = Field(default=None, max_length=160)
+    crew: list[CrewMember] = Field(default_factory=list, max_length=20)
 
 
 def autonomy_enabled() -> bool:
@@ -122,7 +137,7 @@ async def caravan_icon() -> FileResponse:
 @app.get("/api/status")
 async def status() -> dict:
     return {
-        "version": "0.3.2",
+        "version": "0.3.3",
         "model": settings.model,
         "openai_configured": bool(settings.openai_api_key),
         "privacy_mode": settings.privacy_mode,
@@ -130,12 +145,67 @@ async def status() -> dict:
         "autonomy_enabled": autonomy_enabled(),
         "home_assistant": await ha.health(),
         "workspace": workspace.summary() if settings.workspace_enabled else None,
+        "onboarding": {
+            "completed": memory.get_setting("onboarding_completed", "false")
+            == "true"
+        },
+        "alert_levels": public_alert_catalog(),
     }
 
 
 @app.get("/api/context")
 async def context() -> dict:
     return {"entities": await ha.states()}
+
+
+@app.get("/api/alerts")
+async def alert_catalog() -> dict:
+    return {"levels": public_alert_catalog()}
+
+
+@app.get("/api/onboarding")
+async def onboarding_status() -> dict:
+    profile = memory.get_json_setting("vehicle_profile")
+    return {
+        "completed": memory.get_setting("onboarding_completed", "false") == "true",
+        "profile": profile,
+    }
+
+
+@app.post("/api/onboarding")
+async def save_onboarding(payload: OnboardingRequest) -> dict:
+    profile = payload.model_dump()
+    if payload.vehicle_type == "caravan" and not (payload.tow_vehicle or "").strip():
+        raise HTTPException(
+            status_code=422,
+            detail="Per una caravan indica la motrice utilizzata",
+        )
+    memory.set_json_setting("vehicle_profile", profile)
+    memory.set_setting("onboarding_completed", "true")
+    memory.add_memory(
+        "shared",
+        "profilo_mezzo",
+        f"{payload.brand} {payload.model}",
+        (
+            f"Tipo: {payload.vehicle_type}; anno: {payload.year or 'non indicato'}; "
+            f"motrice: {payload.tow_vehicle or 'non applicabile'}"
+        ),
+        {"source": "onboarding"},
+    )
+    for member in payload.crew:
+        memory.add_memory(
+            "shared",
+            "persona",
+            member.name,
+            f"Ruolo nell'equipaggio: {member.role}",
+            {"source": "onboarding"},
+        )
+    logger.info(
+        "Intervista iniziale completata per mezzo tipo=%s, membri=%d",
+        payload.vehicle_type,
+        len(payload.crew),
+    )
+    return {"completed": True}
 
 
 @app.get("/api/memories")
