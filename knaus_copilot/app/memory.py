@@ -53,6 +53,26 @@ class MemoryStore:
                     value TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS learning_observations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    site_key TEXT NOT NULL,
+                    observed_at TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_learning_site_time
+                    ON learning_observations(site_key, observed_at DESC);
+
+                CREATE TABLE IF NOT EXISTS decision_outcomes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    site_key TEXT NOT NULL,
+                    decision TEXT NOT NULL,
+                    context_json TEXT NOT NULL,
+                    outcome TEXT,
+                    score REAL,
+                    created_at TEXT NOT NULL,
+                    resolved_at TEXT
+                );
                 """
             )
 
@@ -87,6 +107,84 @@ class MemoryStore:
 
     def set_json_setting(self, key: str, value: dict[str, Any]) -> None:
         self.set_setting(key, json.dumps(value, ensure_ascii=False))
+
+    def add_learning_observation(
+        self,
+        site_key: str,
+        payload: dict[str, Any],
+        observed_at: str | None = None,
+    ) -> int:
+        timestamp = observed_at or datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO learning_observations(site_key, observed_at, payload_json)
+                VALUES(?,?,?)
+                """,
+                (site_key, timestamp, json.dumps(payload, ensure_ascii=False)),
+            )
+            return int(cursor.lastrowid)
+
+    def recent_learning_observations(
+        self,
+        site_key: str,
+        limit: int = 288,
+    ) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                """
+                SELECT observed_at, payload_json
+                FROM learning_observations
+                WHERE site_key = ?
+                ORDER BY id DESC LIMIT ?
+                """,
+                (site_key, limit),
+            ).fetchall()
+        return [
+            {
+                "observed_at": row["observed_at"],
+                "payload": json.loads(row["payload_json"]),
+            }
+            for row in reversed(rows)
+        ]
+
+    def learning_site_count(self) -> int:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT COUNT(DISTINCT site_key) AS total FROM learning_observations"
+            ).fetchone()
+        return int(row["total"] if row else 0)
+
+    def add_decision(
+        self,
+        site_key: str,
+        decision: str,
+        context: dict[str, Any],
+    ) -> int:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO decision_outcomes(
+                    site_key, decision, context_json, created_at
+                ) VALUES(?,?,?,?)
+                """,
+                (site_key, decision, json.dumps(context, ensure_ascii=False), now),
+            )
+            return int(cursor.lastrowid)
+
+    def resolve_decision(self, decision_id: int, outcome: str, score: float) -> None:
+        score = max(-1.0, min(1.0, float(score)))
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            db.execute(
+                """
+                UPDATE decision_outcomes
+                SET outcome = ?, score = ?, resolved_at = ?
+                WHERE id = ?
+                """,
+                (outcome, score, now, decision_id),
+            )
 
     def add_message(self, user_id: str, role: str, content: str) -> None:
         now = datetime.now(timezone.utc).isoformat()

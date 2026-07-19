@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 import httpx
 import uvicorn
@@ -14,6 +15,7 @@ from .agent import KnausAgent
 from .alerts import public_alert_catalog
 from .config import Settings
 from .home_assistant import HomeAssistantClient
+from .learning import ContextLearner
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
 from .workspace import WorkspaceError, WorkspaceManager
@@ -35,28 +37,45 @@ ha = HomeAssistantClient(
     settings.max_context_entities,
 )
 agent = KnausAgent(
-    settings.openai_api_key,
+    settings.ai_api_key,
     settings.model,
     memory,
     policy,
     settings.privacy_mode,
+    settings.ai_provider,
+    settings.ai_base_url,
 )
 workspace = WorkspaceManager(settings.homeassistant_config_dir)
+learner = ContextLearner(memory)
+
+
+async def learning_loop() -> None:
+    while True:
+        try:
+            learner.observe(await ha.states())
+        except Exception:
+            logger.exception("Campionamento locale non riuscito")
+        await asyncio.sleep(300)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info(
-        "mistermif AI avviato: modalità=%s, modello=%s",
+        "mistermif AI avviato: modalità=%s, provider=%s, modello=%s",
         settings.autonomy_mode,
+        settings.ai_provider,
         settings.model,
     )
     if settings.workspace_enabled:
         workspace.bootstrap()
+    learning_task = asyncio.create_task(learning_loop())
     yield
+    learning_task.cancel()
+    with suppress(asyncio.CancelledError):
+        await learning_task
 
 
-app = FastAPI(title="mistermif AI", version="0.3.3", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.4.0", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -136,10 +155,14 @@ async def caravan_icon() -> FileResponse:
 
 @app.get("/api/status")
 async def status() -> dict:
+    learning = learner.summary()
     return {
-        "version": "0.3.3",
+        "version": "0.4.0",
         "model": settings.model,
-        "openai_configured": bool(settings.openai_api_key),
+        "ai_provider": settings.ai_provider,
+        "ai_configured": bool(settings.ai_api_key)
+        if settings.ai_provider != "local"
+        else True,
         "privacy_mode": settings.privacy_mode,
         "permissions": policy.public_summary(),
         "autonomy_enabled": autonomy_enabled(),
@@ -150,6 +173,26 @@ async def status() -> dict:
             == "true"
         },
         "alert_levels": public_alert_catalog(),
+        "learning": {
+            "site_key": learning.site_key,
+            "samples": learning.samples,
+            "confidence": learning.confidence,
+            "learned_sites": learning.learned_sites,
+        },
+    }
+
+
+@app.get("/api/learning")
+async def learning_status() -> dict:
+    summary = learner.summary()
+    return {
+        "site_key": summary.site_key,
+        "samples": summary.samples,
+        "confidence": summary.confidence,
+        "learned_sites": summary.learned_sites,
+        "averages": summary.averages,
+        "local_only": True,
+        "self_modifying": False,
     }
 
 

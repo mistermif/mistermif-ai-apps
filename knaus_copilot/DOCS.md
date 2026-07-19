@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.3.3
+# Guida semplice a mistermif AI 0.4.0
 
 ## Installazione in cinque minuti
 
@@ -72,18 +72,38 @@ equipaggio, mezzo, viaggi e piazzole non vengono inclusi nel contesto cloud.
 - **Urgenza:** intervento entro 10–15 minuti.
 - **Allerta:** nessun intervento richiesto, ma occorre prestare attenzione.
 
-## Chat OpenAI facoltativa
+## AI facoltativa, anche gratuita
 
-La modalità locale funziona senza chiave. Per attivare la conversazione cloud:
+La modalità locale non richiede account, chiavi o pagamenti. Continua a
+registrare dati, memorie e contesti di sosta anche senza un modello generativo.
 
-1. apri la scheda **Configurazione** dell'app;
-2. inserisci la chiave OpenAI nel campo protetto;
-3. seleziona `redacted_cloud`;
-4. salva e riavvia l'app.
+### Groq Free
+
+1. crea una chiave nel portale Groq;
+2. apri **Configurazione** dell'app;
+3. seleziona provider `groq`;
+4. inserisci la chiave in `ai_api_key`;
+5. imposta `openai/gpt-oss-20b`;
+6. seleziona `redacted_cloud`;
+7. salva e riavvia soltanto mistermif AI.
+
+### OpenAI
+
+È ancora supportato, ma richiede credito API separato dall'abbonamento ChatGPT.
 
 Non inserire mai la chiave nel repository, in `configuration.yaml`, nei log o in
 una conversazione. Il filtro rimuove coordinate, tracker, reti, contatti e
 memorie personali prima della richiesta al modello.
+
+## Apprendimento locale
+
+Ogni cinque minuti l'app registra localmente le misure energetiche autorizzate.
+Lo storico di una sosta viene usato soltanto con GPS valido e viene separato per
+area e orientamento. Una produzione registrata altrove non aumenta la confidenza
+della posizione corrente.
+
+L'app impara dati e risultati, non riscrive il proprio codice e non modifica
+automaticamente inverter, batteria, ventilazione o firmware.
 
 ## Ripristino
 

@@ -3,7 +3,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from openai import AsyncOpenAI
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    AsyncOpenAI,
+    AuthenticationError,
+    RateLimitError,
+)
 
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
@@ -65,15 +71,22 @@ class KnausAgent:
         memory: MemoryStore,
         policy: PermissionPolicy,
         privacy_mode: str = "local_only",
+        provider: str = "local",
+        base_url: str = "",
     ):
         self.model = model
+        self.provider = provider
         self.memory = memory
         self.policy = policy
         self.privacy_mode = privacy_mode
         self.privacy = PrivacyFilter()
         self.client = (
-            AsyncOpenAI(api_key=api_key)
-            if api_key and privacy_mode == "redacted_cloud"
+            AsyncOpenAI(api_key=api_key, base_url=base_url or None)
+            if (
+                provider in {"openai", "groq"}
+                and api_key
+                and privacy_mode == "redacted_cloud"
+            )
             else None
         )
 
@@ -90,9 +103,15 @@ class KnausAgent:
                     "La modalità privacy locale è attiva: nessun contenuto viene "
                     "inviato a un modello cloud. Memoria e analisi locali restano operative."
                 )
+            elif self.provider == "local":
+                answer = (
+                    "Il motore locale è attivo. Posso osservare, ricordare e applicare "
+                    "le regole locali; per risposte generative o ricerche configura "
+                    "un provider cloud compatibile."
+                )
             else:
                 answer = (
-                    "La chiave OpenAI API non è ancora configurata. "
+                    f"La chiave API per {self.provider} non è ancora configurata. "
                     "La memoria locale e la lettura di Home Assistant sono operative."
                 )
             self.memory.add_message(user_id, "assistant", answer)
@@ -121,11 +140,34 @@ class KnausAgent:
                 ),
             }
         )
-        response = await self.client.responses.create(
-            model=self.model,
-            instructions=SYSTEM_INSTRUCTIONS,
-            input=conversation,
-        )
+        try:
+            response = await self.client.responses.create(
+                model=self.model,
+                instructions=SYSTEM_INSTRUCTIONS,
+                input=conversation,
+            )
+        except AuthenticationError as exc:
+            raise RuntimeError(
+                f"Chiave {self.provider} non valida o non autorizzata."
+            ) from exc
+        except RateLimitError as exc:
+            detail = str(exc).casefold()
+            if "insufficient_quota" in detail or "quota" in detail:
+                raise RuntimeError(
+                    f"Quota gratuita o credito {self.provider} non disponibile."
+                ) from exc
+            raise RuntimeError(
+                f"Limite temporaneo {self.provider} raggiunto. Riprova più tardi."
+            ) from exc
+        except APIConnectionError as exc:
+            raise RuntimeError(
+                f"Servizio {self.provider} non raggiungibile; il controllo locale continua."
+            ) from exc
+        except APIStatusError as exc:
+            raise RuntimeError(
+                f"Il provider {self.provider} ha rifiutato la richiesta "
+                f"(HTTP {exc.status_code})."
+            ) from exc
         answer = response.output_text.strip()
         self.memory.add_message(user_id, "assistant", answer)
         return answer
