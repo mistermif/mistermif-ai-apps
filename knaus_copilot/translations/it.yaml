@@ -1,7 +1,7 @@
 configuration:
   ai_provider:
     name: Provider AI
-    description: Locale, OpenAI oppure Groq compatibile.
+    description: Locale, OpenAI, Groq oppure Gemini con Google Search.
   ai_api_key:
     name: Chiave API del provider
     description: Chiave privata del provider selezionato. Non viene salvata nella repository.
@@ -29,3 +29,15 @@ configuration:
   log_level:
     name: "Livello dei log"
     description: "Quantità di dettagli scritti nei log dell'app."
+  privacy_mode:
+    name: "Privacy cloud"
+    description: "Locale, dati redatti oppure contesto esteso con posizione."
+  cloud_daily_limit:
+    name: "Limite cloud giornaliero"
+    description: "Tetto complessivo, mantenuto sotto il limite gratuito configurato."
+  cloud_automatic_limit:
+    name: "Limite ricerche automatiche"
+    description: "Budget riservato alle ricerche avviate autonomamente."
+  gemini_search_enabled:
+    name: "Google Search per Gemini"
+    description: "Consente ricerche aggiornate con fonti quando la richiesta lo richiede."

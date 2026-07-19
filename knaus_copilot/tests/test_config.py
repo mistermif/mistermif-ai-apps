@@ -67,3 +67,38 @@ class SettingsTest(TestCase):
             self.assertEqual("groq-test-key", settings.ai_api_key)
             self.assertEqual("https://api.groq.com/openai/v1", settings.ai_base_url)
             self.assertEqual("openai/gpt-oss-20b", settings.model)
+
+    def test_gemini_defaults_and_cloud_limits(self):
+        with TemporaryDirectory() as directory:
+            options_file = Path(directory) / "options.json"
+            options_file.write_text(
+                json.dumps(
+                    {
+                        "ai_provider": "gemini",
+                        "ai_api_key": "gemini-test-key",
+                        "privacy_mode": "contextual_cloud",
+                        "cloud_daily_limit": 999,
+                        "cloud_automatic_limit": 70,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "KNAUS_DATA_DIR": directory,
+                    "KNAUS_OPTIONS_FILE": str(options_file),
+                },
+                clear=True,
+            ):
+                settings = Settings.load()
+
+            self.assertEqual("gemini", settings.ai_provider)
+            self.assertEqual("gemini-2.5-flash", settings.model)
+            self.assertEqual(
+                "https://generativelanguage.googleapis.com/v1beta",
+                settings.ai_base_url,
+            )
+            self.assertEqual("contextual_cloud", settings.privacy_mode)
+            self.assertEqual(490, settings.cloud_daily_limit)
+            self.assertEqual(70, settings.cloud_automatic_limit)

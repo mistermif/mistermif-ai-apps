@@ -22,6 +22,17 @@ La redazione riduce il rischio ma non equivale alla garanzia matematica della
 modalità locale. Testo libero e nuove forme di identificazione possono richiedere
 nuove regole di filtro.
 
+## Cloud contestuale
+
+`privacy_mode: contextual_cloud` consente di includere posizione GPS, memorie di
+viaggio, profilo del mezzo e stati Home Assistant autorizzati quando servono
+alla richiesta. Anche in questa modalità vengono sempre rimossi chiavi API,
+token, password, segreti, indirizzi IP, email e numeri di telefono.
+
+Le chiamate sono limitate localmente da `cloud_daily_limit` e dal sotto-limite
+`cloud_automatic_limit`. L'esaurimento del budget automatico non consuma la
+riserva manuale e non ferma regole, memoria, apprendimento o automazioni locali.
+
 ## Conservazione
 
 Database e file restano nei volumi locali dell'app e nella cartella dedicata.
