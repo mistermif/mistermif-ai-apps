@@ -78,6 +78,16 @@ class MemoryStore:
                 (key, value, now),
             )
 
+    def get_json_setting(self, key: str) -> dict[str, Any] | None:
+        value = self.get_setting(key)
+        if not value:
+            return None
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, dict) else None
+
+    def set_json_setting(self, key: str, value: dict[str, Any]) -> None:
+        self.set_setting(key, json.dumps(value, ensure_ascii=False))
+
     def add_message(self, user_id: str, role: str, content: str) -> None:
         now = datetime.now(timezone.utc).isoformat()
         with self._lock, self._connect() as db:

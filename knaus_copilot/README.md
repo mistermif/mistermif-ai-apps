@@ -1,24 +1,19 @@
-# mistermif AI
+# mistermif AI 0.3.3
 
-App personale Home Assistant per la supervisione intelligente della caravan.
+App personale Home Assistant per supervisione, memoria e assistenza intelligente
+della caravan.
 
-La versione `0.1.0` è intenzionalmente **sola lettura**:
+- chat Ingress con memoria SQLite locale;
+- lettura filtrata degli stati Home Assistant;
+- intervista iniziale per mezzo, motrice ed equipaggio;
+- livelli emergenza, urgenza e allerta;
+- workspace isolato in `/config/mistermif_ai`;
+- file ponte compatibile con un `/config/packages` già esistente;
+- interruttore generale dell'autonomia;
+- blocco esplicito di batteria, inverter, ventilazione e firmware.
 
-- chat tramite Ingress;
-- memoria SQLite persistente;
-- profili separati tramite identità Home Assistant;
-- lettura filtrata degli stati;
-- analisi AI con OpenAI Responses API;
-- nessun comando verso Home Assistant.
-
-## Sicurezza
-
-L'add-on non monta `/config` e non possiede accesso al filesystem di Home
-Assistant. Usa esclusivamente il proxy Core con `homeassistant_api: true`.
-La classe `PermissionPolicy` filtra gli stati e nega ogni azione operativa.
-
-I parametri di batteria, ventilazione, firmware e amministrazione sono
-esplicitamente classificati come sensibili.
+La modalità iniziale è `observe` con privacy `local_only`. Il modello cloud e le
+azioni operative richiedono configurazione e autorizzazioni separate.
 
 ## Sviluppo locale
 
@@ -27,14 +22,8 @@ cd knaus-copilot
 PYTHONPATH=. python3 -m unittest discover -s tests -v
 ```
 
-Per provarlo su Home Assistant OS, copiare la cartella in:
-
-```text
-/addons/knaus_copilot
-```
-
-Poi aggiornare lo store degli add-on locali, installare e configurare la chiave
-OpenAI dalla pagina dell'add-on.
+Installare la repo `https://github.com/mistermif/mistermif-ai-apps` dallo Store
+delle app di Home Assistant.
 
 ## Roadmap
 

@@ -39,11 +39,31 @@ class WorkspaceManagerTest(TestCase):
             )
             self.assertTrue(any((manager.root / "backup").iterdir()))
 
-    def test_existing_packages_are_never_overwritten(self):
+    def test_existing_standard_packages_use_bridge_file(self):
         with TemporaryDirectory() as directory:
             config_dir = Path(directory)
             (config_dir / "configuration.yaml").write_text(
                 "homeassistant:\n  packages: !include_dir_named packages\n",
+                encoding="utf-8",
+            )
+            manager = WorkspaceManager(config_dir)
+            manager.bootstrap()
+            result = manager.install_include()
+
+            self.assertTrue(result["changed"])
+            self.assertEqual(
+                "!include_dir_merge_named ../mistermif_ai/packages\n",
+                (config_dir / "packages/mistermif_ai.yaml").read_text(
+                    encoding="utf-8"
+                ),
+            )
+            self.assertTrue(manager.summary()["include_installed"])
+
+    def test_nonstandard_packages_are_never_overwritten(self):
+        with TemporaryDirectory() as directory:
+            config_dir = Path(directory)
+            (config_dir / "configuration.yaml").write_text(
+                "homeassistant:\n  packages: !include custom_packages.yaml\n",
                 encoding="utf-8",
             )
             manager = WorkspaceManager(config_dir)

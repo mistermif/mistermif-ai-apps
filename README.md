@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.3.2
+## Cosa funziona oggi — versione 0.3.3
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - chat OpenAI, quando viene configurata una chiave API;
@@ -40,7 +40,26 @@ deterministiche e indipendenti dall'AI e da Internet.
 - interruttore persistente per bloccare il potere decisionale;
 - spegnimento del solo climatizzatore configurato;
 - notifiche tramite un servizio Home Assistant `notify.*` configurato;
-- blocco di BMS, firmware, ventilazione inverter e parametri critici.
+- blocco di BMS, firmware, ventilazione inverter e parametri critici;
+- intervista locale al primo avvio per mezzo, motrice ed equipaggio;
+- tre livelli operativi: emergenza, urgenza e allerta;
+- collegamento compatibile con installazioni che usano già `/config/packages`.
+
+### Livelli di allarme
+
+- **Emergenza:** intervento immediato, escalation e notifiche ripetute;
+- **Urgenza:** intervento richiesto entro 10–15 minuti;
+- **Allerta:** nessun intervento necessario, ma attenzione e monitoraggio.
+
+I livelli descrivono priorità e tempi di risposta. Non sostituiscono protezioni
+locali deterministiche per incendio, gas, temperatura, persone o animali.
+
+### Intervista iniziale
+
+Al primo avvio l'app chiede tipo, marca, modello e anno del mezzo. Per una
+caravan richiede anche la motrice. Nomi e ruoli dell'equipaggio vengono
+conservati esclusivamente nella memoria SQLite locale e sono esclusi dal
+contesto cloud filtrato.
 
 ## Cosa è progettato per la 0.4
 
@@ -124,8 +143,12 @@ homeassistant:
   packages: !include_dir_named mistermif_ai/packages
 ```
 
-Se esiste già una configurazione `packages`, l'operazione si blocca. Ogni file
-creato nel workspace viene registrato e inventariato.
+Se la configurazione esistente usa la forma standard
+`packages: !include_dir_named packages`, Mistermif AI conserva quella struttura
+e crea soltanto il file ponte `/config/packages/mistermif_ai.yaml`, che carica i
+contenuti reali da `/config/mistermif_ai/packages`. Strutture diverse continuano
+a richiedere verifica manuale. Ogni file creato nel workspace viene registrato e
+inventariato.
 
 ## Sicurezza e autonomia
 
@@ -207,6 +230,8 @@ Ulteriori dettagli sono in [`docs/EXPERTISE.md`](docs/EXPERTISE.md).
 
 > Prima dei test crea e conserva un backup completo di Home Assistant.
 
+### Avvio rapido
+
 1. Apri **Impostazioni → App → Store delle app**.
 2. Apri il menu dei repository.
 3. Aggiungi:
@@ -216,9 +241,37 @@ Ulteriori dettagli sono in [`docs/EXPERTISE.md`](docs/EXPERTISE.md).
    ```
 
 4. Aggiorna lo store e installa **mistermif AI**.
-5. Configura la chiave OpenAI e le entità autorizzate.
-6. Imposta il servizio `notify.*` desiderato.
-7. Avvia l'app e abilita **Mostra nella barra laterale**.
+5. Avvia l'app e abilita **Mostra nella barra laterale**.
+6. Rispondi alla breve intervista iniziale.
+7. Premi **Attiva cartella dedicata** e conferma.
+
+Per usare l'app in modalità locale non serve altro. La chiave OpenAI, le
+notifiche e le azioni automatiche sono funzioni facoltative e si configurano in
+seguito. L'autonomia rimane bloccata finché l'utente non la abilita.
+
+### Cosa fa automaticamente
+
+- crea `/config/mistermif_ai` e le relative sottocartelle;
+- salva una copia di `configuration.yaml` prima del collegamento;
+- se non esiste una sezione `packages`, aggiunge l'include necessario;
+- se esiste la forma comune `!include_dir_named packages`, crea il solo file
+  ponte `/config/packages/mistermif_ai.yaml`;
+- se trova una struttura personalizzata, non modifica nulla e mostra una
+  spiegazione.
+
+Non è necessario copiare file o scrivere YAML per le due configurazioni
+standard sopra.
+
+### Se qualcosa non parte
+
+1. Apri la scheda **Registro** dell'app e cerca una riga `ERROR`.
+2. Controlla che Home Assistant mostri l'app come **in esecuzione**.
+3. Lascia l'autonomia bloccata finché il collegamento non è stabile.
+4. In caso di errore `packages`, non modificare YAML alla cieca: consulta
+   [`knaus_copilot/DOCS.md`](knaus_copilot/DOCS.md).
+
+Il ripristino consiste nel fermare l'app, rimuovere il file ponte eventualmente
+creato e recuperare la copia più recente da `/config/mistermif_ai/backup`.
 
 ## Documentazione e presentazione
 

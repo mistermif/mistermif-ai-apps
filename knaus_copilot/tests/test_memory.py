@@ -17,6 +17,21 @@ class MemoryStoreTest(TestCase):
             reopened = MemoryStore(path)
             self.assertEqual("true", reopened.get_setting("autonomy_enabled"))
 
+    def test_json_setting_is_persisted_locally(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "memory.sqlite3"
+            store = MemoryStore(path)
+            store.set_json_setting(
+                "vehicle_profile",
+                {"vehicle_type": "caravan", "brand": "Knaus"},
+            )
+
+            reopened = MemoryStore(path)
+            self.assertEqual(
+                {"vehicle_type": "caravan", "brand": "Knaus"},
+                reopened.get_json_setting("vehicle_profile"),
+            )
+
     def test_messages_are_returned_in_chronological_order(self):
         with TemporaryDirectory() as directory:
             store = MemoryStore(Path(directory) / "memory.sqlite3")

@@ -218,6 +218,32 @@
       font-size: 13px;
       font-weight: 750;
     }
+    .alert-legend { display: grid; gap: 8px; margin-top: 14px; }
+    .alert-level {
+      display: grid; grid-template-columns: 92px 1fr; gap: 10px;
+      padding: 9px 11px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.1); font-size: 12px;
+    }
+    .alert-level b { text-transform: uppercase; letter-spacing: .5px; }
+    .alert-level.emergenza { border-color: #ff315f; background: rgba(255,49,95,.11); }
+    .alert-level.urgenza { border-color: #ffb020; background: rgba(255,176,32,.09); }
+    .alert-level.allerta { border-color: #00d9ff; background: rgba(0,217,255,.08); }
+    dialog {
+      width: min(680px, calc(100vw - 28px)); max-height: calc(100vh - 28px);
+      overflow: auto; color: var(--text); border: 1px solid rgba(0,217,255,.5);
+      border-radius: 18px; background: #050b17; box-shadow: 0 25px 90px #000;
+    }
+    dialog::backdrop { background: rgba(0,3,10,.82); backdrop-filter: blur(5px); }
+    .onboarding-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .field input, .field select {
+      width: 100%; min-height: 44px; padding: 9px 11px; color: var(--text);
+      border: 1px solid var(--line); border-radius: 9px; background: #020713;
+    }
+    .onboarding-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+    .onboarding-actions button { min-height: 46px; }
     #details { margin-top: 15px; color: var(--muted); line-height: 1.7; }
     .footer {
       display: flex;
@@ -255,6 +281,43 @@
       </header>
 
       <main class="content">
+        <dialog id="onboarding-dialog">
+          <form id="onboarding-form">
+            <div class="panel-head"><div class="panel-icon">✦</div><h2>Conosciamoci</h2></div>
+            <p class="tagline">Queste informazioni restano nella memoria locale e potrai modificarle in seguito.</p>
+            <div class="onboarding-grid">
+              <div class="field">
+                <label for="vehicle-type">Tipo di mezzo</label>
+                <select id="vehicle-type" required>
+                  <option value="caravan">Caravan</option>
+                  <option value="camper">Camper</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="vehicle-year">Anno</label>
+                <input id="vehicle-year" type="number" min="1950" max="2100">
+              </div>
+              <div class="field">
+                <label for="vehicle-brand">Marca</label>
+                <input id="vehicle-brand" required maxlength="100">
+              </div>
+              <div class="field">
+                <label for="vehicle-model">Modello</label>
+                <input id="vehicle-model" required maxlength="120">
+              </div>
+              <div class="field full" id="tow-field">
+                <label for="tow-vehicle">Motrice utilizzata</label>
+                <input id="tow-vehicle" maxlength="160" placeholder="Marca e modello dell'auto">
+              </div>
+              <div class="field full">
+                <label for="crew-members">Equipaggio</label>
+                <input id="crew-members" maxlength="500" placeholder="Es. Mirco (pilota), Valentina, Fido (cane)">
+              </div>
+            </div>
+            <div class="onboarding-actions"><button type="submit">SALVA PROFILO LOCALE</button></div>
+          </form>
+        </dialog>
+
         <section class="metrics" aria-label="Stato del sistema">
           <div class="metric"><small>Modalità</small><strong class="cyan">Osservazione</strong></div>
           <div class="metric"><small>Home Assistant</small><strong id="ha-summary" class="pink">Verifica…</strong></div>
@@ -282,6 +345,11 @@
               <div class="permission"><span class="shield">✓</span><div><b>Notifiche autonome</b><small>Solo sui canali configurati</small></div></div>
             </div>
             <p class="warning">⚠ Può lavorare liberamente solo nella propria cartella. Ogni modifica esterna richiede sempre spiegazione e conferma. Batteria, inverter, ventilazione e firmware restano protetti.</p>
+            <div class="alert-legend" aria-label="Livelli di allarme">
+              <div class="alert-level emergenza"><b>Emergenza</b><span>Intervento immediato</span></div>
+              <div class="alert-level urgenza"><b>Urgenza</b><span>Intervento entro 10–15 minuti</span></div>
+              <div class="alert-level allerta"><b>Allerta</b><span>Prestare attenzione, nessun intervento necessario</span></div>
+            </div>
             <button id="autonomy-toggle" class="autonomy-btn" type="button">AUTONOMIA BLOCCATA</button>
             <div id="details"><small>Caricamento stato…</small></div>
             <button id="workspace-install" class="workspace-btn" type="button" hidden>ATTIVA CARTELLA DEDICATA</button>
@@ -289,7 +357,7 @@
         </div>
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.3.2 · WORKSPACE ISOLATO</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.3.3 · WORKSPACE ISOLATO</span></footer>
     </div>
   </div>
 
@@ -297,6 +365,11 @@
     const messages = document.querySelector("#messages");
     const form = document.querySelector("#chat-form");
     const input = document.querySelector("#message");
+    const onboardingDialog = document.querySelector("#onboarding-dialog");
+    const onboardingForm = document.querySelector("#onboarding-form");
+    const vehicleType = document.querySelector("#vehicle-type");
+    const towField = document.querySelector("#tow-field");
+    let onboardingShown = false;
 
     function add(text, role) {
       const element = document.createElement("div");
@@ -373,6 +446,10 @@
         ]);
         const installButton = document.querySelector("#workspace-install");
         installButton.hidden = !data.workspace || data.workspace.include_installed;
+        if (!data.onboarding.completed && !onboardingShown) {
+          onboardingShown = true;
+          onboardingDialog.showModal();
+        }
       } catch (error) {
         document.querySelector("#status").textContent = "Anteprima locale";
         document.querySelector("#ha-summary").textContent = "Demo grafica";
@@ -392,6 +469,49 @@
         if (data.pending_action) addConfirmation(data.pending_action);
       } catch (error) {
         add(`Anteprima: la chat sarà attiva dentro Home Assistant. (${error.message})`, "assistant");
+      }
+    });
+
+    function updateTowField() {
+      const caravan = vehicleType.value === "caravan";
+      towField.hidden = !caravan;
+      document.querySelector("#tow-vehicle").required = caravan;
+    }
+
+    vehicleType.addEventListener("change", updateTowField);
+    updateTowField();
+
+    onboardingForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const crew = document.querySelector("#crew-members").value
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => {
+          const match = item.match(/^(.+?)\s*\((.+)\)$/);
+          return match
+            ? {name: match[1].trim(), role: match[2].trim()}
+            : {name: item, role: "equipaggio"};
+        });
+      const yearValue = document.querySelector("#vehicle-year").value;
+      try {
+        await api("api/onboarding", {
+          method: "POST",
+          body: JSON.stringify({
+            vehicle_type: vehicleType.value,
+            brand: document.querySelector("#vehicle-brand").value.trim(),
+            model: document.querySelector("#vehicle-model").value.trim(),
+            year: yearValue ? Number(yearValue) : null,
+            tow_vehicle: vehicleType.value === "caravan"
+              ? document.querySelector("#tow-vehicle").value.trim()
+              : null,
+            crew
+          })
+        });
+        onboardingDialog.close();
+        add("Profilo iniziale salvato nella memoria locale.", "assistant");
+      } catch (error) {
+        add(`Profilo non salvato: ${error.message}`, "assistant");
       }
     });
 
