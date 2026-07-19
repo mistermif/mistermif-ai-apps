@@ -43,6 +43,13 @@ class HomeAssistantClient:
             if not self.policy.can_read(entity_id):
                 continue
             attributes = state.get("attributes") or {}
+            local_attributes = {}
+            if entity_id.startswith("device_tracker.caravan"):
+                local_attributes = {
+                    key: attributes.get(key)
+                    for key in ("latitude", "longitude", "gps_accuracy")
+                    if attributes.get(key) is not None
+                }
             visible.append(
                 {
                     "entity_id": entity_id,
@@ -51,11 +58,16 @@ class HomeAssistantClient:
                     "unit": attributes.get("unit_of_measurement"),
                     "last_updated": state.get("last_updated"),
                     "sensitive": self.policy.is_sensitive(entity_id),
+                    "attributes": local_attributes,
                 }
             )
-            if len(visible) >= self.max_entities:
-                break
-        return visible
+        visible.sort(
+            key=lambda item: (
+                not str(item["entity_id"]).startswith("device_tracker.caravan"),
+                str(item["entity_id"]),
+            )
+        )
+        return visible[: self.max_entities]
 
     async def health(self) -> dict:
         try:

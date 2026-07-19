@@ -1,9 +1,18 @@
 configuration:
+  ai_provider:
+    name: AI provider
+    description: Local, OpenAI, or compatible Groq.
+  ai_api_key:
+    name: Provider API key
+    description: Private key for the selected provider. It is never stored in the repository.
+  ai_base_url:
+    name: Compatible API URL
+    description: Leave empty to use the provider default.
   openai_api_key:
-    name: "OpenAI API key"
-    description: "Key used for AI chat. It is never stored in this repository."
+    name: "Previous OpenAI API key"
+    description: "Kept only to migrate existing installations."
   model:
-    name: "OpenAI model"
+    name: "AI model"
     description: "Model used to generate responses."
   autonomy_mode:
     name: "Autonomy mode"

@@ -1,9 +1,18 @@
 configuration:
+  ai_provider:
+    name: Provider AI
+    description: Locale, OpenAI oppure Groq compatibile.
+  ai_api_key:
+    name: Chiave API del provider
+    description: Chiave privata del provider selezionato. Non viene salvata nella repository.
+  ai_base_url:
+    name: Indirizzo API compatibile
+    description: Lascia vuoto per usare l'indirizzo predefinito del provider.
   openai_api_key:
-    name: "Chiave OpenAI API"
-    description: "Chiave usata dall'app per la chat AI. Non viene salvata nel repository."
+    name: "Chiave OpenAI precedente"
+    description: "Campo mantenuto soltanto per migrare installazioni esistenti."
   model:
-    name: "Modello OpenAI"
+    name: "Modello AI"
     description: "Modello usato per generare le risposte."
   autonomy_mode:
     name: "Modalità di autonomia"

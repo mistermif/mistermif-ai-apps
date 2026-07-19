@@ -9,6 +9,9 @@ from pathlib import Path
 @dataclass(frozen=True)
 class Settings:
     openai_api_key: str
+    ai_provider: str = "local"
+    ai_api_key: str = ""
+    ai_base_url: str = ""
     model: str = "gpt-5.4-mini"
     autonomy_mode: str = "observe"
     climate_entity: str = "climate.thermal_control"
@@ -32,7 +35,25 @@ class Settings:
         if options_path.exists():
             options = json.loads(options_path.read_text(encoding="utf-8"))
 
-        api_key = str(options.get("openai_api_key") or os.getenv("OPENAI_API_KEY", ""))
+        legacy_openai_key = str(
+            options.get("openai_api_key") or os.getenv("OPENAI_API_KEY", "")
+        )
+        ai_provider = str(options.get("ai_provider", "openai" if legacy_openai_key else "local"))
+        if ai_provider not in {"local", "openai", "groq"}:
+            ai_provider = "local"
+        ai_api_key = str(
+            options.get("ai_api_key")
+            or (legacy_openai_key if ai_provider == "openai" else "")
+            or os.getenv("AI_API_KEY", "")
+        )
+        default_base_urls = {
+            "local": "",
+            "openai": "https://api.openai.com/v1",
+            "groq": "https://api.groq.com/openai/v1",
+        }
+        ai_base_url = str(
+            options.get("ai_base_url") or default_base_urls[ai_provider]
+        ).rstrip("/")
         mode = str(options.get("autonomy_mode", "observe"))
         if mode not in {"observe", "confirm", "limited"}:
             mode = "observe"
@@ -46,9 +67,22 @@ class Settings:
             max_context_entities = 80
         max_context_entities = min(200, max(10, max_context_entities))
 
+        model = str(options.get("model", "gpt-5.4-mini"))
+        if ai_provider == "groq" and (
+            not options.get("model")
+            or model.startswith("gpt-5.")
+            or model == "local-rules"
+        ):
+            model = "openai/gpt-oss-20b"
+        if ai_provider == "local" and not options.get("model"):
+            model = "local-rules"
+
         return cls(
-            openai_api_key=api_key,
-            model=str(options.get("model", "gpt-5.4-mini")),
+            openai_api_key=legacy_openai_key,
+            ai_provider=ai_provider,
+            ai_api_key=ai_api_key,
+            ai_base_url=ai_base_url,
+            model=model,
             autonomy_mode=mode,
             climate_entity=str(
                 options.get("climate_entity", "climate.thermal_control")

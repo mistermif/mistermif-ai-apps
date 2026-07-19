@@ -9,8 +9,8 @@ Il progetto nasce su una caravan Knaus, ma l'architettura è pensata per essere
 configurabile e adattabile ad altri camper e caravan.
 
 > Il progetto è in sviluppo attivo. La versione corrente fornisce la base sicura
-> del copilota; viaggio, campeggi, frigorifero e analisi avanzate sono specificati
-> per la versione 0.4 ma non sono ancora tutti operativi.
+> del copilota; viaggio, campeggi, frigorifero e decisioni energetiche complete
+> sono ancora in sviluppo progressivo.
 
 ## Perché esiste
 
@@ -28,12 +28,16 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.3.3
+## Cosa funziona oggi — versione 0.4.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
-- chat OpenAI, quando viene configurata una chiave API;
+- provider AI selezionabile: locale, OpenAI oppure Groq compatibile;
+- Groq Free supportato tramite Responses API compatibile;
 - lettura filtrata delle entità Home Assistant autorizzate;
 - memoria locale SQLite per conversazioni e note;
+- campionamento locale continuo ogni cinque minuti;
+- storico energetico separato per posizione e orientamento della sosta;
+- confidenza locale che cresce solo con campioni GPS validi;
 - workspace isolato sotto `/config/mistermif_ai`;
 - backup controllato di `configuration.yaml` prima dell'inserimento dell'include;
 - registro delle modifiche e inventario con hash SHA-256;
@@ -101,8 +105,9 @@ Sensori e automazioni Home Assistant
                       └─ azioni autorizzate
 ```
 
-Solo il contesto necessario viene inviato all'API OpenAI. Database, memoria e
-file operativi restano locali, salvo esportazione richiesta dall'utente. In
+Solo il contesto necessario viene inviato al provider AI selezionato. Database,
+memoria e file operativi restano locali, salvo esportazione richiesta
+dall'utente. In
 modalità predefinita `local_only` non viene inviato alcun contenuto al modello
 cloud; la modalità `redacted_cloud` è opzionale e applica filtri preventivi.
 
@@ -112,10 +117,16 @@ Il copilota è progettato per riconoscere routine ripetute e preparare il mezzo.
 Se, per esempio, la cucina a induzione viene usata spesso alle 12, può verificare
 prima SOC, produzione, ricarica, limite della colonnina e carichi differibili.
 
-Le abitudini non nascono da un singolo episodio: includono contesto, frequenza,
-confidenza, simulazione storica e modalità ombra. L'utente può correggere,
-sospendere o cancellare ogni apprendimento. Gli adattamenti restano entro i
-margini autorizzati e non possono indebolire protezioni per persone o animali.
+Le abitudini non nascono da un singolo episodio. La versione 0.4.0 registra
+campioni locali e li associa a un'identità anonima della sosta derivata da GPS e
+orientamento. Campioni senza posizione non aumentano la confidenza e dati di
+luoghi diversi non vengono mescolati.
+
+L'apprendimento riguarda osservazioni e risultati: non modifica autonomamente
+codice, firmware, soglie protette o parametri dell'impianto. L'utente potrà
+correggere, sospendere e cancellare i dati appresi. Le decisioni energetiche
+predittive complete verranno abilitate soltanto dopo simulazione storica e
+modalità ombra.
 
 ## Workspace isolato
 
@@ -245,9 +256,20 @@ Ulteriori dettagli sono in [`docs/EXPERTISE.md`](docs/EXPERTISE.md).
 6. Rispondi alla breve intervista iniziale.
 7. Premi **Attiva cartella dedicata** e conferma.
 
-Per usare l'app in modalità locale non serve altro. La chiave OpenAI, le
-notifiche e le azioni automatiche sono funzioni facoltative e si configurano in
-seguito. L'autonomia rimane bloccata finché l'utente non la abilita.
+Per usare l'app in modalità locale non serve altro. Groq Free e OpenAI sono
+facoltativi. Le notifiche e le azioni automatiche si configurano in seguito.
+L'autonomia rimane bloccata finché l'utente non la abilita.
+
+### AI gratuita con Groq
+
+1. Crea una chiave nel portale Groq e non inserirla mai nella repository.
+2. In **Configurazione** seleziona `groq`.
+3. Inserisci la chiave nel campo protetto `ai_api_key`.
+4. Usa il modello `openai/gpt-oss-20b`.
+5. Seleziona `redacted_cloud`, salva e riavvia solo l'app.
+
+Le quote gratuite possono cambiare. Se Groq non risponde, memoria, monitoraggio,
+apprendimento e protezioni locali continuano a funzionare.
 
 ### Cosa fa automaticamente
 
