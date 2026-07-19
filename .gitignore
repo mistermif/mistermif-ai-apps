@@ -10,3 +10,5 @@ venv/
 .pytest_cache/
 .coverage
 *-source.png
+outputs/*.inspect.ndjson
+outputs/*/
