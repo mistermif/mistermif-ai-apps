@@ -28,10 +28,12 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.4.0
+## Cosa funziona oggi — versione 0.5.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
-- provider AI selezionabile: locale, OpenAI oppure Groq compatibile;
+- provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
+- Google Search opzionale con fonti per meteo, ristoranti, campeggi e ricambi;
+- budget giornalieri separati per richieste cloud totali e automatiche;
 - Groq Free supportato tramite Responses API compatibile;
 - lettura filtrata delle entità Home Assistant autorizzate;
 - memoria locale SQLite per conversazioni e note;
@@ -48,6 +50,27 @@ deterministiche e indipendenti dall'AI e da Internet.
 - intervista locale al primo avvio per mezzo, motrice ed equipaggio;
 - tre livelli operativi: emergenza, urgenza e allerta;
 - collegamento compatibile con installazioni che usano già `/config/packages`.
+
+### Gemini e Google Search
+
+Per usare Gemini: crea una chiave in Google AI Studio, seleziona `gemini`,
+inseriscila in `ai_api_key` e usa `gemini-2.5-flash`.
+
+Le modalità privacy sono:
+
+- `local_only`: nessun invio al cloud;
+- `redacted_cloud`: rimuove anche posizione, viaggi e profilo;
+- `contextual_cloud`: consente posizione e contesto utile, ma rimuove sempre
+  chiavi API, token, password, segreti, indirizzi IP e contatti.
+
+I valori iniziali sono 450 richieste complessive al giorno e 60 automatiche.
+Il sotto-limite automatico protegge una riserva per chat e ricerche manuali.
+Sono tetti locali configurabili, non una garanzia sulle quote future del
+fornitore. Al loro esaurimento il controllo locale continua.
+
+Gemini attiva Google Search quando la richiesta lo indica o contiene un intento
+riconoscibile, come meteo, ristorante, campeggio o ricambio. Le fonti vengono
+mostrate in fondo alla risposta.
 
 ### Livelli di allarme
 

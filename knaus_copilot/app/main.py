@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from .agent import KnausAgent
 from .alerts import public_alert_catalog
 from .config import Settings
+from .cloud_usage import CloudUsage
 from .home_assistant import HomeAssistantClient
 from .learning import ContextLearner
 from .memory import MemoryStore
@@ -36,6 +37,11 @@ ha = HomeAssistantClient(
     policy,
     settings.max_context_entities,
 )
+cloud_usage = CloudUsage(
+    memory,
+    settings.cloud_daily_limit,
+    settings.cloud_automatic_limit,
+)
 agent = KnausAgent(
     settings.ai_api_key,
     settings.model,
@@ -44,6 +50,8 @@ agent = KnausAgent(
     settings.privacy_mode,
     settings.ai_provider,
     settings.ai_base_url,
+    cloud_usage,
+    settings.gemini_search_enabled,
 )
 workspace = WorkspaceManager(settings.homeassistant_config_dir)
 learner = ContextLearner(memory)
@@ -75,11 +83,13 @@ async def lifespan(_: FastAPI):
         await learning_task
 
 
-app = FastAPI(title="mistermif AI", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.5.0", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
+    web_search: bool = False
+    automatic: bool = False
 
 
 class MemoryRequest(BaseModel):
@@ -157,13 +167,14 @@ async def caravan_icon() -> FileResponse:
 async def status() -> dict:
     learning = learner.summary()
     return {
-        "version": "0.4.0",
+        "version": "0.5.0",
         "model": settings.model,
         "ai_provider": settings.ai_provider,
         "ai_configured": bool(settings.ai_api_key)
         if settings.ai_provider != "local"
         else True,
         "privacy_mode": settings.privacy_mode,
+        "cloud_usage": cloud_usage.snapshot(),
         "permissions": policy.public_summary(),
         "autonomy_enabled": autonomy_enabled(),
         "home_assistant": await ha.health(),
@@ -314,7 +325,27 @@ async def chat(
             "action_result": action_result,
         }
     try:
-        answer = await agent.chat(user_id, payload.message, await ha.states())
+        search_terms = (
+            "cerca",
+            "ristorant",
+            "campegg",
+            "meteo",
+            "prevision",
+            "allerta",
+            "ricambio",
+            "notizie",
+            "google",
+        )
+        web_search = payload.web_search or any(
+            term in normalized for term in search_terms
+        )
+        answer = await agent.chat(
+            user_id,
+            payload.message,
+            await ha.states(),
+            automatic=payload.automatic,
+            web_search=web_search,
+        )
     except Exception as exc:
         logger.exception("Errore durante la conversazione")
         raise HTTPException(status_code=502, detail=str(exc)) from exc

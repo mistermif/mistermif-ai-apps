@@ -443,6 +443,8 @@
           `Entità visibili: ${data.home_assistant.visible_entities || 0}`,
           `AI: ${data.ai_configured ? "disponibile" : "da configurare"}`,
           `Privacy: ${data.privacy_mode === "local_only" ? "solo locale" : "cloud con redazione"}`,
+          `Cloud oggi: ${data.cloud_usage.total}/${data.cloud_usage.daily_limit} richieste`,
+          `Automatiche: ${data.cloud_usage.automatic}/${data.cloud_usage.automatic_limit}`,
           `Workspace: ${data.workspace?.include_installed ? "collegato" : "da collegare"}`,
           `Apprendimento: ${data.learning.samples} campioni in questa sosta`,
           `Confidenza locale: ${Math.round(data.learning.confidence * 100)}%`,

@@ -39,3 +39,25 @@ class PrivacyFilterTest(TestCase):
 
         self.assertEqual(1, len(result))
         self.assertEqual("preferenza", result[0]["category"])
+
+    def test_contextual_cloud_keeps_location_but_removes_secrets(self):
+        privacy = PrivacyFilter(allow_location=True)
+        text = (
+            "Sono a 45.123456, 9.123456; "
+            "api_key=AIza123456789012345678901234567890"
+        )
+        result = privacy.sanitize_text(text)
+        states = privacy.sanitize_states(
+            [
+                {
+                    "entity_id": "device_tracker.caravan",
+                    "name": "GPS caravan",
+                    "state": "not_home",
+                    "attributes": {"latitude": 45.1, "longitude": 9.1},
+                }
+            ]
+        )
+
+        self.assertIn("45.123456", result)
+        self.assertNotIn("AIza", result)
+        self.assertEqual("device_tracker.caravan", states[0]["entity_id"])

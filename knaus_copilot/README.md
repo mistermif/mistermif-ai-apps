@@ -1,10 +1,11 @@
-# mistermif AI 0.4.0
+# mistermif AI 0.5.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
 
 - chat Ingress con memoria SQLite locale;
-- provider locale, OpenAI e Groq compatibile;
+- provider locale, OpenAI, Groq e Gemini;
+- Google Search opzionale con citazioni e contatori giornalieri;
 - apprendimento energetico locale separato per contesto di sosta;
 - lettura filtrata degli stati Home Assistant;
 - intervista iniziale per mezzo, motrice ed equipaggio;
@@ -14,8 +15,10 @@ della caravan.
 - interruttore generale dell'autonomia;
 - blocco esplicito di batteria, inverter, ventilazione e firmware.
 
-La modalità iniziale è `observe` con privacy `local_only`. Groq Free e OpenAI
-sono facoltativi. Le azioni operative richiedono autorizzazioni separate e
+La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
+sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e
+contesto Home Assistant utile; segreti, chiavi, token, password, IP e contatti
+restano redatti. Le azioni operative richiedono autorizzazioni separate e
 l'apprendimento non può modificare codice o parametri protetti.
 
 ## Sviluppo locale

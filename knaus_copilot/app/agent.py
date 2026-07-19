@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import httpx
 from openai import (
     APIConnectionError,
     APIStatusError,
@@ -14,6 +15,7 @@ from openai import (
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
 from .privacy import PrivacyFilter
+from .cloud_usage import CloudUsage
 
 
 SYSTEM_INSTRUCTIONS = """
@@ -73,13 +75,21 @@ class KnausAgent:
         privacy_mode: str = "local_only",
         provider: str = "local",
         base_url: str = "",
+        cloud_usage: CloudUsage | None = None,
+        gemini_search_enabled: bool = True,
     ):
         self.model = model
         self.provider = provider
         self.memory = memory
         self.policy = policy
         self.privacy_mode = privacy_mode
-        self.privacy = PrivacyFilter()
+        self.base_url = base_url
+        self.api_key = api_key
+        self.cloud_usage = cloud_usage
+        self.gemini_search_enabled = gemini_search_enabled
+        self.privacy = PrivacyFilter(
+            allow_location=privacy_mode == "contextual_cloud"
+        )
         self.client = (
             AsyncOpenAI(api_key=api_key, base_url=base_url or None)
             if (
@@ -95,9 +105,16 @@ class KnausAgent:
         user_id: str,
         message: str,
         ha_states: list[dict[str, Any]],
+        automatic: bool = False,
+        web_search: bool = False,
     ) -> str:
         self.memory.add_message(user_id, "user", message)
-        if self.client is None:
+        cloud_ready = (
+            self.provider == "gemini"
+            and bool(self.api_key)
+            and self.privacy_mode != "local_only"
+        )
+        if self.client is None and not cloud_ready:
             if self.privacy_mode == "local_only":
                 answer = (
                     "La modalità privacy locale è attiva: nessun contenuto viene "
@@ -140,7 +157,16 @@ class KnausAgent:
                 ),
             }
         )
+        if self.cloud_usage:
+            self.cloud_usage.consume(automatic=automatic)
         try:
+            if self.provider == "gemini":
+                answer = await self._gemini(
+                    conversation,
+                    web_search=web_search and self.gemini_search_enabled,
+                )
+                self.memory.add_message(user_id, "assistant", answer)
+                return answer
             response = await self.client.responses.create(
                 model=self.model,
                 instructions=SYSTEM_INSTRUCTIONS,
@@ -170,4 +196,57 @@ class KnausAgent:
             ) from exc
         answer = response.output_text.strip()
         self.memory.add_message(user_id, "assistant", answer)
+        return answer
+
+    async def _gemini(
+        self,
+        conversation: list[dict[str, str]],
+        web_search: bool,
+    ) -> str:
+        contents = [
+            {
+                "role": "model" if item["role"] == "assistant" else "user",
+                "parts": [{"text": item["content"]}],
+            }
+            for item in conversation
+        ]
+        payload: dict[str, Any] = {
+            "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTIONS}]},
+            "contents": contents,
+        }
+        if web_search:
+            payload["tools"] = [{"google_search": {}}]
+        async with httpx.AsyncClient(timeout=45) as client:
+            response = await client.post(
+                f"{self.base_url}/models/{self.model}:generateContent",
+                headers={
+                    "x-goog-api-key": self.api_key,
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+        if response.status_code == 401 or response.status_code == 403:
+            raise RuntimeError("Chiave Gemini non valida o non autorizzata.")
+        if response.status_code == 429:
+            raise RuntimeError(
+                "Limite Gemini temporaneamente raggiunto; "
+                "il controllo locale continua."
+            )
+        response.raise_for_status()
+        data = response.json()
+        candidates = data.get("candidates") or []
+        if not candidates:
+            raise RuntimeError("Gemini non ha restituito una risposta utilizzabile.")
+        parts = candidates[0].get("content", {}).get("parts", [])
+        answer = "".join(str(part.get("text", "")) for part in parts).strip()
+        if not answer:
+            raise RuntimeError("Gemini ha restituito una risposta vuota.")
+        grounding = candidates[0].get("groundingMetadata") or {}
+        links = []
+        for chunk in grounding.get("groundingChunks", []):
+            web = chunk.get("web") or {}
+            if web.get("uri") and web.get("title"):
+                links.append(f"- [{web['title']}]({web['uri']})")
+        if links:
+            answer += "\n\nFonti:\n" + "\n".join(dict.fromkeys(links))
         return answer
