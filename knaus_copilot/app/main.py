@@ -83,7 +83,7 @@ async def lifespan(_: FastAPI):
         await learning_task
 
 
-app = FastAPI(title="mistermif AI", version="0.5.0", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.5.1", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -167,7 +167,7 @@ async def caravan_icon() -> FileResponse:
 async def status() -> dict:
     learning = learner.summary()
     return {
-        "version": "0.5.0",
+        "version": "0.5.1",
         "model": settings.model,
         "ai_provider": settings.ai_provider,
         "ai_configured": bool(settings.ai_api_key)
