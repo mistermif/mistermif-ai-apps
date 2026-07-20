@@ -228,6 +228,53 @@
     .alert-level.emergenza { border-color: #ff315f; background: rgba(255,49,95,.11); }
     .alert-level.urgenza { border-color: #ffb020; background: rgba(255,176,32,.09); }
     .alert-level.allerta { border-color: #00d9ff; background: rgba(0,217,255,.08); }
+    .lab-panel { margin-top: 18px; }
+    .lab-layout { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr); gap: 16px; }
+    .lab-controls, .lab-result {
+      padding: 14px; border: 1px solid rgba(88,113,156,.34);
+      border-radius: 13px; background: rgba(2,7,19,.65);
+    }
+    .lab-controls { display: grid; gap: 11px; align-content: start; }
+    .lab-controls label { color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; }
+    .lab-controls select {
+      width: 100%; min-height: 46px; padding: 9px 11px; color: var(--text);
+      border: 1px solid var(--line); border-radius: 9px; background: #020713;
+    }
+    .lab-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .lab-actions button { min-height: 46px; padding: 9px; }
+    .lab-actions .secondary {
+      color: var(--text); background: rgba(0,217,255,.08);
+      border-color: rgba(0,217,255,.42); box-shadow: none;
+    }
+    .lab-result { min-height: 180px; }
+    .lab-result strong { color: var(--cyan); text-transform: uppercase; }
+    .lab-result p { margin: 9px 0 0; color: var(--muted); line-height: 1.5; }
+    .lab-result pre {
+      margin: 12px 0 0; padding: 11px; overflow: auto; white-space: pre-wrap;
+      color: #d9e4ff; border-radius: 9px; background: #01050d; font-size: 12px;
+    }
+    .lifecycle { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 12px 0 0; }
+    .phase {
+      padding: 8px 5px; border: 1px solid var(--line); border-radius: 8px;
+      color: var(--muted); text-align: center; text-transform: uppercase;
+      letter-spacing: .4px; font-size: 10px; font-weight: 900;
+    }
+    .phase.current { color: #020713; border-color: var(--cyan); background: var(--cyan); }
+    .mapping-box {
+      margin-top: 14px; padding: 13px; border: 1px solid rgba(0,217,255,.25);
+      border-radius: 12px; background: rgba(0,217,255,.035);
+    }
+    .mapping-box summary { color: var(--cyan); cursor: pointer; font-weight: 900; }
+    .mapping-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      margin-top: 12px;
+    }
+    .mapping-grid .field select, .mapping-grid .field input {
+      width: 100%; min-height: 44px; padding: 8px; color: var(--text);
+      border: 1px solid var(--line); border-radius: 9px; background: #020713;
+    }
+    .mapping-actions { display: flex; gap: 9px; margin-top: 12px; }
+    .mapping-actions button { min-height: 44px; }
     dialog {
       width: min(680px, calc(100vw - 28px)); max-height: calc(100vh - 28px);
       overflow: auto; color: var(--text); border: 1px solid rgba(0,217,255,.5);
@@ -263,6 +310,8 @@
       form { grid-template-columns: 1fr; }
       button { min-height: 50px; }
       #messages { height: 46vh; }
+      .lab-layout, .lab-actions, .mapping-grid { grid-template-columns: 1fr; }
+      .mapping-actions { flex-direction: column; }
     }
   </style>
 </head>
@@ -337,11 +386,12 @@
           </section>
 
           <aside class="panel">
-            <div class="panel-head"><div class="panel-icon">⌾</div><h2>Autorizzazioni v0.2</h2></div>
+            <div class="panel-head"><div class="panel-icon">⌾</div><h2>Autorizzazioni v0.3</h2></div>
             <div class="permissions">
               <div class="permission"><span class="shield">✓</span><div><b>Lettura filtrata</b><small>Solo sensori autorizzati</small></div></div>
               <div class="permission"><span class="shield">✓</span><div><b>Memoria locale</b><small>Chat e note in SQLite</small></div></div>
-              <div class="permission"><span class="shield">✓</span><div><b>Controllo limitato</b><small>Solo spegnimento climatizzatore</small></div></div>
+              <div class="permission"><span class="shield">✓</span><div><b>Creazione autonoma</b><small>Plance, helper e automazioni nel workspace</small></div></div>
+              <div class="permission"><span class="shield">✓</span><div><b>Controllo apparati</b><small>Solo azioni autorizzate e collaudate</small></div></div>
               <div class="permission"><span class="shield">✓</span><div><b>Notifiche autonome</b><small>Solo sui canali configurati</small></div></div>
             </div>
             <p class="warning">⚠ Può lavorare liberamente solo nella propria cartella. Ogni modifica esterna richiede sempre spiegazione e conferma. Batteria, inverter, ventilazione e firmware restano protetti.</p>
@@ -355,9 +405,52 @@
             <button id="workspace-install" class="workspace-btn" type="button" hidden>ATTIVA CARTELLA DEDICATA</button>
           </aside>
         </div>
+
+        <section class="panel lab-panel">
+          <div class="panel-head"><div class="panel-icon">⚗</div><h2>Energy Safety Lab</h2></div>
+          <p class="tagline">Collauda decisioni, helper e automazioni senza scaricare la batteria e senza accendere carichi reali.</p>
+          <div class="lifecycle" aria-label="Ciclo di collaudo">
+            <div class="phase">Bozza</div>
+            <div class="phase current">Simulazione</div>
+            <div class="phase">Ombra</div>
+            <div class="phase">Attiva</div>
+          </div>
+          <div class="lab-layout">
+            <div class="lab-controls">
+              <label for="lab-scenario">Scenario virtuale</label>
+              <select id="lab-scenario"><option>Caricamento…</option></select>
+              <small id="lab-purpose" class="tagline">Nessun comando reale viene eseguito.</small>
+              <div class="lab-actions">
+                <button id="lab-install" class="secondary" type="button">CREA PLANCIA E HELPER</button>
+                <button id="lab-run" type="button">ESEGUI TEST</button>
+              </div>
+            </div>
+            <div class="lab-result">
+              <strong id="lab-result-title">Laboratorio pronto</strong>
+              <p id="lab-result-text">Seleziona uno scenario. Il risultato mostrerà cosa avrebbe deciso l'assistente, senza chiamare Home Assistant.</p>
+              <pre id="lab-result-metrics">Azioni reali: 0 · Batteria utilizzata dal test: 0%</pre>
+            </div>
+          </div>
+          <details class="mapping-box">
+            <summary>Associazione sensori reali per la futura modalità ombra</summary>
+            <p class="tagline">Puoi prepararla anche se i sensori sono offline: nessun comando verrà eseguito.</p>
+            <div class="mapping-grid">
+              <div class="field"><label for="map-soc">SOC batteria *</label><select id="map-soc"></select></div>
+              <div class="field"><label for="map-grid">Potenza rete / PZEM *</label><select id="map-grid"></select></div>
+              <div class="field"><label for="map-solar">Potenza solare *</label><select id="map-solar"></select></div>
+              <div class="field"><label for="map-current">Corrente batteria</label><select id="map-current"></select></div>
+              <div class="field"><label for="map-climate">Climatizzatore</label><select id="map-climate"></select></div>
+              <div class="field"><label for="map-amps">Ampere disponibili</label><input id="map-amps" type="number" min="3" max="16" value="6"></div>
+            </div>
+            <div class="mapping-actions">
+              <button id="mapping-save" class="secondary" type="button">SALVA ASSOCIAZIONE</button>
+              <button id="shadow-run" type="button">PROVA IN OMBRA</button>
+            </div>
+          </details>
+        </section>
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.5.5 · CONTESTO PERTINENTE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.5.6 · ENERGY SAFETY LAB</span></footer>
     </div>
   </div>
 
@@ -369,6 +462,8 @@
     const onboardingForm = document.querySelector("#onboarding-form");
     const vehicleType = document.querySelector("#vehicle-type");
     const towField = document.querySelector("#tow-field");
+    const labScenario = document.querySelector("#lab-scenario");
+    let labScenarios = [];
     let onboardingShown = false;
 
     function add(text, role) {
@@ -463,6 +558,171 @@
         showDetails(["I dati reali compariranno quando l'app sarà avviata dentro Home Assistant."]);
       }
     }
+
+    async function refreshLab() {
+      try {
+        const data = await api("api/lab");
+        labScenarios = data.scenarios;
+        labScenario.replaceChildren();
+        data.scenarios.forEach(scenario => {
+          const option = document.createElement("option");
+          option.value = scenario.id;
+          option.textContent = scenario.label;
+          labScenario.appendChild(option);
+        });
+        updateLabPurpose();
+        document.querySelector("#lab-install").textContent = data.bundle_installed
+          ? "RIGENERA FILE LAB"
+          : "CREA PLANCIA E HELPER";
+      } catch (error) {
+        document.querySelector("#lab-result-text").textContent =
+          `Laboratorio non disponibile: ${error.message}`;
+      }
+    }
+
+    function updateLabPurpose() {
+      const scenario = labScenarios.find(item => item.id === labScenario.value);
+      document.querySelector("#lab-purpose").textContent = scenario
+        ? scenario.purpose
+        : "Nessun comando reale viene eseguito.";
+    }
+
+    labScenario.addEventListener("change", updateLabPurpose);
+
+    function renderLabResult(data, prefix = "") {
+      document.querySelector("#lab-result-title").textContent =
+        `${prefix}${data.severity}: ${data.decision}`;
+      document.querySelector("#lab-result-text").textContent = data.reason;
+      const actions = data.allowed_actions.length
+        ? data.allowed_actions.join(", ")
+        : "nessuna";
+      document.querySelector("#lab-result-metrics").textContent = [
+        `Origine dati: ${data.source}`,
+        `Carico valutato: ${data.metrics.observed_grid_watts} W`,
+        `Limite valutato: ${data.metrics.grid_limit_watts} W`,
+        `Azioni che avrebbe proposto: ${actions}`,
+        "Azioni reali eseguite: 0",
+        "Batteria utilizzata dal test: 0%"
+      ].join("\n");
+    }
+
+    function fillEntitySelect(select, states, selected, domains = []) {
+      select.replaceChildren();
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "Non associato";
+      select.appendChild(empty);
+      states
+        .filter(item => !domains.length || domains.some(domain => item.entity_id.startsWith(`${domain}.`)))
+        .forEach(item => {
+          const option = document.createElement("option");
+          option.value = item.entity_id;
+          option.textContent = `${item.name || item.entity_id} · ${item.state}`;
+          option.selected = item.entity_id === selected;
+          select.appendChild(option);
+        });
+    }
+
+    async function refreshMapping() {
+      try {
+        const data = await api("api/lab/entities");
+        const mapping = data.mapping || {entities: {}, available_amps: 6};
+        const entities = mapping.entities || {};
+        fillEntitySelect(document.querySelector("#map-soc"), data.items, entities.battery_soc, ["sensor"]);
+        fillEntitySelect(document.querySelector("#map-grid"), data.items, entities.grid_power, ["sensor"]);
+        fillEntitySelect(document.querySelector("#map-solar"), data.items, entities.solar_power, ["sensor"]);
+        fillEntitySelect(document.querySelector("#map-current"), data.items, entities.battery_current, ["sensor"]);
+        fillEntitySelect(document.querySelector("#map-climate"), data.items, entities.climate, ["climate"]);
+        document.querySelector("#map-amps").value = mapping.available_amps || 6;
+      } catch (error) {
+        document.querySelector("#lab-purpose").textContent =
+          `Entità reali non disponibili: ${error.message}`;
+      }
+    }
+
+    document.querySelector("#lab-install").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const data = await api("api/lab/install", {method: "POST", body: "{}"});
+        document.querySelector("#lab-result-title").textContent = "File laboratorio creati";
+        document.querySelector("#lab-result-text").textContent =
+          "Plancia, helper, automazione fissa e politica dinamica sono nella cartella dedicata. Per vedere i nuovi helper in Home Assistant servirà il controllo configurazione e un riavvio.";
+        document.querySelector("#lab-result-metrics").textContent =
+          `${data.files.length} file generati · servizi reali chiamati: 0`;
+        button.textContent = "RIGENERA FILE LAB";
+      } catch (error) {
+        document.querySelector("#lab-result-title").textContent = "Creazione non riuscita";
+        document.querySelector("#lab-result-text").textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.querySelector("#lab-run").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      button.textContent = "SIMULAZIONE…";
+      try {
+        const data = await api("api/lab/run", {
+          method: "POST",
+          body: JSON.stringify({scenario: labScenario.value})
+        });
+        renderLabResult(data);
+      } catch (error) {
+        document.querySelector("#lab-result-title").textContent = "Test non riuscito";
+        document.querySelector("#lab-result-text").textContent = error.message;
+      } finally {
+        button.disabled = false;
+        button.textContent = "ESEGUI TEST";
+      }
+    });
+
+    document.querySelector("#mapping-save").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      const fields = {
+        battery_soc: document.querySelector("#map-soc").value,
+        grid_power: document.querySelector("#map-grid").value,
+        solar_power: document.querySelector("#map-solar").value,
+        battery_current: document.querySelector("#map-current").value,
+        climate: document.querySelector("#map-climate").value
+      };
+      const entities = Object.fromEntries(
+        Object.entries(fields).filter(([, value]) => Boolean(value))
+      );
+      button.disabled = true;
+      try {
+        const data = await api("api/lab/mapping", {
+          method: "POST",
+          body: JSON.stringify({
+            entities,
+            available_amps: Number(document.querySelector("#map-amps").value)
+          })
+        });
+        document.querySelector("#lab-result-title").textContent = "Associazione salvata";
+        document.querySelector("#lab-result-text").textContent = data.ready_for_shadow
+          ? "I tre sensori obbligatori sono associati. Puoi eseguire una prova in ombra: leggerà gli stati ma non invierà comandi."
+          : "Associazione parziale. Seleziona SOC, potenza rete e potenza solare.";
+      } catch (error) {
+        document.querySelector("#lab-result-text").textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.querySelector("#shadow-run").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const data = await api("api/lab/shadow/run", {method: "POST", body: "{}"});
+        renderLabResult(data, "ombra · ");
+      } catch (error) {
+        document.querySelector("#lab-result-title").textContent = "Ombra non eseguita";
+        document.querySelector("#lab-result-text").textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
 
     form.addEventListener("submit", async event => {
       event.preventDefault();
@@ -568,6 +828,8 @@
     });
 
     refresh();
+    refreshLab();
+    refreshMapping();
   </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-# mistermif AI 0.5.5
+# mistermif AI 0.5.6
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -13,6 +13,9 @@ della caravan.
 - workspace isolato in `/config/mistermif_ai`;
 - file ponte compatibile con un `/config/packages` già esistente;
 - interruttore generale dell'autonomia;
+- Energy Safety Lab con scenari virtuali e storico locale;
+- creazione isolata di plancia, helper, automazione fissa e policy dinamica;
+- collaudo in simulazione e ombra prima di qualunque azione reale;
 - blocco esplicito di batteria, inverter, ventilazione e firmware.
 
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
@@ -35,6 +38,11 @@ I test rapidi non ricevono vecchi ricordi, mentre sensori offline o sconosciuti
 vengono descritti come dati mancanti e non bastano, da soli, a generare
 un'emergenza. Le indicazioni su pneumatici e TPMS separano dati verificati,
 precauzioni e pericoli reali.
+
+I test energetici non richiedono di scaricare realmente la batteria: gli
+scenari del laboratorio producono decisioni e proposte, ma la lista delle
+azioni eseguite resta vuota. La modalità attiva è bloccata finché non sono
+associati e convalidati i sensori reali in modalità ombra.
 
 ## Sviluppo locale
 

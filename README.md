@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.5.5
+## Cosa funziona oggi — versione 0.5.6
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -61,6 +61,47 @@ deterministiche e indipendenti dall'AI e da Internet.
 - intervista locale al primo avvio per mezzo, motrice ed equipaggio;
 - tre livelli operativi: emergenza, urgenza e allerta;
 - collegamento compatibile con installazioni che usano già `/config/packages`.
+- Energy Safety Lab completamente locale con sensori virtuali;
+- generazione nel workspace di plancia, helper, automazione fissa e policy
+  dinamica;
+- sei scenari ripetibili che non scaricano la batteria e non comandano apparati;
+- ciclo obbligatorio bozza → simulazione → ombra → attiva;
+- backup automatico di ogni file generato prima di una sua sovrascrittura;
+- registro locale di input, decisione e azioni che sarebbero state proposte.
+
+### Energy Safety Lab
+
+La versione 0.5.6 introduce un laboratorio indipendente dal provider AI. Può
+quindi essere usato anche senza Gemini e quando i dispositivi ESP sono offline.
+Il pulsante **Crea plancia e helper** prepara esclusivamente dentro
+`/config/mistermif_ai`:
+
+- un package di helper e sensori virtuali;
+- una plancia Lovelace YAML pronta da collegare;
+- un'automazione fissa che genera soltanto un evento locale;
+- una policy leggibile per le automazioni dinamiche;
+- manifest, storico delle prove e copie di rollback.
+
+Gli scenari inclusi coprono sensori offline, batteria critica, recupero solare,
+colonnina da 6 A, colonnina da 10 A con presa esterna e animali a bordo. Durante
+una simulazione vengono eseguiti zero servizi Home Assistant: il consumo della
+batteria reale causato dal test è sempre zero.
+
+La modalità attiva rimane bloccata finché i sensori reali non saranno associati,
+convalidati e osservati in modalità ombra. Questo evita che un nome errato o un
+valore `unknown` producano un comando. In modalità ombra l'assistente registra
+cosa avrebbe fatto senza cambiare alcuno stato.
+
+La sezione di associazione guidata richiede inizialmente soltanto SOC batteria,
+potenza rete/PZEM e produzione solare. Corrente batteria e clima sono opzionali.
+Le entità possono essere selezionate anche quando il loro stato è offline; la
+prova ombra resterà inconcludente finché i tre valori obbligatori non saranno
+validi.
+
+Il backend espone inoltre un costruttore generale per bozze di tipo dashboard,
+helper, automazione fissa, automazione dinamica, script e template. Le bozze
+restano fuori da `packages/`, hanno un manifest locale e non vengono caricate da
+Home Assistant finché non attraversano il ciclo di collaudo.
 
 ### Quale intelligenza artificiale scegliere
 
@@ -216,6 +257,7 @@ I file creati dall'assistente vengono conservati in:
 ├── script/
 ├── template/
 ├── helper/
+├── laboratorio/
 ├── backup/
 ├── log/
 └── manifest/
@@ -272,6 +314,13 @@ Ogni automazione dinamica deve essere visibile, versionata, disattivabile,
 registrare dati e motivazione di ogni decisione e offrire ripristino della
 versione precedente. Nuovi apparati o nuove categorie di comando richiedono
 approvazione esplicita.
+
+Prima dell'attivazione ogni versione attraversa quattro fasi: bozza,
+simulazione con dati virtuali, ombra con sensori reali ma zero comandi, e infine
+attiva. Il passaggio alla fase attiva richiede interruttore generale abilitato,
+associazione esplicita dei sensori e test superati. Il laboratorio non può
+promuovere da solo comandi protetti come SBU, parametri inverter, BMS, firmware
+o ventilazione tecnica.
 
 ### Animali a bordo
 

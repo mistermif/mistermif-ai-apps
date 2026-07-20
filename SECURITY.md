@@ -32,6 +32,19 @@ Ogni decisione deve registrare input, regola, motivazione, azione, esito e
 versione dell'automazione. Devono essere disponibili disattivazione immediata e
 rollback.
 
+## Collaudo obbligatorio
+
+Una nuova automazione dinamica passa da bozza, simulazione e modalità ombra
+prima di poter diventare attiva. La simulazione usa esclusivamente dati
+virtuali e non chiama servizi Home Assistant. La modalità ombra può leggere i
+sensori reali, ma non esegue comandi.
+
+La modalità attiva richiede associazioni esplicite e convalidate delle entità,
+interruttore generale attivo e azioni già presenti nella policy. Dati mancanti,
+stale, `unknown` o `unavailable` bloccano la decisione. Nessun test deve
+richiedere di scaricare deliberatamente una batteria o sovraccaricare una
+colonnina.
+
 ## Notifiche
 
 L'assistente può inviare notifiche senza conferma esclusivamente attraverso il

@@ -2,9 +2,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+
+from .automation_lab import (
+    LAB_DASHBOARD_YAML,
+    LAB_DYNAMIC_POLICY_YAML,
+    LAB_FIXED_AUTOMATION_YAML,
+    LAB_HELPERS_YAML,
+    LAB_PACKAGE_YAML,
+    LAB_VERSION,
+)
 
 
 WORKSPACE_NAME = "mistermif_ai"
@@ -15,6 +25,7 @@ WORKSPACE_FOLDERS = (
     "script",
     "template",
     "helper",
+    "laboratorio",
     "backup",
     "log",
     "manifest",
@@ -23,6 +34,16 @@ INCLUDE_LINE = "  packages: !include_dir_named mistermif_ai/packages"
 STANDARD_PACKAGES_LINE = "packages: !include_dir_named packages"
 BRIDGE_NAME = "mistermif_ai.yaml"
 BRIDGE_CONTENT = "!include_dir_merge_named ../mistermif_ai/packages\n"
+ARTIFACT_FOLDERS = {
+    "dashboard": "plance",
+    "helper": "helper",
+    "fixed_automation": "automazioni",
+    "dynamic_automation": "automazioni",
+    "script": "script",
+    "template": "template",
+}
+SAFE_ARTIFACT_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{1,63}$")
+MAX_ARTIFACT_SIZE = 100_000
 
 
 class WorkspaceError(RuntimeError):
@@ -63,6 +84,19 @@ class WorkspaceManager:
             raise WorkspaceError("Tipo di file non autorizzato")
         destination.parent.mkdir(parents=True, exist_ok=True)
         previous_hash = self._hash(destination) if destination.exists() else None
+        backup = None
+        if destination.exists() and destination.read_text(encoding="utf-8") != content:
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            backup = self.safe_path(
+                str(
+                    Path("backup")
+                    / "generated"
+                    / timestamp
+                    / destination.relative_to(self.root)
+                )
+            )
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(destination, backup)
         destination.write_text(content, encoding="utf-8")
         self._journal(
             "write",
@@ -70,10 +104,102 @@ class WorkspaceManager:
                 "path": str(destination.relative_to(self.root)),
                 "previous_hash": previous_hash,
                 "new_hash": self._hash(destination),
+                "backup": str(backup.relative_to(self.root)) if backup else None,
             },
         )
         self._write_manifest()
         return destination
+
+    def create_energy_lab_bundle(self) -> dict:
+        self.bootstrap()
+        files = {
+            "packages/mistermif_ai_energy_lab.yaml": LAB_PACKAGE_YAML,
+            "plance/energy_safety_lab.yaml": LAB_DASHBOARD_YAML,
+            "helper/energy_safety_lab.yaml": LAB_HELPERS_YAML,
+            "automazioni/energy_safety_lab_fixed.yaml": LAB_FIXED_AUTOMATION_YAML,
+            "automazioni/energy_safety_lab_dynamic_policy.yaml": (
+                LAB_DYNAMIC_POLICY_YAML
+            ),
+        }
+        written = []
+        for relative_path, content in files.items():
+            self.write_text(relative_path, content)
+            written.append(relative_path)
+        manifest = {
+            "name": "Energy Safety Lab",
+            "version": LAB_VERSION,
+            "files": written,
+            "mode": "simulation",
+            "real_services_called": False,
+            "requires_home_assistant_restart": self._include_installed(),
+        }
+        self.write_text(
+            "laboratorio/energy_safety_lab.json",
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        )
+        self._journal("create_energy_lab_bundle", manifest)
+        return manifest
+
+    def create_artifact(
+        self,
+        kind: str,
+        name: str,
+        content: str,
+        description: str = "",
+    ) -> dict:
+        self.bootstrap()
+        folder = ARTIFACT_FOLDERS.get(kind)
+        if not folder:
+            raise WorkspaceError("Tipo di artefatto non autorizzato")
+        if not SAFE_ARTIFACT_NAME.fullmatch(name):
+            raise WorkspaceError(
+                "Nome non valido: usa solo lettere minuscole, numeri, _ o -"
+            )
+        if not content.strip():
+            raise WorkspaceError("Il contenuto non può essere vuoto")
+        if len(content.encode("utf-8")) > MAX_ARTIFACT_SIZE:
+            raise WorkspaceError("Artefatto troppo grande")
+        if "\x00" in content:
+            raise WorkspaceError("Contenuto non valido")
+
+        relative_path = f"{folder}/{name}.yaml"
+        self.write_text(relative_path, content.rstrip() + "\n")
+        metadata = {
+            "kind": kind,
+            "name": name,
+            "path": relative_path,
+            "description": description[:500],
+            "state": "draft",
+            "loaded_by_home_assistant": False,
+            "external_changes": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.write_text(
+            f"manifest/artifact-{kind}-{name}.json",
+            json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
+        )
+        self._journal("create_artifact_draft", metadata)
+        return metadata
+
+    def list_artifacts(self) -> list[dict]:
+        if not self.root.exists():
+            return []
+        result = []
+        for path in sorted((self.root / "manifest").glob("artifact-*.json")):
+            try:
+                value = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if isinstance(value, dict):
+                result.append(value)
+        return result
+
+    def record_lab_result(self, result: dict) -> None:
+        self.bootstrap()
+        log_path = self.safe_path("log/energy_safety_lab.jsonl")
+        with log_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(result, ensure_ascii=False) + "\n")
+        self._write_manifest()
 
     def install_include(self) -> dict:
         configuration = self.config_dir / "configuration.yaml"

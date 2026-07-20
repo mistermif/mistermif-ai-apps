@@ -13,6 +13,12 @@ from pydantic import BaseModel, Field
 
 from .agent import KnausAgent
 from .alerts import public_alert_catalog
+from .automation_lab import (
+    evaluate_snapshot,
+    public_scenarios,
+    run_scenario,
+    snapshot_from_home_assistant,
+)
 from .config import Settings
 from .cloud_usage import CloudUsage
 from .home_assistant import HomeAssistantClient
@@ -83,7 +89,10 @@ async def lifespan(_: FastAPI):
         await learning_task
 
 
-app = FastAPI(title="mistermif AI", version="0.5.5", lifespan=lifespan)
+APP_VERSION = "0.5.6"
+
+
+app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -106,6 +115,29 @@ class ActionRequest(BaseModel):
 
 class WorkspaceInstallRequest(BaseModel):
     confirmed: bool = False
+
+
+class LabRunRequest(BaseModel):
+    scenario: str = Field(min_length=1, max_length=80)
+
+
+class LabModeRequest(BaseModel):
+    mode: str = Field(pattern="^(simulation|shadow|active)$")
+    confirmed: bool = False
+
+
+class ArtifactRequest(BaseModel):
+    kind: str = Field(
+        pattern="^(dashboard|helper|fixed_automation|dynamic_automation|script|template)$"
+    )
+    name: str = Field(pattern="^[a-z0-9][a-z0-9_-]{1,63}$")
+    content: str = Field(min_length=1, max_length=100_000)
+    description: str = Field(default="", max_length=500)
+
+
+class LabMappingRequest(BaseModel):
+    entities: dict[str, str] = Field(default_factory=dict)
+    available_amps: int = Field(default=6, ge=3, le=16)
 
 
 class AutonomyRequest(BaseModel):
@@ -144,6 +176,27 @@ def require_autonomy() -> None:
         )
 
 
+def lab_mode() -> str:
+    mode = memory.get_setting("lab_mode", "simulation") or "simulation"
+    return mode if mode in {"simulation", "shadow", "active"} else "simulation"
+
+
+LAB_MAPPING_KEYS = {
+    "battery_soc",
+    "battery_current",
+    "battery_trend",
+    "grid_power",
+    "external_power",
+    "solar_power",
+    "available_amps",
+    "climate",
+    "external_charge",
+    "animals_on_board",
+    "external_socket_parallel",
+}
+LAB_REQUIRED_MAPPING_KEYS = {"battery_soc", "grid_power", "solar_power"}
+
+
 def user_identity(
     user_id: str | None,
     user_name: str | None,
@@ -167,7 +220,7 @@ async def caravan_icon() -> FileResponse:
 async def status() -> dict:
     learning = learner.summary()
     return {
-        "version": "0.5.5",
+        "version": APP_VERSION,
         "model": settings.model,
         "ai_provider": settings.ai_provider,
         "ai_configured": bool(settings.ai_api_key)
@@ -190,6 +243,16 @@ async def status() -> dict:
             "samples": learning.samples,
             "confidence": learning.confidence,
             "learned_sites": learning.learned_sites,
+        },
+        "lab": {
+            "mode": lab_mode(),
+            "bundle_installed": (
+                workspace.safe_path("laboratorio/energy_safety_lab.json").exists()
+                if settings.workspace_enabled and workspace.root.exists()
+                else False
+            ),
+            "active_ready": False,
+            "real_actions_during_simulation": False,
         },
     }
 
@@ -404,6 +467,179 @@ async def install_workspace(payload: WorkspaceInstallRequest) -> dict:
         return workspace.install_include()
     except WorkspaceError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/api/workspace/artifacts")
+async def list_workspace_artifacts() -> dict:
+    if not settings.workspace_enabled:
+        raise HTTPException(status_code=403, detail="Workspace disabilitato")
+    return {
+        "items": workspace.list_artifacts(),
+        "creation_scope": "/config/mistermif_ai",
+        "drafts_are_active": False,
+    }
+
+
+@app.post("/api/workspace/artifacts")
+async def create_workspace_artifact(payload: ArtifactRequest) -> dict:
+    if not settings.workspace_enabled:
+        raise HTTPException(status_code=403, detail="Workspace disabilitato")
+    try:
+        return workspace.create_artifact(
+            payload.kind,
+            payload.name,
+            payload.content,
+            payload.description,
+        )
+    except WorkspaceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/api/lab")
+async def lab_status() -> dict:
+    bundle_path = workspace.safe_path("laboratorio/energy_safety_lab.json")
+    mapping = memory.get_json_setting("energy_lab_mapping") or {}
+    mapped_entities = mapping.get("entities", {})
+    return {
+        "mode": lab_mode(),
+        "scenarios": public_scenarios(),
+        "bundle_installed": bundle_path.exists(),
+        "mapping_configured": LAB_REQUIRED_MAPPING_KEYS.issubset(mapped_entities),
+        "mapping": mapping,
+        "active_ready": False,
+        "active_block_reason": (
+            "Prima occorre associare e convalidare i sensori reali in modalità ombra."
+        ),
+        "safety": {
+            "simulation_calls_real_services": False,
+            "simulation_changes_battery": False,
+            "simulation_changes_inverter": False,
+            "workspace_only_generation": True,
+        },
+    }
+
+
+@app.get("/api/lab/entities")
+async def lab_entities() -> dict:
+    states = await ha.states()
+    return {
+        "items": states,
+        "mapping": memory.get_json_setting("energy_lab_mapping"),
+        "required_keys": sorted(LAB_REQUIRED_MAPPING_KEYS),
+        "optional_keys": sorted(LAB_MAPPING_KEYS - LAB_REQUIRED_MAPPING_KEYS),
+    }
+
+
+@app.post("/api/lab/mapping")
+async def save_lab_mapping(payload: LabMappingRequest) -> dict:
+    unknown_keys = set(payload.entities) - LAB_MAPPING_KEYS
+    if unknown_keys:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Chiavi mapping non riconosciute: {', '.join(sorted(unknown_keys))}",
+        )
+    invalid_entities = [
+        entity_id
+        for entity_id in payload.entities.values()
+        if not policy.can_read(entity_id)
+    ]
+    if invalid_entities:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Entità fuori dal perimetro di lettura: "
+                + ", ".join(sorted(invalid_entities))
+            ),
+        )
+    mapping = {
+        "entities": payload.entities,
+        "available_amps": payload.available_amps,
+    }
+    memory.set_json_setting("energy_lab_mapping", mapping)
+    return {
+        "saved": True,
+        "mapping": mapping,
+        "ready_for_shadow": LAB_REQUIRED_MAPPING_KEYS.issubset(payload.entities),
+        "ready_for_active": False,
+    }
+
+
+@app.post("/api/lab/install")
+async def install_lab() -> dict:
+    if not settings.workspace_enabled:
+        raise HTTPException(status_code=403, detail="Workspace disabilitato")
+    try:
+        result = workspace.create_energy_lab_bundle()
+    except WorkspaceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {
+        **result,
+        "message": (
+            "Laboratorio creato nella cartella dedicata. I suoi helper sono "
+            "virtuali e non comandano apparati reali."
+        ),
+    }
+
+
+@app.post("/api/lab/run")
+async def execute_lab_scenario(payload: LabRunRequest) -> dict:
+    try:
+        result = run_scenario(payload.scenario)
+        workspace.record_lab_result(result)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except WorkspaceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return result
+
+
+@app.post("/api/lab/shadow/run")
+async def execute_lab_shadow() -> dict:
+    mapping = memory.get_json_setting("energy_lab_mapping") or {}
+    entities = mapping.get("entities", {})
+    if not LAB_REQUIRED_MAPPING_KEYS.issubset(entities):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Associa prima almeno SOC batteria, potenza rete e potenza solare."
+            ),
+        )
+    snapshot = snapshot_from_home_assistant(
+        await ha.states(),
+        entities,
+        default_available_amps=int(mapping.get("available_amps", 6)),
+    )
+    result = evaluate_snapshot(snapshot, source="shadow")
+    workspace.record_lab_result(result)
+    return result
+
+
+@app.post("/api/lab/mode")
+async def set_lab_mode(payload: LabModeRequest) -> dict:
+    if payload.mode == "active":
+        require_autonomy()
+        if not payload.confirmed:
+            raise HTTPException(
+                status_code=403,
+                detail="Conferma esplicita richiesta per la modalità attiva",
+            )
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Modalità attiva non ancora pronta: associazione sensori e "
+                "collaudo ombra sono obbligatori."
+            ),
+        )
+    memory.set_setting("lab_mode", payload.mode)
+    return {
+        "mode": payload.mode,
+        "real_actions_enabled": False,
+        "message": (
+            "La modalità simulazione usa solo dati virtuali."
+            if payload.mode == "simulation"
+            else "La modalità ombra osserva, registra e non esegue comandi."
+        ),
+    }
 
 
 if __name__ == "__main__":

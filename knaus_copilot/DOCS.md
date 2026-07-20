@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.5.5
+# Guida semplice a mistermif AI 0.5.6
 
 ## Installazione in cinque minuti
 
@@ -71,6 +71,53 @@ equipaggio, mezzo, viaggi e piazzole non vengono inclusi nel contesto cloud.
 - **Emergenza:** intervento immediato.
 - **Urgenza:** intervento entro 10–15 minuti.
 - **Allerta:** nessun intervento richiesto, ma occorre prestare attenzione.
+
+## Provare le automazioni senza scaricare la batteria
+
+Apri mistermif AI e scorri fino a **Energy Safety Lab**:
+
+1. premi **Crea plancia e helper**;
+2. seleziona uno scenario virtuale;
+3. premi **Esegui test**;
+4. controlla decisione, motivazione e azioni che avrebbe proposto.
+
+Il test non accende il clima, non cambia SBU/SUB, non usa la presa esterna e non
+scarica la batteria. Scrive soltanto il risultato nel registro locale
+`/config/mistermif_ai/log/energy_safety_lab.jsonl`.
+
+I file preparati sono separati:
+
+- `packages/mistermif_ai_energy_lab.yaml`: helper virtuali caricabili da HA;
+- `plance/energy_safety_lab.yaml`: plancia Lovelace pronta;
+- `automazioni/energy_safety_lab_fixed.yaml`: descrizione della regola fissa;
+- `automazioni/energy_safety_lab_dynamic_policy.yaml`: limiti dinamici;
+- `laboratorio/energy_safety_lab.json`: manifest del laboratorio.
+
+Se il collegamento `packages` è già attivo, Home Assistant vedrà i nuovi helper
+dopo controllo della configurazione e riavvio. La simulazione nell'app funziona
+subito anche con Home Assistant e sensori offline.
+
+Ogni nuova logica segue:
+
+1. **bozza** nella cartella dedicata;
+2. **simulazione** con valori virtuali;
+3. **ombra** con sensori reali, ma nessun comando;
+4. **attiva** soltanto dopo convalida.
+
+Un sensore `unknown` o `unavailable` rende la prova inconcludente e non può
+generare un comando.
+
+Per preparare la modalità ombra apri **Associazione sensori reali**, scegli:
+
+- SOC batteria;
+- potenza rete/PZEM;
+- potenza solare;
+- facoltativamente corrente batteria e climatizzatore;
+- ampere disponibili.
+
+Premi **Salva associazione** e poi **Prova in ombra**. Anche questa prova
+registra soltanto ciò che l'assistente avrebbe deciso: le azioni reali restano
+zero.
 
 ## AI facoltativa, anche gratuita
 

@@ -37,6 +37,37 @@ autorizzato.
 6. kill switch e disattivazione per singola automazione sono sempre disponibili;
 7. una nuova versione viene prima simulata e può essere ripristinata.
 
+### Stati tecnici
+
+- **Bozza:** file creati solo nel workspace, non caricati e non eseguiti.
+- **Simulazione:** input sintetici, zero chiamate ai servizi Home Assistant.
+- **Ombra:** lettura dei sensori reali e registrazione della decisione, zero
+  comandi.
+- **Attiva:** esecuzione limitata alle azioni già autorizzate, con interruttore
+  generale, cooldown, registro e rollback.
+
+La promozione non può saltare simulazione e ombra. Un sensore non associato,
+stale, `unknown` o `unavailable` blocca la decisione invece di essere convertito
+in zero.
+
+## Energy Safety Lab 0.5.6
+
+Il laboratorio locale contiene scenari ripetibili per SOC basso, recupero
+solare, sovraccarico della colonnina, presa esterna e animali a bordo. Ogni
+risultato dichiara:
+
+- dati di ingresso;
+- limite elettrico virtuale;
+- livello di avviso;
+- decisione e motivazione;
+- azioni consentite che avrebbe proposto;
+- raccomandazioni ancora protette;
+- conferma che nessun servizio reale è stato chiamato.
+
+I risultati sono salvati in
+`/config/mistermif_ai/log/energy_safety_lab.jsonl`. La simulazione è
+deterministica e non consuma richieste Gemini.
+
 ## Limiti critici
 
 Richiedono sempre autorizzazione dedicata:

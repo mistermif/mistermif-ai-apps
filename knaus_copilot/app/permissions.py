@@ -65,7 +65,7 @@ class PermissionPolicy:
                 "parametri batteria",
                 "parametri ventilazione inverter",
                 "firmware ESPHome",
-                "modifica YAML",
+                "modifiche YAML fuori dal workspace dedicato",
                 "riavvio o spegnimento di sistema",
             ],
             "external_changes": {
