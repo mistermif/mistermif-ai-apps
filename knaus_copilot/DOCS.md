@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.4.0
+# Guida semplice a mistermif AI 0.5.2
 
 ## Installazione in cinque minuti
 
@@ -77,6 +77,20 @@ equipaggio, mezzo, viaggi e piazzole non vengono inclusi nel contesto cloud.
 La modalità locale non richiede account, chiavi o pagamenti. Continua a
 registrare dati, memorie e contesti di sosta anche senza un modello generativo.
 
+### Gemini Free
+
+1. crea una chiave in Google AI Studio senza attivare la fatturazione;
+2. seleziona provider `gemini`;
+3. inserisci la chiave in `ai_api_key`;
+4. imposta `gemini-3.5-flash`;
+5. lascia Google Search disattivato;
+6. usa il profilo prudente 15 richieste totali / 5 automatiche;
+7. salva e riavvia solo mistermif AI.
+
+Il piano gratuito può ragionare sui dati forniti da Home Assistant, ma Gemini
+3.5 Flash Free non include Google Search Grounding. Per ricerche aggiornate con
+fonti occorre un progetto Gemini a pagamento e l'opzione Search attiva.
+
 ### Groq Free
 
 1. crea una chiave nel portale Groq;
@@ -90,6 +104,14 @@ registrare dati, memorie e contesti di sosta anche senza un modello generativo.
 ### OpenAI
 
 È ancora supportato, ma richiede credito API separato dall'abbonamento ChatGPT.
+
+### Confronto rapido
+
+- `local`: nessun account, nessun costo, nessun dato al cloud;
+- `gemini` Free: chat generativa gratuita entro la quota, senza ricerca Google;
+- `groq` Free: chat rapida gratuita entro la quota, senza ricerca integrata;
+- `gemini` Paid: ricerca Google con fonti e costi controllabili;
+- `openai`: API a consumo separata da ChatGPT, senza quota gratuita garantita.
 
 Non inserire mai la chiave nel repository, in `configuration.yaml`, nei log o in
 una conversazione. Il filtro rimuove coordinate, tracker, reti, contatti e

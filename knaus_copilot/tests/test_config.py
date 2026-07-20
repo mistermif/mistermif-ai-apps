@@ -94,7 +94,7 @@ class SettingsTest(TestCase):
                 settings = Settings.load()
 
             self.assertEqual("gemini", settings.ai_provider)
-            self.assertEqual("gemini-2.5-flash", settings.model)
+            self.assertEqual("gemini-3.5-flash", settings.model)
             self.assertEqual(
                 "https://generativelanguage.googleapis.com/v1beta",
                 settings.ai_base_url,
@@ -102,3 +102,30 @@ class SettingsTest(TestCase):
             self.assertEqual("contextual_cloud", settings.privacy_mode)
             self.assertEqual(490, settings.cloud_daily_limit)
             self.assertEqual(70, settings.cloud_automatic_limit)
+
+    def test_gemini_free_defaults_are_conservative(self):
+        with TemporaryDirectory() as directory:
+            options_file = Path(directory) / "options.json"
+            options_file.write_text(
+                json.dumps(
+                    {
+                        "ai_provider": "gemini",
+                        "ai_api_key": "test-key",
+                        "privacy_mode": "contextual_cloud",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "KNAUS_DATA_DIR": directory,
+                    "KNAUS_OPTIONS_FILE": str(options_file),
+                },
+                clear=True,
+            ):
+                settings = Settings.load()
+
+            self.assertEqual(15, settings.cloud_daily_limit)
+            self.assertEqual(5, settings.cloud_automatic_limit)
+            self.assertFalse(settings.gemini_search_enabled)

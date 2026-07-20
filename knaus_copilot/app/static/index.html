@@ -357,7 +357,7 @@
         </div>
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.4.0 · APPRENDIMENTO LOCALE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.5.2 · APPRENDIMENTO LOCALE</span></footer>
     </div>
   </div>
 
@@ -442,7 +442,8 @@
           `Modello: ${data.model}`,
           `Entità visibili: ${data.home_assistant.visible_entities || 0}`,
           `AI: ${data.ai_configured ? "disponibile" : "da configurare"}`,
-          `Privacy: ${data.privacy_mode === "local_only" ? "solo locale" : "cloud con redazione"}`,
+          `Privacy: ${data.privacy_mode === "local_only" ? "solo locale" : data.privacy_mode === "contextual_cloud" ? "cloud contestuale" : "cloud con redazione"}`,
+          `Ricerca Gemini: ${data.gemini_search_enabled ? "attiva" : "disattiva"}`,
           `Cloud oggi: ${data.cloud_usage.total}/${data.cloud_usage.daily_limit} richieste`,
           `Automatiche: ${data.cloud_usage.automatic}/${data.cloud_usage.automatic_limit}`,
           `Workspace: ${data.workspace?.include_installed ? "collegato" : "da collegare"}`,

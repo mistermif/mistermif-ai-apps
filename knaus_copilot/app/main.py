@@ -83,7 +83,7 @@ async def lifespan(_: FastAPI):
         await learning_task
 
 
-app = FastAPI(title="mistermif AI", version="0.5.1", lifespan=lifespan)
+app = FastAPI(title="mistermif AI", version="0.5.2", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
@@ -167,7 +167,7 @@ async def caravan_icon() -> FileResponse:
 async def status() -> dict:
     learning = learner.summary()
     return {
-        "version": "0.5.1",
+        "version": "0.5.2",
         "model": settings.model,
         "ai_provider": settings.ai_provider,
         "ai_configured": bool(settings.ai_api_key)
@@ -175,6 +175,7 @@ async def status() -> dict:
         else True,
         "privacy_mode": settings.privacy_mode,
         "cloud_usage": cloud_usage.snapshot(),
+        "gemini_search_enabled": settings.gemini_search_enabled,
         "permissions": policy.public_summary(),
         "autonomy_enabled": autonomy_enabled(),
         "home_assistant": await ha.health(),

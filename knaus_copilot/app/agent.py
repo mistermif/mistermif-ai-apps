@@ -232,6 +232,18 @@ class KnausAgent:
                 "Limite Gemini temporaneamente raggiunto; "
                 "il controllo locale continua."
             )
+        if response.status_code == 404:
+            raise RuntimeError(
+                f"Il modello Gemini '{self.model}' non è disponibile o è stato "
+                "ritirato. Seleziona un modello attuale, per esempio "
+                "gemini-3.5-flash."
+            )
+        if response.status_code == 400 and web_search:
+            raise RuntimeError(
+                "Google Search Grounding non è disponibile per questo progetto "
+                "o piano Gemini. Disattiva la ricerca Gemini oppure configura "
+                "la fatturazione in Google AI Studio."
+            )
         response.raise_for_status()
         data = response.json()
         candidates = data.get("candidates") or []

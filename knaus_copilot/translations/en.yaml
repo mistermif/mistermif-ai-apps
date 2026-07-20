@@ -34,10 +34,10 @@ configuration:
     description: "Local only, redacted data, or extended context with location."
   cloud_daily_limit:
     name: "Daily cloud limit"
-    description: "Overall cap kept below the configured free-tier allowance."
+    description: "Local overall cap. The recommended free profile uses 15 requests."
   cloud_automatic_limit:
     name: "Automatic search limit"
-    description: "Budget reserved for searches started autonomously."
+    description: "Separate automatic budget. The recommended free profile uses 5 requests."
   gemini_search_enabled:
     name: "Google Search for Gemini"
-    description: "Allows current searches with cited sources when needed."
+    description: "Requires a Gemini plan supporting Google Search Grounding; it is not included in the Gemini 3.5 Flash Free Tier."

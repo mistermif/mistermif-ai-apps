@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.5.1
+## Cosa funziona oggi — versione 0.5.2
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -51,10 +51,43 @@ deterministiche e indipendenti dall'AI e da Internet.
 - tre livelli operativi: emergenza, urgenza e allerta;
 - collegamento compatibile con installazioni che usano già `/config/packages`.
 
-### Gemini e Google Search
+### Quale intelligenza artificiale scegliere
 
-Per usare Gemini: crea una chiave in Google AI Studio, seleziona `gemini`,
-inseriscila in `ai_api_key` e usa `gemini-2.5-flash`.
+La sicurezza e le automazioni locali non dipendono da alcun provider. Cambiare
+AI modifica la conversazione e la capacità di interpretazione, non i permessi
+concessi all'assistente.
+
+| Soluzione | Costo iniziale | Ricerca Internet in questa versione | Quando sceglierla |
+|---|---:|---|---|
+| `local` | gratuito | no | massima riservatezza, memoria e regole locali senza chat generativa |
+| `gemini` Free | gratuito entro le quote del progetto | no con Gemini 3.5 Flash Free | ragionamento cloud senza carta di credito, usando dati HA e meteo già integrato |
+| `groq` Free | gratuito entro le quote | no | risposte molto rapide e buona alternativa gratuita |
+| `gemini` Paid | consumo a pagamento | Google Search Grounding con fonti | meteo contestuale, ristoranti, campeggi e ricambi aggiornati |
+| `openai` | consumo a pagamento | non ancora collegata dall'app | qualità elevata; l'API è separata dall'abbonamento ChatGPT |
+
+Quote, modelli e prezzi cambiano nel tempo: prima di attivare la fatturazione
+verifica sempre le pagine ufficiali di [Gemini](https://ai.google.dev/gemini-api/docs/pricing),
+[Groq](https://console.groq.com/docs/rate-limits) e
+[OpenAI](https://developers.openai.com/api/docs/models/gpt-5.4-mini).
+
+#### Gemini gratuito
+
+1. crea una chiave in Google AI Studio senza attivare la fatturazione;
+2. seleziona `gemini` e inserisci la chiave in `ai_api_key`;
+3. usa il modello stabile `gemini-3.5-flash`;
+4. lascia `gemini_search_enabled` disattivato;
+5. usa inizialmente 15 richieste giornaliere, di cui 5 automatiche.
+
+Gemini 3.5 Flash offre input e output gratuiti entro i limiti del progetto, ma
+Google Search Grounding non è disponibile nel Free Tier. I limiti reali sono
+mostrati in Google AI Studio e prevalgono sempre sui tetti locali dell'app.
+
+#### Gemini con fatturazione
+
+Con un progetto a pagamento si può attivare `gemini_search_enabled`. Al momento
+Google indica per i modelli Gemini 3 una franchigia di 5.000 prompt grounded al
+mese, condivisa, seguita da tariffazione per query; input e output hanno costi
+separati. Imposta limiti locali prudenti e controlla periodicamente la spesa.
 
 Le modalità privacy sono:
 
@@ -63,14 +96,10 @@ Le modalità privacy sono:
 - `contextual_cloud`: consente posizione e contesto utile, ma rimuove sempre
   chiavi API, token, password, segreti, indirizzi IP e contatti.
 
-I valori iniziali sono 450 richieste complessive al giorno e 60 automatiche.
-Il sotto-limite automatico protegge una riserva per chat e ricerche manuali.
-Sono tetti locali configurabili, non una garanzia sulle quote future del
-fornitore. Al loro esaurimento il controllo locale continua.
-
-Gemini attiva Google Search quando la richiesta lo indica o contiene un intento
-riconoscibile, come meteo, ristorante, campeggio o ricambio. Le fonti vengono
-mostrate in fondo alla risposta.
+I valori iniziali interni sono 15 richieste complessive al giorno e 5
+automatiche. Il sotto-limite protegge una riserva per le richieste manuali. Se
+Google Search è autorizzato, viene usato solo per richieste riconoscibili come
+meteo, ristorante, campeggio o ricambio e le fonti vengono mostrate in fondo.
 
 ### Livelli di allarme
 
@@ -279,7 +308,7 @@ Ulteriori dettagli sono in [`docs/EXPERTISE.md`](docs/EXPERTISE.md).
 6. Rispondi alla breve intervista iniziale.
 7. Premi **Attiva cartella dedicata** e conferma.
 
-Per usare l'app in modalità locale non serve altro. Groq Free e OpenAI sono
+Per usare l'app in modalità locale non serve altro. Gemini, Groq e OpenAI sono
 facoltativi. Le notifiche e le azioni automatiche si configurano in seguito.
 L'autonomia rimane bloccata finché l'utente non la abilita.
 
@@ -293,6 +322,20 @@ L'autonomia rimane bloccata finché l'utente non la abilita.
 
 Le quote gratuite possono cambiare. Se Groq non risponde, memoria, monitoraggio,
 apprendimento e protezioni locali continuano a funzionare.
+
+Il piano gratuito pubblica limiti distinti per modello. Per
+`openai/gpt-oss-20b` Groq indica attualmente fino a 30 richieste al minuto e
+1.000 al giorno, oltre a limiti sui token; fanno fede i limiti mostrati nel
+proprio account.
+
+### OpenAI a consumo
+
+OpenAI non dispone di un livello API gratuito per `gpt-5.4-mini`. L'API è
+fatturata separatamente da ChatGPT e richiede credito o un metodo di pagamento.
+Il modello indicato costa attualmente, per milione di token, 0,75 USD in input e
+4,50 USD in output; eventuali strumenti hanno costi separati. Mistermif AI usa
+OpenAI per le risposte, ma non abilita ancora automaticamente il Web Search di
+OpenAI.
 
 ### Cosa fa automaticamente
 

@@ -17,9 +17,9 @@ class Settings:
     climate_entity: str = "climate.thermal_control"
     notification_service: str = "notify.notify"
     privacy_mode: str = "local_only"
-    cloud_daily_limit: int = 450
-    cloud_automatic_limit: int = 60
-    gemini_search_enabled: bool = True
+    cloud_daily_limit: int = 15
+    cloud_automatic_limit: int = 5
+    gemini_search_enabled: bool = False
     workspace_enabled: bool = True
     homeassistant_config_dir: Path = Path("/homeassistant")
     max_context_entities: int = 80
@@ -75,14 +75,14 @@ class Settings:
             max_context_entities = 80
         max_context_entities = min(200, max(10, max_context_entities))
         try:
-            cloud_daily_limit = int(options.get("cloud_daily_limit", 450))
+            cloud_daily_limit = int(options.get("cloud_daily_limit", 15))
         except (TypeError, ValueError):
-            cloud_daily_limit = 450
+            cloud_daily_limit = 15
         cloud_daily_limit = min(490, max(1, cloud_daily_limit))
         try:
-            cloud_automatic_limit = int(options.get("cloud_automatic_limit", 60))
+            cloud_automatic_limit = int(options.get("cloud_automatic_limit", 5))
         except (TypeError, ValueError):
-            cloud_automatic_limit = 60
+            cloud_automatic_limit = 5
         cloud_automatic_limit = min(
             cloud_daily_limit, max(0, cloud_automatic_limit)
         )
@@ -101,7 +101,7 @@ class Settings:
             or model.startswith("gpt-")
             or model in {"local-rules", "openai/gpt-oss-20b"}
         ):
-            model = "gemini-2.5-flash"
+            model = "gemini-3.5-flash"
 
         return cls(
             openai_api_key=legacy_openai_key,
@@ -120,7 +120,7 @@ class Settings:
             cloud_daily_limit=cloud_daily_limit,
             cloud_automatic_limit=cloud_automatic_limit,
             gemini_search_enabled=bool(
-                options.get("gemini_search_enabled", True)
+                options.get("gemini_search_enabled", False)
             ),
             workspace_enabled=bool(options.get("workspace_enabled", True)),
             max_context_entities=max_context_entities,
