@@ -47,7 +47,6 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
             [
                 response(503),
                 response(503),
-                response(503),
                 response(
                     200,
                     {
@@ -69,16 +68,16 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual("Gemini operativo", answer)
-        self.assertEqual(4, len(client.urls))
+        self.assertEqual(3, len(client.urls))
         self.assertTrue(
             client.urls[-1].endswith(
                 f"/models/{GEMINI_FALLBACK_MODEL}:generateContent"
             )
         )
-        self.assertEqual([call(1.0), call(2.0)], sleep.await_args_list)
+        self.assertEqual([call(1.0)], sleep.await_args_list)
 
     async def test_reports_clear_error_when_primary_and_fallback_are_down(self):
-        client = FakeAsyncClient([response(503) for _ in range(5)])
+        client = FakeAsyncClient([response(503) for _ in range(3)])
         with (
             patch("app.agent.httpx.AsyncClient", return_value=client),
             patch("app.agent.asyncio.sleep", AsyncMock()),
@@ -90,7 +89,7 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
                 )
 
     async def test_search_does_not_fallback_to_unsupported_free_grounding(self):
-        client = FakeAsyncClient([response(503) for _ in range(3)])
+        client = FakeAsyncClient([response(503) for _ in range(2)])
         with (
             patch("app.agent.httpx.AsyncClient", return_value=client),
             patch("app.agent.asyncio.sleep", AsyncMock()),
@@ -101,5 +100,74 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
                     web_search=True,
                 )
 
-        self.assertEqual(3, len(client.urls))
+        self.assertEqual(2, len(client.urls))
         self.assertTrue(all(GEMINI_FALLBACK_MODEL not in url for url in client.urls))
+
+    async def test_short_chat_uses_fast_lite_model_with_minimal_thinking(self):
+        client = FakeAsyncClient(
+            [
+                response(
+                    200,
+                    {
+                        "candidates": [
+                            {"content": {"parts": [{"text": "Sì, sono connesso."}]}}
+                        ]
+                    },
+                )
+            ]
+        )
+        with patch("app.agent.httpx.AsyncClient", return_value=client):
+            answer = await self.make_agent()._gemini(
+                [{"role": "user", "content": "sei connesso?"}],
+                web_search=False,
+                thinking_level="minimal",
+            )
+
+        self.assertEqual("Sì, sono connesso.", answer)
+        self.assertIn(GEMINI_FALLBACK_MODEL, client.urls[0])
+
+    def test_thinking_level_follows_request_complexity(self):
+        agent = self.make_agent()
+        self.assertEqual("minimal", agent._thinking_level("Ciao, sei connesso?"))
+        self.assertEqual(
+            "low",
+            agent._thinking_level("Mi puoi spiegare come stai funzionando oggi?"),
+        )
+        self.assertEqual(
+            "low",
+            agent._thinking_level("Come sta la caravan?"),
+        )
+        self.assertEqual(
+            "medium",
+            agent._thinking_level(
+                "Analizza la batteria e prepara una strategia energetica."
+            ),
+        )
+
+    def test_simple_chat_sends_no_sensor_dump(self):
+        agent = self.make_agent()
+        states = [
+            {"entity_id": "sensor.batteria_soc", "name": "Batteria SOC"},
+            {"entity_id": "sensor.temperatura", "name": "Temperatura"},
+        ]
+        self.assertEqual(
+            [],
+            agent._select_states(states, "Ciao, sei connesso?", "minimal"),
+        )
+
+    def test_energy_question_keeps_only_relevant_states(self):
+        agent = self.make_agent()
+        states = [
+            {"entity_id": "sensor.batteria_soc", "name": "Batteria SOC"},
+            {"entity_id": "sensor.inverter_power", "name": "Potenza inverter"},
+            {"entity_id": "sensor.porta", "name": "Porta ingresso"},
+        ]
+        selected = agent._select_states(
+            states,
+            "Analizza energia e batteria",
+            "medium",
+        )
+        self.assertEqual(
+            {"sensor.batteria_soc", "sensor.inverter_power"},
+            {item["entity_id"] for item in selected},
+        )

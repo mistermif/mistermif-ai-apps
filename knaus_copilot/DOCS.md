@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.5.3
+# Guida semplice a mistermif AI 0.5.4
 
 ## Installazione in cinque minuti
 
@@ -94,6 +94,12 @@ fonti occorre un progetto Gemini a pagamento e l'opzione Search attiva.
 Se Gemini 3.5 Flash restituisce `503 Service Unavailable`, l'app ritenta
 automaticamente e passa a `gemini-3.1-flash-lite`, anch'esso gratuito, quando
 Search è disattivata. Non occorre cambiare la configurazione o la chiave.
+
+La velocità è adattiva: domande brevi usano il modello Lite e ragionamento
+minimo; domande normali usano ragionamento ridotto; analisi energetiche, meteo,
+sicurezza e decisioni automatiche conservano il modello 3.5 e un ragionamento
+più approfondito. Prima della richiesta cloud vengono scelti localmente solo i
+sensori pertinenti, senza inviare inutilmente l'intero elenco di Home Assistant.
 
 ### Groq Free
 

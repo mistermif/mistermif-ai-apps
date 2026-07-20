@@ -1,4 +1,4 @@
-# mistermif AI 0.5.3
+# mistermif AI 0.5.4
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -27,6 +27,9 @@ include Google Search Grounding per questo modello; la funzione va attivata solo
 su un progetto con fatturazione compatibile.
 In caso di errore temporaneo `503`, l'app esegue brevi ritentativi e usa
 automaticamente `gemini-3.1-flash-lite` come fallback gratuito.
+Le richieste brevi vengono instradate sul modello Lite con ragionamento minimo;
+le analisi complesse restano sul modello 3.5 e ricevono un contesto sensori
+selezionato localmente.
 
 ## Sviluppo locale
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -24,6 +25,79 @@ logger = logging.getLogger("mistermif-ai")
 
 GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-lite"
 GEMINI_RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
+
+SIMPLE_MESSAGE_HINTS = (
+    "ciao",
+    "buongiorno",
+    "buonasera",
+    "grazie",
+    "sei conness",
+    "sei online",
+    "funzioni",
+    "chi sei",
+    "prova",
+    "tutto ok",
+)
+
+COMPLEX_MESSAGE_HINTS = (
+    "analizz",
+    "strateg",
+    "preved",
+    "confront",
+    "diagnos",
+    "ottimizz",
+    "sicurezza",
+    "emergenza",
+    "autonomia",
+    "batteria",
+    "energia",
+    "inverter",
+    "meteo",
+    "viaggio",
+    "frigorif",
+    "condensa",
+    "temperatur",
+)
+
+STATE_CONTEXT_GROUPS = {
+    "battery": (
+        ("batter", "soc", "autonomia"),
+        ("batter", "soc", "voltag", "voltage", "corrente", "current"),
+    ),
+    "energy": (
+        ("energi", "consum", "potenza", "watt", "ampere", "rete", "inverter"),
+        ("power", "potenza", "energy", "energia", "pzem", "inverter", "current"),
+    ),
+    "climate": (
+        ("clima", "temperatur", "umid", "comfort", "caldo", "freddo"),
+        ("climate", "temperatur", "humidity", "umid", "thermal"),
+    ),
+    "fridge": (
+        ("frigo", "frigorif", "ventol"),
+        ("fridge", "frigo", "frigorif", "ventol"),
+    ),
+    "weather": (
+        ("meteo", "vento", "piogg", "pression", "temporale", "sole"),
+        ("weather", "meteo", "wind", "vento", "pressure", "pression", "rain"),
+    ),
+    "location": (
+        ("dove", "posizion", "gps", "campeggio", "viaggio"),
+        ("device_tracker", "gps", "position", "posizion", "latitude", "longitude"),
+    ),
+}
+
+CORE_STATE_FRAGMENTS = (
+    "batter",
+    "soc",
+    "inverter",
+    "power",
+    "potenza",
+    "temperatur",
+    "climate",
+    "frigo",
+    "humidity",
+    "umid",
+)
 
 
 SYSTEM_INSTRUCTIONS = """
@@ -142,10 +216,22 @@ class KnausAgent:
             self.memory.add_message(user_id, "assistant", answer)
             return answer
 
-        history = self.memory.recent_messages(user_id, limit=16)
-        memories = self.memory.list_memories(user_id, limit=20)
+        thinking_level = self._thinking_level(
+            message,
+            automatic=automatic,
+            web_search=web_search,
+        )
+        history_limit = {"minimal": 4, "low": 8, "medium": 16}[thinking_level]
+        memory_limit = {"minimal": 4, "low": 8, "medium": 20}[thinking_level]
+        history = self.memory.recent_messages(user_id, limit=history_limit)
+        memories = self.memory.list_memories(user_id, limit=memory_limit)
+        selected_states = self._select_states(
+            ha_states,
+            message,
+            thinking_level=thinking_level,
+        )
         context = {
-            "home_assistant": self.privacy.sanitize_states(ha_states),
+            "home_assistant": self.privacy.sanitize_states(selected_states),
             "memories": self.privacy.sanitize_memories(memories),
             "permissions": self.policy.public_summary(),
         }
@@ -172,6 +258,7 @@ class KnausAgent:
                 answer = await self._gemini(
                     conversation,
                     web_search=web_search and self.gemini_search_enabled,
+                    thinking_level=thinking_level,
                 )
                 self.memory.add_message(user_id, "assistant", answer)
                 return answer
@@ -206,10 +293,64 @@ class KnausAgent:
         self.memory.add_message(user_id, "assistant", answer)
         return answer
 
+    @staticmethod
+    def _thinking_level(
+        message: str,
+        automatic: bool = False,
+        web_search: bool = False,
+    ) -> str:
+        normalized = message.casefold().strip()
+        if automatic or web_search:
+            return "medium"
+        if (
+            len(normalized) > 240
+            or any(hint in normalized for hint in COMPLEX_MESSAGE_HINTS)
+        ):
+            return "medium"
+        if any(hint in normalized for hint in SIMPLE_MESSAGE_HINTS):
+            return "minimal"
+        return "low"
+
+    @staticmethod
+    def _select_states(
+        states: list[dict[str, Any]],
+        message: str,
+        thinking_level: str,
+    ) -> list[dict[str, Any]]:
+        if thinking_level == "minimal":
+            return []
+
+        normalized = message.casefold()
+        fragments: set[str] = set()
+        for triggers, group_fragments in STATE_CONTEXT_GROUPS.values():
+            if any(trigger in normalized for trigger in triggers):
+                fragments.update(group_fragments)
+        if not fragments:
+            fragments.update(CORE_STATE_FRAGMENTS)
+
+        query_words = {
+            word
+            for word in re.findall(r"[\wà-öø-ÿ]+", normalized)
+            if len(word) >= 5
+        }
+        ranked = []
+        for index, state in enumerate(states):
+            candidate = (
+                f"{state.get('entity_id', '')} {state.get('name', '')}".casefold()
+            )
+            score = sum(4 for fragment in fragments if fragment in candidate)
+            score += sum(2 for word in query_words if word in candidate)
+            if score:
+                ranked.append((-score, index, state))
+        ranked.sort(key=lambda item: (item[0], item[1]))
+        limit = 32 if thinking_level == "low" else 60
+        return [item[2] for item in ranked[:limit]]
+
     async def _gemini(
         self,
         conversation: list[dict[str, str]],
         web_search: bool,
+        thinking_level: str = "low",
     ) -> str:
         contents = [
             {
@@ -221,16 +362,26 @@ class KnausAgent:
         payload: dict[str, Any] = {
             "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTIONS}]},
             "contents": contents,
+            "generationConfig": {
+                "thinkingConfig": {"thinkingLevel": thinking_level}
+            },
         }
         if web_search:
             payload["tools"] = [{"google_search": {}}]
-        response, effective_model = await self._gemini_request(
+        preferred_model = (
+            GEMINI_FALLBACK_MODEL
+            if thinking_level == "minimal" and not web_search
+            else self.model
+        )
+        response, effective_model, switched_model = await self._gemini_request(
             payload,
             allow_fallback=not web_search,
+            preferred_model=preferred_model,
         )
-        if effective_model != self.model:
+        if switched_model:
             logger.warning(
-                "Gemini primario non disponibile: fallback %s ha risposto HTTP %s",
+                "Gemini %s non disponibile: modello alternativo %s ha risposto HTTP %s",
+                preferred_model,
                 effective_model,
                 response.status_code,
             )
@@ -255,8 +406,8 @@ class KnausAgent:
             )
         if response.status_code in GEMINI_RETRYABLE_STATUSES:
             fallback_detail = (
-                f" e provato il modello gratuito di riserva {GEMINI_FALLBACK_MODEL}"
-                if effective_model == GEMINI_FALLBACK_MODEL
+                " e provato il modello alternativo gratuito"
+                if switched_model
                 else ""
             )
             raise RuntimeError(
@@ -288,15 +439,21 @@ class KnausAgent:
         self,
         payload: dict[str, Any],
         allow_fallback: bool,
-    ) -> tuple[httpx.Response, str]:
-        models = [self.model]
-        if allow_fallback and self.model != GEMINI_FALLBACK_MODEL:
-            models.append(GEMINI_FALLBACK_MODEL)
+        preferred_model: str,
+    ) -> tuple[httpx.Response, str, bool]:
+        models = [preferred_model]
+        alternate_model = (
+            self.model
+            if preferred_model == GEMINI_FALLBACK_MODEL
+            else GEMINI_FALLBACK_MODEL
+        )
+        if allow_fallback and alternate_model not in models:
+            models.append(alternate_model)
 
         last_response: httpx.Response | None = None
         async with httpx.AsyncClient(timeout=45) as client:
             for model_index, model in enumerate(models):
-                attempts = 3 if model_index == 0 else 2
+                attempts = 2 if model_index == 0 else 1
                 for attempt in range(attempts):
                     response = await client.post(
                         f"{self.base_url}/models/{model}:generateContent",
@@ -308,7 +465,7 @@ class KnausAgent:
                     )
                     last_response = response
                     if response.status_code not in GEMINI_RETRYABLE_STATUSES:
-                        return response, model
+                        return response, model, model_index > 0
                     if attempt < attempts - 1:
                         delay = float(2**attempt)
                         logger.warning(
@@ -327,4 +484,4 @@ class KnausAgent:
 
         if last_response is None:
             raise RuntimeError("Nessuna richiesta Gemini è stata eseguita.")
-        return last_response, models[-1]
+        return last_response, models[-1], len(models) > 1
