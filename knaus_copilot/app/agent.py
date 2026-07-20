@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from typing import Any
 
 import httpx
@@ -16,6 +18,12 @@ from .memory import MemoryStore
 from .permissions import PermissionPolicy
 from .privacy import PrivacyFilter
 from .cloud_usage import CloudUsage
+
+
+logger = logging.getLogger("mistermif-ai")
+
+GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-lite"
+GEMINI_RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
 
 
 SYSTEM_INSTRUCTIONS = """
@@ -216,25 +224,26 @@ class KnausAgent:
         }
         if web_search:
             payload["tools"] = [{"google_search": {}}]
-        async with httpx.AsyncClient(timeout=45) as client:
-            response = await client.post(
-                f"{self.base_url}/models/{self.model}:generateContent",
-                headers={
-                    "x-goog-api-key": self.api_key,
-                    "Content-Type": "application/json",
-                },
-                json=payload,
+        response, effective_model = await self._gemini_request(
+            payload,
+            allow_fallback=not web_search,
+        )
+        if effective_model != self.model:
+            logger.warning(
+                "Gemini primario non disponibile: fallback %s ha risposto HTTP %s",
+                effective_model,
+                response.status_code,
             )
         if response.status_code == 401 or response.status_code == 403:
             raise RuntimeError("Chiave Gemini non valida o non autorizzata.")
         if response.status_code == 429:
             raise RuntimeError(
-                "Limite Gemini temporaneamente raggiunto; "
-                "il controllo locale continua."
+                "Limite Gemini temporaneamente raggiunto anche dopo i tentativi "
+                "automatici; il controllo locale continua."
             )
         if response.status_code == 404:
             raise RuntimeError(
-                f"Il modello Gemini '{self.model}' non è disponibile o è stato "
+                f"Il modello Gemini '{effective_model}' non è disponibile o è stato "
                 "ritirato. Seleziona un modello attuale, per esempio "
                 "gemini-3.5-flash."
             )
@@ -243,6 +252,18 @@ class KnausAgent:
                 "Google Search Grounding non è disponibile per questo progetto "
                 "o piano Gemini. Disattiva la ricerca Gemini oppure configura "
                 "la fatturazione in Google AI Studio."
+            )
+        if response.status_code in GEMINI_RETRYABLE_STATUSES:
+            fallback_detail = (
+                f" e provato il modello gratuito di riserva {GEMINI_FALLBACK_MODEL}"
+                if effective_model == GEMINI_FALLBACK_MODEL
+                else ""
+            )
+            raise RuntimeError(
+                "Gemini è temporaneamente sovraccarico o non disponibile. "
+                f"Ho già eseguito i tentativi automatici{fallback_detail}. "
+                "Il controllo locale "
+                "continua; riprova tra qualche minuto."
             )
         response.raise_for_status()
         data = response.json()
@@ -262,3 +283,48 @@ class KnausAgent:
         if links:
             answer += "\n\nFonti:\n" + "\n".join(dict.fromkeys(links))
         return answer
+
+    async def _gemini_request(
+        self,
+        payload: dict[str, Any],
+        allow_fallback: bool,
+    ) -> tuple[httpx.Response, str]:
+        models = [self.model]
+        if allow_fallback and self.model != GEMINI_FALLBACK_MODEL:
+            models.append(GEMINI_FALLBACK_MODEL)
+
+        last_response: httpx.Response | None = None
+        async with httpx.AsyncClient(timeout=45) as client:
+            for model_index, model in enumerate(models):
+                attempts = 3 if model_index == 0 else 2
+                for attempt in range(attempts):
+                    response = await client.post(
+                        f"{self.base_url}/models/{model}:generateContent",
+                        headers={
+                            "x-goog-api-key": self.api_key,
+                            "Content-Type": "application/json",
+                        },
+                        json=payload,
+                    )
+                    last_response = response
+                    if response.status_code not in GEMINI_RETRYABLE_STATUSES:
+                        return response, model
+                    if attempt < attempts - 1:
+                        delay = float(2**attempt)
+                        logger.warning(
+                            "Gemini %s ha risposto HTTP %s; nuovo tentativo tra %.0fs",
+                            model,
+                            response.status_code,
+                            delay,
+                        )
+                        await asyncio.sleep(delay)
+                if model_index < len(models) - 1:
+                    logger.warning(
+                        "Gemini %s non disponibile; provo il fallback gratuito %s",
+                        model,
+                        models[model_index + 1],
+                    )
+
+        if last_response is None:
+            raise RuntimeError("Nessuna richiesta Gemini è stata eseguita.")
+        return last_response, models[-1]

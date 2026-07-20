@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.5.2
+# Guida semplice a mistermif AI 0.5.3
 
 ## Installazione in cinque minuti
 
@@ -90,6 +90,10 @@ registrare dati, memorie e contesti di sosta anche senza un modello generativo.
 Il piano gratuito può ragionare sui dati forniti da Home Assistant, ma Gemini
 3.5 Flash Free non include Google Search Grounding. Per ricerche aggiornate con
 fonti occorre un progetto Gemini a pagamento e l'opzione Search attiva.
+
+Se Gemini 3.5 Flash restituisce `503 Service Unavailable`, l'app ritenta
+automaticamente e passa a `gemini-3.1-flash-lite`, anch'esso gratuito, quando
+Search è disattivata. Non occorre cambiare la configurazione o la chiave.
 
 ### Groq Free
 

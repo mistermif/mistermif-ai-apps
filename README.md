@@ -28,10 +28,12 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.5.2
+## Cosa funziona oggi — versione 0.5.3
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
+- ritentativi automatici e fallback gratuito da Gemini 3.5 Flash a
+  Gemini 3.1 Flash-Lite in caso di errore temporaneo `503`;
 - Google Search opzionale con fonti per meteo, ristoranti, campeggi e ricambi;
 - budget giornalieri separati per richieste cloud totali e automatiche;
 - Groq Free supportato tramite Responses API compatibile;
@@ -81,6 +83,9 @@ verifica sempre le pagine ufficiali di [Gemini](https://ai.google.dev/gemini-api
 Gemini 3.5 Flash offre input e output gratuiti entro i limiti del progetto, ma
 Google Search Grounding non è disponibile nel Free Tier. I limiti reali sono
 mostrati in Google AI Studio e prevalgono sempre sui tetti locali dell'app.
+Se Google segnala un sovraccarico temporaneo, l'app ritenta la richiesta e,
+senza Search attiva, passa automaticamente al modello gratuito
+`gemini-3.1-flash-lite`. Le protezioni e le analisi locali non si interrompono.
 
 #### Gemini con fatturazione
 

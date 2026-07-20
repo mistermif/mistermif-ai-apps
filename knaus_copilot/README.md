@@ -1,4 +1,4 @@
-# mistermif AI 0.5.2
+# mistermif AI 0.5.3
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -25,6 +25,8 @@ Il profilo Gemini gratuito consigliato usa `gemini-3.5-flash`, Search
 disattivato, 15 richieste giornaliere e 5 automatiche. Il piano gratuito non
 include Google Search Grounding per questo modello; la funzione va attivata solo
 su un progetto con fatturazione compatibile.
+In caso di errore temporaneo `503`, l'app esegue brevi ritentativi e usa
+automaticamente `gemini-3.1-flash-lite` come fallback gratuito.
 
 ## Sviluppo locale
 
