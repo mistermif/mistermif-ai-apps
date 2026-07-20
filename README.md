@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.5.4
+## Cosa funziona oggi — versione 0.5.5
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -36,7 +36,13 @@ deterministiche e indipendenti dall'AI e da Internet.
   Gemini 3.1 Flash-Lite in caso di errore temporaneo `503`;
 - risposta adattiva: modello Lite e ragionamento minimo per le richieste brevi,
   Gemini 3.5 e ragionamento più profondo per analisi e decisioni;
+- saluti e test rapidi isolati dai vecchi ricordi per evitare risposte fuori
+  contesto;
 - selezione locale dei soli sensori pertinenti prima dell'invio al modello;
+- filtro ricorsivo degli attributi Home Assistant per rimuovere token,
+  credenziali, SSID, IP e contatti anche dai dati annidati;
+- sensori offline trattati come diagnosi incompleta, senza generare da soli
+  falsi allarmi;
 - Google Search opzionale con fonti per meteo, ristoranti, campeggi e ricambi;
 - budget giornalieri separati per richieste cloud totali e automatiche;
 - Groq Free supportato tramite Responses API compatibile;
@@ -92,7 +98,8 @@ senza Search attiva, passa automaticamente al modello gratuito
 
 Per ridurre la latenza, saluti e richieste molto brevi vengono gestiti da
 Gemini 3.1 Flash-Lite con ragionamento `minimal` e senza inviare l'elenco dei
-sensori. Le domande normali usano ragionamento `low`; analisi energetiche,
+sensori, vecchie conversazioni o memorie. Le domande normali usano ragionamento
+`low`; analisi energetiche,
 meteo, sicurezza e decisioni automatiche restano su Gemini 3.5 Flash con
 ragionamento `medium` e ricevono soltanto le entità pertinenti.
 
@@ -140,6 +147,9 @@ contesto cloud filtrato.
 - memoria di piazzola, ampere, orientamento ed esposizione solare;
 - preparazione del viaggio usando meteo ed esperienze precedenti;
 - monitoraggio e analisi del frigorifero e delle sue ventole;
+- integrazione TPMS opzionale per osservare pressione e temperatura degli
+  pneumatici, rilevare tendenze e suggerire una sosta o una riduzione prudente
+  della velocità senza sostituire le prescrizioni del costruttore;
 - riepiloghi giornalieri di energia, temperature e comfort;
 - allerte per vento, temporali, gelo, caldo e condensa;
 - ricerca guidata di ricambi con verifica della compatibilità;

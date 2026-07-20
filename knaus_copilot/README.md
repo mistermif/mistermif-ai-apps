@@ -1,4 +1,4 @@
-# mistermif AI 0.5.4
+# mistermif AI 0.5.5
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -18,7 +18,8 @@ della caravan.
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
 sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e
 contesto Home Assistant utile; segreti, chiavi, token, password, IP e contatti
-restano redatti. Le azioni operative richiedono autorizzazioni separate e
+restano redatti anche quando presenti negli attributi annidati delle entità.
+Le azioni operative richiedono autorizzazioni separate e
 l'apprendimento non può modificare codice o parametri protetti.
 
 Il profilo Gemini gratuito consigliato usa `gemini-3.5-flash`, Search
@@ -30,6 +31,10 @@ automaticamente `gemini-3.1-flash-lite` come fallback gratuito.
 Le richieste brevi vengono instradate sul modello Lite con ragionamento minimo;
 le analisi complesse restano sul modello 3.5 e ricevono un contesto sensori
 selezionato localmente.
+I test rapidi non ricevono vecchi ricordi, mentre sensori offline o sconosciuti
+vengono descritti come dati mancanti e non bastano, da soli, a generare
+un'emergenza. Le indicazioni su pneumatici e TPMS separano dati verificati,
+precauzioni e pericoli reali.
 
 ## Sviluppo locale
 

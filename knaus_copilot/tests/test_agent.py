@@ -3,13 +3,14 @@ from unittest.mock import AsyncMock, Mock, call, patch
 
 import httpx
 
-from app.agent import GEMINI_FALLBACK_MODEL, KnausAgent
+from app.agent import GEMINI_FALLBACK_MODEL, KnausAgent, SYSTEM_INSTRUCTIONS
 
 
 class FakeAsyncClient:
     def __init__(self, responses):
         self.responses = list(responses)
         self.urls = []
+        self.requests = []
 
     async def __aenter__(self):
         return self
@@ -19,6 +20,7 @@ class FakeAsyncClient:
 
     async def post(self, url, **kwargs):
         self.urls.append(url)
+        self.requests.append(kwargs)
         return self.responses.pop(0)
 
 
@@ -125,6 +127,46 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual("Sì, sono connesso.", answer)
         self.assertIn(GEMINI_FALLBACK_MODEL, client.urls[0])
+        generation = client.requests[0]["json"]["generationConfig"]
+        self.assertEqual(192, generation["maxOutputTokens"])
+
+    async def test_minimal_chat_does_not_send_old_memories_or_history(self):
+        memory = Mock()
+        memory.recent_messages.return_value = [
+            {"role": "user", "content": "Ciao, sei connesso?"}
+        ]
+        memory.list_memories.return_value = [
+            {
+                "category": "pneumatici",
+                "title": "Vecchio controllo",
+                "content": "Ricordare la pressione",
+            }
+        ]
+        policy = Mock()
+        policy.public_summary.return_value = {"mode": "observe"}
+        agent = KnausAgent(
+            api_key="test-key",
+            model="gemini-3.5-flash",
+            memory=memory,
+            policy=policy,
+            privacy_mode="contextual_cloud",
+            provider="gemini",
+            base_url="https://generativelanguage.googleapis.com/v1beta",
+        )
+        agent._gemini = AsyncMock(return_value="Sì, sono connesso.")
+
+        answer = await agent.chat(
+            "mirco",
+            "Ciao, sei connesso?",
+            [{"entity_id": "sensor.batteria_soc", "state": "80"}],
+        )
+
+        self.assertEqual("Sì, sono connesso.", answer)
+        memory.list_memories.assert_not_called()
+        conversation = agent._gemini.await_args.args[0]
+        self.assertEqual(1, len(conversation))
+        self.assertNotIn("pneumatici", conversation[0]["content"])
+        self.assertIn('"memories": []', conversation[0]["content"])
 
     def test_thinking_level_follows_request_complexity(self):
         agent = self.make_agent()
@@ -171,3 +213,10 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
             {"sensor.batteria_soc", "sensor.inverter_power"},
             {item["entity_id"] for item in selected},
         )
+
+    def test_system_prompt_does_not_treat_offline_data_as_an_emergency(self):
+        self.assertIn(
+            "da solo non dimostra un guasto, un pericolo o un'emergenza",
+            SYSTEM_INSTRUCTIONS,
+        )
+        self.assertIn("Per pneumatici e TPMS", SYSTEM_INSTRUCTIONS)

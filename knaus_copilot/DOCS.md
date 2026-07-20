@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.5.4
+# Guida semplice a mistermif AI 0.5.5
 
 ## Installazione in cinque minuti
 
@@ -100,6 +100,18 @@ minimo; domande normali usano ragionamento ridotto; analisi energetiche, meteo,
 sicurezza e decisioni automatiche conservano il modello 3.5 e un ragionamento
 più approfondito. Prima della richiesta cloud vengono scelti localmente solo i
 sensori pertinenti, senza inviare inutilmente l'intero elenco di Home Assistant.
+Saluti e semplici prove di connessione non ricevono vecchie memorie. Un sensore
+`unavailable` o `unknown` rende la diagnosi incompleta, ma non costituisce da
+solo una condizione di emergenza.
+
+### Pneumatici e TPMS
+
+Mistermif AI può aiutare a interpretare dati e tendenze, ma la pressione corretta
+deve provenire dalla targhetta o dal manuale del mezzo e deve essere verificata
+rispetto a misura, indice dello pneumatico e carico reale per asse. Una futura
+integrazione TPMS potrà confrontare pressione e temperatura con velocità,
+temperatura esterna e durata del viaggio, suggerendo una riduzione prudente
+della velocità o una sosta quando i dati mostrano un'anomalia crescente.
 
 ### Groq Free
 
@@ -125,7 +137,8 @@ sensori pertinenti, senza inviare inutilmente l'intero elenco di Home Assistant.
 
 Non inserire mai la chiave nel repository, in `configuration.yaml`, nei log o in
 una conversazione. Il filtro rimuove coordinate, tracker, reti, contatti e
-memorie personali prima della richiesta al modello.
+memorie personali prima della richiesta al modello; controlla ricorsivamente
+anche gli attributi annidati delle entità Home Assistant.
 
 ## Apprendimento locale
 

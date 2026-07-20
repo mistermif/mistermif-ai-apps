@@ -42,9 +42,10 @@ class PrivacyFilterTest(TestCase):
 
     def test_contextual_cloud_keeps_location_but_removes_secrets(self):
         privacy = PrivacyFilter(allow_location=True)
+        fake_key = "AIza" + ("1" * 30)
         text = (
             "Sono a 45.123456, 9.123456; "
-            "api_key=AIza123456789012345678901234567890"
+            f"api_key={fake_key}"
         )
         result = privacy.sanitize_text(text)
         states = privacy.sanitize_states(
@@ -59,5 +60,46 @@ class PrivacyFilterTest(TestCase):
         )
 
         self.assertIn("45.123456", result)
-        self.assertNotIn("AIza", result)
+        self.assertNotIn(fake_key, result)
         self.assertEqual("device_tracker.caravan", states[0]["entity_id"])
+
+    def test_nested_state_attributes_are_redacted_recursively(self):
+        privacy = PrivacyFilter(allow_location=True)
+        states = [
+            {
+                "entity_id": "sensor.router_diagnostics",
+                "name": "Diagnostica router",
+                "state": "online",
+                "attributes": {
+                    "network": {
+                        "ip_address": "192.0.2.55",
+                        "ssid": "Knaus privata",
+                        "access_token": "token-di-prova-non-reale",
+                    },
+                    "samples": [
+                        {"authorization": "Bearer test-token"},
+                        {"voltage": 12.8},
+                    ],
+                },
+            }
+        ]
+
+        attributes = privacy.sanitize_states(states)[0]["attributes"]
+
+        self.assertEqual(
+            "[DATO SENSIBILE RIMOSSO]",
+            attributes["network"]["ip_address"],
+        )
+        self.assertEqual(
+            "[DATO SENSIBILE RIMOSSO]",
+            attributes["network"]["ssid"],
+        )
+        self.assertEqual(
+            "[DATO SENSIBILE RIMOSSO]",
+            attributes["network"]["access_token"],
+        )
+        self.assertEqual(
+            "[DATO SENSIBILE RIMOSSO]",
+            attributes["samples"][0]["authorization"],
+        )
+        self.assertEqual(12.8, attributes["samples"][1]["voltage"])

@@ -115,6 +115,22 @@ Il tuo perimetro operativo è definito dalla politica ricevuta nel contesto:
 Per le condizioni elettriche o meteo urgenti, evidenzia prima il rischio e poi
 la raccomandazione. Non confondere il SOC del BMS con quello stimato
 dall'inverter. Le decisioni rapide di sicurezza restano alle automazioni locali.
+Un sensore `unavailable`, `unknown` o assente indica che la diagnosi è
+incompleta: da solo non dimostra un guasto, un pericolo o un'emergenza. Non
+assegnare livelli di allarme senza almeno una misura disponibile o un evento
+concreto che li giustifichi. Non interpretare lo stato `on`/`off` di un sensore
+binario se il significato operativo non è esplicitato nel nome o negli attributi.
+
+Per pneumatici e TPMS:
+- non inventare una pressione corretta: verifica targhetta del mezzo, manuale,
+  misura e indice dello pneumatico, carico reale per asse e pressione a freddo;
+- separa sempre pressione prescritta, limite dello pneumatico e tua stima;
+- valuta tendenze di pressione e temperatura, velocità, temperatura esterna e
+  durata del viaggio quando i relativi sensori sono realmente disponibili;
+- una lettura TPMS isolata richiede conferma; perdita rapida, temperatura
+  anomala o scostamento crescente possono giustificare riduzione della velocità,
+  sosta sicura e controllo professionale;
+- non presentare recensioni commerciali come prova di compatibilità o sicurezza.
 
 Sei inoltre specializzato in campeggi, aree attrezzate e viaggi in caravan:
 - confronta accessibilità per caravan, lunghezza del complesso, servizi, corrente
@@ -221,10 +237,14 @@ class KnausAgent:
             automatic=automatic,
             web_search=web_search,
         )
-        history_limit = {"minimal": 4, "low": 8, "medium": 16}[thinking_level]
-        memory_limit = {"minimal": 4, "low": 8, "medium": 20}[thinking_level]
+        history_limit = {"minimal": 1, "low": 8, "medium": 16}[thinking_level]
+        memory_limit = {"minimal": 0, "low": 8, "medium": 20}[thinking_level]
         history = self.memory.recent_messages(user_id, limit=history_limit)
-        memories = self.memory.list_memories(user_id, limit=memory_limit)
+        memories = (
+            []
+            if memory_limit == 0
+            else self.memory.list_memories(user_id, limit=memory_limit)
+        )
         selected_states = self._select_states(
             ha_states,
             message,
@@ -363,7 +383,12 @@ class KnausAgent:
             "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTIONS}]},
             "contents": contents,
             "generationConfig": {
-                "thinkingConfig": {"thinkingLevel": thinking_level}
+                "thinkingConfig": {"thinkingLevel": thinking_level},
+                "maxOutputTokens": {
+                    "minimal": 192,
+                    "low": 512,
+                    "medium": 1024,
+                }[thinking_level],
             },
         }
         if web_search:

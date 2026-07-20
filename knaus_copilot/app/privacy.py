@@ -67,6 +67,36 @@ LOCAL_ONLY_MEMORY_CATEGORIES = {
     "abitudine",
 }
 
+SECRET_ATTRIBUTE_KEYS = {
+    "api_key",
+    "apikey",
+    "access_token",
+    "refresh_token",
+    "token",
+    "password",
+    "passwd",
+    "secret",
+    "authorization",
+    "credential",
+    "credentials",
+    "ssid",
+    "bssid",
+    "ip_address",
+    "mac_address",
+    "email",
+    "phone",
+    "telephone",
+    "telefono",
+}
+
+LOCATION_ATTRIBUTE_KEYS = {
+    "latitude",
+    "longitude",
+    "gps_accuracy",
+    "address",
+    "indirizzo",
+}
+
 
 class PrivacyFilter:
     def __init__(self, allow_location: bool = False):
@@ -98,6 +128,26 @@ class PrivacyFilter:
             return False
         return any(fragment in candidate for fragment in SENSITIVE_ENTITY_FRAGMENTS)
 
+    def sanitize_value(self, value: Any, key: str = "") -> Any:
+        normalized_key = key.casefold().replace("-", "_").replace(" ", "_")
+        if normalized_key in SECRET_ATTRIBUTE_KEYS:
+            return "[DATO SENSIBILE RIMOSSO]"
+        if (
+            not self.allow_location
+            and normalized_key in LOCATION_ATTRIBUTE_KEYS
+        ):
+            return "[POSIZIONE RIMOSSA]"
+        if isinstance(value, str):
+            return self.sanitize_text(value)
+        if isinstance(value, dict):
+            return {
+                str(child_key): self.sanitize_value(child_value, str(child_key))
+                for child_key, child_value in value.items()
+            }
+        if isinstance(value, (list, tuple)):
+            return [self.sanitize_value(item, key) for item in value]
+        return value
+
     def sanitize_states(self, states: list[dict[str, Any]]) -> list[dict[str, Any]]:
         result = []
         for state in states:
@@ -120,6 +170,10 @@ class PrivacyFilter:
             clean["name"] = self.sanitize_text(name)
             if isinstance(clean.get("state"), str):
                 clean["state"] = self.sanitize_text(clean["state"])
+            clean["attributes"] = self.sanitize_value(
+                clean.get("attributes") or {},
+                "attributes",
+            )
             result.append(clean)
         return result
 

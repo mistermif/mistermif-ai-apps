@@ -43,7 +43,9 @@ non può essere scelto dinamicamente da una conversazione.
 La modalità predefinita è `local_only`: nessun contenuto viene inviato a un
 modello cloud. La modalità `redacted_cloud` è opzionale e filtra coordinate,
 tracker, contatti, indirizzi di rete, token e categorie di memoria locali prima
-della richiesta esterna.
+della richiesta esterna. Il filtro attraversa ricorsivamente anche gli attributi
+annidati delle entità Home Assistant e rimuove sempre credenziali, SSID,
+indirizzi IP e contatti.
 
 Viaggi, campeggi, piazzole, profilo del mezzo, contatti e abitudini restano
 sempre esclusi dal contesto cloud. Il filtro è una misura di riduzione del
