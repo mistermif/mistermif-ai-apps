@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.8.0
+# Guida semplice a mistermif AI 0.8.1
 
 ## Installazione in cinque minuti
 

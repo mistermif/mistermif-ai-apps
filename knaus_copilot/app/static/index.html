@@ -238,6 +238,76 @@
     .settings-note { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
     .settings-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
     .settings-actions button { min-height: 46px; }
+    .ai-link {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+    }
+    .ai-node {
+      min-height: 94px;
+      display: grid;
+      place-items: center;
+      gap: 4px;
+      padding: 12px;
+      border: 1px solid rgba(0,217,255,.32);
+      border-radius: 13px;
+      text-align: center;
+      background: linear-gradient(145deg, rgba(0,217,255,.08), rgba(133,76,255,.08));
+    }
+    .ai-node strong { font-size: 14px; }
+    .ai-node small { color: var(--muted); }
+    .ai-node-icon {
+      width: 38px; height: 38px; display: grid; place-items: center;
+      border-radius: 11px; color: var(--cyan); font-size: 20px;
+      background: rgba(0,217,255,.1); border: 1px solid rgba(0,217,255,.34);
+    }
+    .ai-node-icon img { width: 34px; height: 34px; object-fit: contain; }
+    .ai-wire { display: grid; gap: 7px; text-align: center; color: var(--muted); font-size: 10px; font-weight: 900; }
+    .ai-wire-track {
+      position: relative; height: 3px; overflow: hidden; border-radius: 99px;
+      background: rgba(88,113,156,.3);
+    }
+    .ai-wire-track::after {
+      content: ""; position: absolute; inset: 0 auto 0 -45%; width: 42%;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--pink), transparent);
+      animation: data-flow 1.8s linear infinite;
+    }
+    .ai-link.offline .ai-wire-track::after { display: none; }
+    .ai-link.offline .ai-node, .ai-link.offline .ai-wire { opacity: .48; }
+    @keyframes data-flow { to { transform: translateX(350%); } }
+    .visual-result {
+      width: min(100%, 660px); align-self: flex-start; padding: 14px;
+      border: 1px solid rgba(0,217,255,.3); border-radius: 15px;
+      background: linear-gradient(145deg, rgba(3,13,29,.98), rgba(13,6,30,.96));
+      box-shadow: 0 12px 34px rgba(0,0,0,.24);
+    }
+    .visual-result-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+    .visual-result-title { font-size: 13px; font-weight: 1000; letter-spacing: .7px; text-transform: uppercase; }
+    .severity-chip { padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 1000; text-transform: uppercase; }
+    .severity-chip.emergenza { color: #fff; background: rgba(255,23,104,.72); }
+    .severity-chip.urgenza { color: #261400; background: #ffb02e; }
+    .severity-chip.allerta { color: #001d13; background: #00e6a0; }
+    .sim-visual-grid { display: grid; grid-template-columns: 126px 1fr; gap: 15px; align-items: center; }
+    .soc-ring {
+      --soc: 0deg; position: relative; width: 112px; aspect-ratio: 1; display: grid; place-items: center;
+      margin: auto; border-radius: 50%;
+      background: conic-gradient(var(--cyan) var(--soc), rgba(88,113,156,.22) 0);
+      box-shadow: 0 0 24px rgba(0,217,255,.12);
+    }
+    .soc-ring::before { content: ""; width: 82px; aspect-ratio: 1; border-radius: 50%; background: #050b17; position: absolute; }
+    .soc-value { position: relative; z-index: 1; text-align: center; font-size: 25px; font-weight: 1000; }
+    .soc-value small { display: block; color: var(--muted); font-size: 9px; letter-spacing: .8px; }
+    .sim-metrics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .sim-metric { padding: 9px 10px; border: 1px solid rgba(88,113,156,.25); border-radius: 10px; background: rgba(255,255,255,.025); }
+    .sim-metric small { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; }
+    .sim-metric strong { display: block; margin-top: 3px; font-size: 16px; }
+    .decision-line { margin-top: 11px; color: var(--text); font-size: 12px; line-height: 1.45; }
+    .safety-line { margin-top: 9px; color: var(--green); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
+    .check-ring { --score: 0deg; }
+    .check-list { display: grid; gap: 6px; }
+    .check-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-radius: 9px; background: rgba(255,255,255,.03); font-size: 11px; }
+    .check-ok { color: var(--green); font-weight: 1000; }
     .footer {
       display: flex;
       justify-content: space-between;
@@ -257,6 +327,12 @@
       #messages { height: 46vh; }
       .quick-controls { grid-template-columns: 1fr; }
       .settings-grid, .settings-actions { grid-template-columns: 1fr; }
+      .ai-link { grid-template-columns: 1fr; }
+      .ai-wire { grid-template-columns: 1fr; }
+      .ai-wire-track { width: 3px; height: 42px; margin: auto; }
+      .ai-wire-track::after { inset: -45% 0 auto; width: 100%; height: 42%; animation-name: data-flow-mobile; }
+      .sim-visual-grid { grid-template-columns: 1fr; }
+      @keyframes data-flow-mobile { to { transform: translateY(350%); } }
     }
   </style>
 </head>
@@ -346,6 +422,21 @@
               <button id="profile-edit" type="button">MODIFICA PROFILO</button>
             </section>
             <section class="settings-card full">
+              <h3>Collegamento intelligente</h3>
+              <div id="ai-link" class="ai-link offline">
+                <div class="ai-node">
+                  <div class="ai-node-icon">⌘</div>
+                  <strong>Codex</strong><small>Laboratorio sul Mac</small>
+                </div>
+                <div class="ai-wire"><span id="ai-wire-label">NON ABBINATO</span><div class="ai-wire-track"></div><span>MCP PRIVATO</span></div>
+                <div class="ai-node">
+                  <div class="ai-node-icon"><img src="caravan-eyes.png" alt=""></div>
+                  <strong>Mistermif AI</strong><small>Raspberry + Home Assistant</small>
+                </div>
+              </div>
+              <p class="settings-note">Il ponte condivide stato filtrato, vincoli e simulazioni. Non può eseguire comandi reali.</p>
+            </section>
+            <section class="settings-card full">
               <h3>Sicurezza</h3>
               <div class="setting-row"><span>Livelli allarme</span><span id="setting-alerts">—</span></div>
               <div class="setting-row"><span>Categorie protette</span><span id="setting-blocked">—</span></div>
@@ -375,7 +466,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.8.0 · CONSOLE ESSENZIALE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.8.1 · CONSOLE ESSENZIALE</span></footer>
     </div>
   </div>
 
@@ -396,6 +487,104 @@
       element.className = `msg ${role}`;
       element.textContent = text;
       messages.appendChild(element);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function metric(container, label, value) {
+      const item = document.createElement("div");
+      item.className = "sim-metric";
+      const caption = document.createElement("small");
+      caption.textContent = label;
+      const strong = document.createElement("strong");
+      strong.textContent = value;
+      item.append(caption, strong);
+      container.appendChild(item);
+    }
+
+    function addSimulationGraphic(simulation) {
+      if (!simulation || simulation.kind === "clarification") return;
+      const card = document.createElement("div");
+      card.className = "visual-result";
+      const head = document.createElement("div");
+      head.className = "visual-result-head";
+      const title = document.createElement("div");
+      title.className = "visual-result-title";
+      title.textContent = simulation.kind === "full" ? "Self-check del gemello digitale" : "Scenario virtuale";
+      const chip = document.createElement("span");
+      chip.className = "severity-chip allerta";
+
+      if (simulation.kind === "full") {
+        const passed = Number(simulation.passed_count || 0);
+        const total = Number(simulation.total || 0);
+        chip.textContent = simulation.passed ? "Tutto coerente" : "Da correggere";
+        chip.className = `severity-chip ${simulation.passed ? "allerta" : "emergenza"}`;
+        head.append(title, chip);
+        const grid = document.createElement("div");
+        grid.className = "sim-visual-grid";
+        const ring = document.createElement("div");
+        ring.className = "soc-ring check-ring";
+        ring.style.setProperty("--soc", `${total ? (passed / total) * 360 : 0}deg`);
+        const score = document.createElement("div");
+        score.className = "soc-value";
+        score.textContent = `${passed}/${total}`;
+        const label = document.createElement("small");
+        label.textContent = "SCENARI OK";
+        score.appendChild(label);
+        ring.appendChild(score);
+        const list = document.createElement("div");
+        list.className = "check-list";
+        (simulation.items || []).forEach(item => {
+          const row = document.createElement("div");
+          row.className = "check-row";
+          const name = document.createElement("span");
+          name.textContent = item.label;
+          const state = document.createElement("span");
+          state.className = item.assessment?.passed ? "check-ok" : "";
+          state.textContent = item.assessment?.passed ? "OK" : "ERRORE";
+          row.append(name, state);
+          list.appendChild(row);
+        });
+        grid.append(ring, list);
+        const safe = document.createElement("div");
+        safe.className = "safety-line";
+        safe.textContent = "✓ Nessuna azione reale · batteria utilizzata 0%";
+        card.append(head, grid, safe);
+      } else {
+        const snapshot = simulation.snapshot || {};
+        const result = simulation.result || {};
+        const severity = String(result.severity || "allerta").toLowerCase();
+        chip.textContent = severity;
+        chip.className = `severity-chip ${["emergenza", "urgenza", "allerta"].includes(severity) ? severity : "allerta"}`;
+        head.append(title, chip);
+        const grid = document.createElement("div");
+        grid.className = "sim-visual-grid";
+        const ring = document.createElement("div");
+        ring.className = "soc-ring";
+        const soc = Math.max(0, Math.min(100, Number(snapshot.battery_soc || 0)));
+        ring.style.setProperty("--soc", `${soc * 3.6}deg`);
+        const socText = document.createElement("div");
+        socText.className = "soc-value";
+        socText.textContent = `${soc.toFixed(0)}%`;
+        const socLabel = document.createElement("small");
+        socLabel.textContent = "BATTERIA";
+        socText.appendChild(socLabel);
+        ring.appendChild(socText);
+        const metrics = document.createElement("div");
+        metrics.className = "sim-metrics";
+        metric(metrics, "Corrente batteria", `${Number(snapshot.battery_current || 0).toFixed(1)} A`);
+        metric(metrics, "Rete / PZEM", `${Number(snapshot.grid_power || 0).toFixed(0)} W`);
+        metric(metrics, "Solare", `${Number(snapshot.solar_power || 0).toFixed(0)} W`);
+        metric(metrics, "Colonnina", `${Number(snapshot.available_amps || 0).toFixed(0)} A`);
+        grid.append(ring, metrics);
+        const decision = document.createElement("div");
+        decision.className = "decision-line";
+        decision.textContent = `Decisione: ${result.decision || "osservazione"} · ${result.reason || "nessun motivo disponibile"}`;
+        const safe = document.createElement("div");
+        safe.className = "safety-line";
+        safe.textContent = "✓ Simulazione isolata · zero comandi reali";
+        card.append(head, grid, decision, safe);
+      }
+      messages.appendChild(card);
       messages.scrollTop = messages.scrollHeight;
     }
 
@@ -445,6 +634,9 @@
         "setting-bridge",
         data.codex_bridge?.ready ? "Pronto" : "Disattivato"
       );
+      const aiLink = document.querySelector("#ai-link");
+      aiLink.classList.toggle("offline", !data.codex_bridge?.ready);
+      setText("ai-wire-label", data.codex_bridge?.ready ? "COLLEGATI" : "NON ABBINATO");
       setText("setting-provider", data.ai_provider);
       setText("setting-model", data.model);
       setText(
@@ -557,6 +749,7 @@
       try {
         const data = await api("api/chat", {method: "POST", body: JSON.stringify({message: text})});
         add(data.answer, "assistant");
+        addSimulationGraphic(data.simulation);
         if (data.pending_action) addConfirmation(data.pending_action);
       } catch (error) {
         add(`Richiesta non completata: ${error.message}`, "assistant");

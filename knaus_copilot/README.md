@@ -1,4 +1,4 @@
-# mistermif AI 0.8.0
+# mistermif AI 0.8.1
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -22,6 +22,8 @@ della caravan.
 - blocco esplicito di batteria, inverter, ventilazione e firmware.
 - ponte consultivo Codex/MCP autenticato per stato, simulazioni e proposte;
 - gemello digitale sul Mac senza servizi Home Assistant eseguibili dal ponte.
+- scheda grafica per simulazioni e self-check, più diagramma del ponte nelle
+  impostazioni.
 
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
 sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e

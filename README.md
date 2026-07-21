@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.8.0
+## Cosa funziona oggi — versione 0.8.1
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -77,6 +77,8 @@ deterministiche e indipendenti dall'AI e da Internet.
   esecuzione di comandi reali attraverso il ponte;
 - autenticazione con token locale e rimozione degli stati sensibili prima della
   condivisione con Codex.
+- risultati delle simulazioni rappresentati con indicatori grafici di SOC,
+  corrente, rete, solare, colonnina, severità e stato del self-check.
 
 ### Laboratorio sul Mac e dialogo con Codex
 

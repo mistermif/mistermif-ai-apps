@@ -132,7 +132,7 @@ async def lifespan(_: FastAPI):
         await learning_task
 
 
-APP_VERSION = "0.8.0"
+APP_VERSION = "0.8.1"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -427,14 +427,17 @@ async def chat(
     if simulation is not None:
         memory.add_message(user_id, "user", payload.message)
         memory.add_message(user_id, "assistant", simulation["answer"])
-        try:
-            if simulation["kind"] == "single":
-                workspace.record_lab_result(simulation["result"])
-            elif simulation["kind"] == "full":
-                for item in simulation["items"]:
-                    workspace.record_lab_result(item["result"])
-        except WorkspaceError:
-            logger.exception("Registrazione della simulazione conversazionale non riuscita")
+        if settings.workspace_enabled:
+            try:
+                if simulation["kind"] == "single":
+                    workspace.record_lab_result(simulation["result"])
+                elif simulation["kind"] == "full":
+                    for item in simulation["items"]:
+                        workspace.record_lab_result(item["result"])
+            except (OSError, WorkspaceError):
+                logger.exception(
+                    "Registrazione della simulazione conversazionale non riuscita"
+                )
         return {
             "answer": simulation["answer"],
             "user": display_name,
