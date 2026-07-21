@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.8.1
+# Guida semplice a mistermif AI 0.9.0
 
 ## Installazione in cinque minuti
 
@@ -71,6 +71,37 @@ equipaggio, mezzo, viaggi e piazzole non vengono inclusi nel contesto cloud.
 - **Emergenza:** intervento immediato.
 - **Urgenza:** intervento entro 10–15 minuti.
 - **Allerta:** nessun intervento richiesto, ma occorre prestare attenzione.
+
+## Sorveglianza meteo automatica
+
+Il controllo predefinito avviene ogni 30 minuti e non interroga l'AI. Usa:
+
+- sensori meteo, barometro e GPS già presenti in Home Assistant;
+- Open-Meteo Best Match, che combina più modelli previsionali;
+- Radar-DPC in Italia per il prodotto puntuale POH, probabilità di grandine;
+- Windy Point Forecast soltanto quando è configurata una chiave Professional.
+
+Il monitor salva l'ultima valutazione nel database locale. Non ripete lo stesso
+messaggio: notifica nuovamente solo se aumenta la severità, il punteggio cresce
+in modo significativo, compare grandine o nasce un temporale osservato. Le
+urgenze e le emergenze aggiungono Telegram agli ID configurati in
+`telegram_targets`.
+
+## Diario viaggi
+
+Il registratore GPS parte dopo due misure consecutive almeno a 5 km/h. Registra
+un punto al minuto e calcola distanza, tempo in movimento, velocità media e
+massima e soste. Dopo 120 minuti fermo chiude il viaggio; la durata è regolabile
+con `travel_arrival_minutes`.
+
+Comandi chat utili:
+
+- `Venerdì parto per il Camping Club degli Amici`;
+- `Fammi il report del viaggio`;
+- `Esporta il viaggio`.
+
+Le esportazioni sono disponibili in CSV e GPX. Tracce e coordinate restano nel
+database locale e non sono aggiunte al contesto AI.
 
 ## I due interruttori
 

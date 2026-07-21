@@ -73,6 +73,54 @@ class MemoryStore:
                     created_at TEXT NOT NULL,
                     resolved_at TEXT
                 );
+
+                CREATE TABLE IF NOT EXISTS travel_plans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    destination TEXT NOT NULL,
+                    departure_text TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'planned',
+                    created_at TEXT NOT NULL,
+                    started_at TEXT,
+                    completed_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_travel_plans_status
+                    ON travel_plans(status, id DESC);
+
+                CREATE TABLE IF NOT EXISTS trips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    plan_id INTEGER,
+                    destination TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    started_at TEXT NOT NULL,
+                    ended_at TEXT,
+                    start_lat REAL,
+                    start_lon REAL,
+                    end_lat REAL,
+                    end_lon REAL,
+                    distance_km REAL NOT NULL DEFAULT 0,
+                    moving_seconds REAL NOT NULL DEFAULT 0,
+                    max_speed_kmh REAL NOT NULL DEFAULT 0,
+                    stop_count INTEGER NOT NULL DEFAULT 0,
+                    stationary_since TEXT,
+                    metadata_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_trips_status
+                    ON trips(status, id DESC);
+
+                CREATE TABLE IF NOT EXISTS trip_points (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    trip_id INTEGER NOT NULL,
+                    observed_at TEXT NOT NULL,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    speed_kmh REAL NOT NULL DEFAULT 0,
+                    temperature REAL,
+                    humidity REAL,
+                    pressure REAL,
+                    weather_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_trip_points_trip
+                    ON trip_points(trip_id, id);
                 """
             )
 
@@ -252,4 +300,189 @@ class MemoryStore:
             item = dict(row)
             item["metadata"] = json.loads(item.pop("metadata_json"))
             result.append(item)
+        return result
+
+    def add_travel_plan(self, destination: str, departure_text: str = "") -> int:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO travel_plans(destination, departure_text, created_at)
+                VALUES(?,?,?)
+                """,
+                (destination.strip(), departure_text.strip(), now),
+            )
+            return int(cursor.lastrowid)
+
+    def pending_travel_plan(self) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute(
+                """
+                SELECT * FROM travel_plans
+                WHERE status = 'planned'
+                ORDER BY id DESC LIMIT 1
+                """
+            ).fetchone()
+        return dict(row) if row else None
+
+    def start_trip(
+        self,
+        latitude: float,
+        longitude: float,
+        destination: str = "",
+        plan_id: int | None = None,
+    ) -> int:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO trips(
+                    plan_id, destination, started_at, start_lat, start_lon
+                ) VALUES(?,?,?,?,?)
+                """,
+                (plan_id, destination, now, latitude, longitude),
+            )
+            trip_id = int(cursor.lastrowid)
+            if plan_id is not None:
+                db.execute(
+                    """
+                    UPDATE travel_plans
+                    SET status = 'started', started_at = ? WHERE id = ?
+                    """,
+                    (now, plan_id),
+                )
+            return trip_id
+
+    def active_trip(self) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM trips WHERE status = 'active' ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+        if not row:
+            return None
+        result = dict(row)
+        result["metadata"] = json.loads(result.pop("metadata_json"))
+        return result
+
+    def add_trip_point(
+        self,
+        trip_id: int,
+        observed_at: str,
+        latitude: float,
+        longitude: float,
+        speed_kmh: float,
+        temperature: float | None = None,
+        humidity: float | None = None,
+        pressure: float | None = None,
+        weather: dict[str, Any] | None = None,
+    ) -> int:
+        with self._lock, self._connect() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO trip_points(
+                    trip_id, observed_at, latitude, longitude, speed_kmh,
+                    temperature, humidity, pressure, weather_json
+                ) VALUES(?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    trip_id,
+                    observed_at,
+                    latitude,
+                    longitude,
+                    speed_kmh,
+                    temperature,
+                    humidity,
+                    pressure,
+                    json.dumps(weather or {}, ensure_ascii=False),
+                ),
+            )
+            return int(cursor.lastrowid)
+
+    def update_trip_progress(
+        self,
+        trip_id: int,
+        *,
+        distance_km: float,
+        moving_seconds: float,
+        max_speed_kmh: float,
+        stop_count: int,
+        stationary_since: str | None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        with self._lock, self._connect() as db:
+            db.execute(
+                """
+                UPDATE trips SET
+                    distance_km = ?, moving_seconds = ?, max_speed_kmh = ?,
+                    stop_count = ?, stationary_since = ?, metadata_json = ?
+                WHERE id = ?
+                """,
+                (
+                    distance_km,
+                    moving_seconds,
+                    max_speed_kmh,
+                    stop_count,
+                    stationary_since,
+                    json.dumps(metadata or {}, ensure_ascii=False),
+                    trip_id,
+                ),
+            )
+
+    def finish_trip(
+        self,
+        trip_id: int,
+        latitude: float,
+        longitude: float,
+    ) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock, self._connect() as db:
+            row = db.execute(
+                "SELECT plan_id FROM trips WHERE id = ?", (trip_id,)
+            ).fetchone()
+            db.execute(
+                """
+                UPDATE trips SET status = 'completed', ended_at = ?,
+                    end_lat = ?, end_lon = ? WHERE id = ?
+                """,
+                (now, latitude, longitude, trip_id),
+            )
+            if row and row["plan_id"] is not None:
+                db.execute(
+                    """
+                    UPDATE travel_plans
+                    SET status = 'completed', completed_at = ? WHERE id = ?
+                    """,
+                    (now, row["plan_id"]),
+                )
+
+    def list_trips(self, limit: int = 100) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT * FROM trips ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["metadata"] = json.loads(item.pop("metadata_json"))
+            result.append(item)
+        return result
+
+    def trip_detail(self, trip_id: int) -> dict[str, Any] | None:
+        with self._connect() as db:
+            trip = db.execute(
+                "SELECT * FROM trips WHERE id = ?", (trip_id,)
+            ).fetchone()
+            points = db.execute(
+                "SELECT * FROM trip_points WHERE trip_id = ? ORDER BY id",
+                (trip_id,),
+            ).fetchall()
+        if not trip:
+            return None
+        result = dict(trip)
+        result["metadata"] = json.loads(result.pop("metadata_json"))
+        result["points"] = []
+        for row in points:
+            point = dict(row)
+            point["weather"] = json.loads(point.pop("weather_json"))
+            result["points"].append(point)
         return result

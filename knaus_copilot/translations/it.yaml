@@ -41,3 +41,27 @@ configuration:
   gemini_search_enabled:
     name: "Google Search per Gemini"
     description: "Richiede un piano Gemini che supporti Google Search Grounding; non è incluso nel Free Tier di Gemini 3.5 Flash."
+  weather_monitor_enabled:
+    name: "Sorveglianza meteo autonoma"
+    description: "Analizza localmente sensori e fonti meteo senza usare token AI."
+  weather_interval_minutes:
+    name: "Intervallo meteo in minuti"
+    description: "Il valore consigliato è 30 minuti."
+  dpc_radar_enabled:
+    name: "Radar Protezione Civile"
+    description: "Usa in Italia i dati ufficiali Radar-DPC, inclusa la probabilità di grandine."
+  windy_api_key:
+    name: "Chiave Windy Professional"
+    description: "Opzionale. Non usare la chiave gratuita di test per decisioni reali."
+  telegram_targets:
+    name: "Destinatari Telegram"
+    description: "ID chat separati da virgola per urgenze ed emergenze."
+  travel_tracker_enabled:
+    name: "Diario viaggi automatico"
+    description: "Rileva partenza, soste e arrivo tramite GPS locale."
+  travel_poll_seconds:
+    name: "Campionamento GPS in secondi"
+    description: "Intervallo di lettura del movimento; consigliato 30 secondi."
+  travel_arrival_minutes:
+    name: "Tempo per riconoscere l'arrivo"
+    description: "Minuti di sosta continua prima di chiudere automaticamente il viaggio."

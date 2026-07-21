@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager, suppress
 import httpx
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from .agent import KnausAgent
@@ -27,6 +27,8 @@ from .home_assistant import HomeAssistantClient
 from .learning import ContextLearner
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
+from .travel import TravelTracker
+from .weather_monitor import WeatherMonitor
 from .workspace import WorkspaceError, WorkspaceManager
 
 
@@ -67,6 +69,15 @@ agent = KnausAgent(
 )
 workspace = WorkspaceManager(settings.homeassistant_config_dir)
 learner = ContextLearner(memory)
+weather_monitor = WeatherMonitor(
+    memory,
+    ha,
+    settings.notification_service,
+    settings.telegram_targets,
+    settings.dpc_radar_enabled,
+    settings.windy_api_key,
+)
+travel_tracker = TravelTracker(memory, settings.travel_arrival_minutes)
 
 
 async def learning_loop() -> None:
@@ -76,6 +87,40 @@ async def learning_loop() -> None:
         except Exception:
             logger.exception("Campionamento locale non riuscito")
         await asyncio.sleep(300)
+
+
+async def weather_loop() -> None:
+    while True:
+        try:
+            await weather_monitor.monitor_once()
+        except Exception:
+            logger.exception("Sorveglianza meteo non riuscita")
+        await asyncio.sleep(settings.weather_interval_minutes * 60)
+
+
+async def travel_loop() -> None:
+    while True:
+        try:
+            result = travel_tracker.observe(await ha.monitoring_states())
+            if result.get("status") in {"started", "arrived"}:
+                if result["status"] == "started":
+                    message = (
+                        "Partenza rilevata automaticamente. "
+                        "Il diario GPS del viaggio è iniziato."
+                    )
+                else:
+                    message = (
+                        "Arrivo rilevato dopo la sosta prolungata. "
+                        "Il diario del viaggio è stato chiuso e salvato."
+                    )
+                await ha.send_notification(
+                    settings.notification_service,
+                    "Mistermif AI · Diario viaggio",
+                    message,
+                )
+        except Exception:
+            logger.exception("Monitoraggio viaggio non riuscito")
+        await asyncio.sleep(settings.travel_poll_seconds)
 
 
 @asynccontextmanager
@@ -89,6 +134,16 @@ async def lifespan(_: FastAPI):
     if settings.workspace_enabled:
         workspace.bootstrap()
     learning_task = asyncio.create_task(learning_loop())
+    weather_task = (
+        asyncio.create_task(weather_loop())
+        if settings.weather_monitor_enabled
+        else None
+    )
+    travel_task = (
+        asyncio.create_task(travel_loop())
+        if settings.travel_tracker_enabled
+        else None
+    )
     bridge_server = None
     bridge_task = None
     if settings.codex_bridge_enabled:
@@ -130,9 +185,14 @@ async def lifespan(_: FastAPI):
     learning_task.cancel()
     with suppress(asyncio.CancelledError):
         await learning_task
+    for task in (weather_task, travel_task):
+        if task is not None:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
 
-APP_VERSION = "0.8.1"
+APP_VERSION = "0.9.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -270,6 +330,8 @@ async def caravan_icon() -> FileResponse:
 @app.get("/api/status")
 async def status() -> dict:
     learning = learner.summary()
+    weather_state = memory.get_json_setting("weather_monitor_state") or {}
+    trip_state = travel_tracker.report()
     return {
         "version": APP_VERSION,
         "model": settings.model,
@@ -303,6 +365,21 @@ async def status() -> dict:
             "confidence": learning.confidence,
             "learned_sites": learning.learned_sites,
         },
+        "weather_monitor": {
+            "enabled": settings.weather_monitor_enabled,
+            "interval_minutes": settings.weather_interval_minutes,
+            "severity": weather_state.get("severity", "non ancora analizzato"),
+            "notified": bool(weather_state.get("notified", False)),
+            "sources": weather_state.get("sources", {}),
+            "local_decisions": True,
+            "ai_tokens_used": 0,
+        },
+        "travel_tracker": {
+            "enabled": settings.travel_tracker_enabled,
+            "poll_seconds": settings.travel_poll_seconds,
+            "arrival_minutes": settings.travel_arrival_minutes,
+            "latest": trip_state,
+        },
         "lab": {
             "mode": lab_mode(),
             "bundle_installed": (
@@ -328,6 +405,58 @@ async def learning_status() -> dict:
         "local_only": True,
         "self_modifying": False,
     }
+
+
+@app.get("/api/weather-monitor")
+async def weather_monitor_status() -> dict:
+    return memory.get_json_setting("weather_monitor_state") or {
+        "severity": "non ancora analizzato",
+        "enabled": settings.weather_monitor_enabled,
+    }
+
+
+@app.post("/api/weather-monitor/check")
+async def weather_monitor_check() -> dict:
+    return await weather_monitor.monitor_once()
+
+
+@app.get("/api/trips")
+async def trips() -> dict:
+    return {"items": memory.list_trips(), "latest_report": travel_tracker.report()}
+
+
+@app.get("/api/trips/{trip_id}")
+async def trip_detail(trip_id: int) -> dict:
+    result = memory.trip_detail(trip_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Viaggio non trovato")
+    return {"trip": result, "report": travel_tracker.report(trip_id)}
+
+
+@app.get("/api/trips/{trip_id}/export.csv")
+async def export_trip_csv(trip_id: int) -> PlainTextResponse:
+    try:
+        content = travel_tracker.export_csv(trip_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Viaggio non trovato") from exc
+    return PlainTextResponse(
+        content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="viaggio-{trip_id}.csv"'},
+    )
+
+
+@app.get("/api/trips/{trip_id}/export.gpx")
+async def export_trip_gpx(trip_id: int) -> PlainTextResponse:
+    try:
+        content = travel_tracker.export_gpx(trip_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Viaggio non trovato") from exc
+    return PlainTextResponse(
+        content,
+        media_type="application/gpx+xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="viaggio-{trip_id}.gpx"'},
+    )
 
 
 @app.get("/api/context")
@@ -420,6 +549,44 @@ async def chat(
         x_remote_user_id, x_remote_user_display_name
     )
     normalized = payload.message.casefold()
+    plan = travel_tracker.capture_plan(payload.message)
+    if plan is not None:
+        answer = (
+            f'Ho memorizzato la prossima destinazione: {plan["destination"]}. '
+            "Quando il GPS rileverà la partenza avvierò automaticamente il diario; "
+            "dopo una sosta prolungata riconoscerò l'arrivo e chiuderò il viaggio."
+        )
+        memory.add_message(user_id, "user", payload.message)
+        memory.add_message(user_id, "assistant", answer)
+        return {"answer": answer, "user": display_name, "travel_plan": plan}
+    if "report" in normalized and any(
+        term in normalized for term in ("viaggio", "tragitto", "spostamento")
+    ):
+        report = travel_tracker.report()
+        if report.get("available"):
+            answer = (
+                f'Viaggio #{report["id"]} verso {report["destination"]}: '
+                f'{report["distance_km"]} km in {report["duration_minutes"]} minuti totali, '
+                f'di cui {report["moving_minutes"]} in movimento, '
+                f'velocità media {report["average_speed_kmh"]} km/h, '
+                f'massima {report["max_speed_kmh"]} km/h e {report["stops"]} soste.'
+            )
+        else:
+            answer = str(report["message"])
+        return {"answer": answer, "user": display_name, "travel_report": report}
+    if "esport" in normalized and any(
+        term in normalized for term in ("viaggio", "tragitto", "spostamento")
+    ):
+        report = travel_tracker.report()
+        if report.get("available"):
+            trip_id = int(report["id"])
+            answer = (
+                f"Il viaggio #{trip_id} è pronto: CSV api/trips/{trip_id}/export.csv "
+                f"oppure traccia GPX api/trips/{trip_id}/export.gpx."
+            )
+        else:
+            answer = str(report["message"])
+        return {"answer": answer, "user": display_name, "travel_report": report}
     simulation = run_conversational_simulation(
         payload.message,
         animals_default=animals_on_board(),

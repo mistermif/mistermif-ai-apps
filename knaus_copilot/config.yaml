@@ -1,5 +1,5 @@
 name: "mistermif AI"
-version: "0.8.1"
+version: "0.9.0"
 slug: "knaus_copilot"
 description: "Assistente AI personale per supervisione, memoria e diario della caravan."
 url: "https://github.com/mistermif/mistermif-ai-apps"
@@ -33,6 +33,14 @@ options:
   privacy_mode: "local_only"
   workspace_enabled: true
   codex_bridge_enabled: false
+  weather_monitor_enabled: true
+  weather_interval_minutes: 30
+  dpc_radar_enabled: true
+  windy_api_key: ""
+  telegram_targets: ""
+  travel_tracker_enabled: true
+  travel_poll_seconds: 30
+  travel_arrival_minutes: 120
   max_context_entities: 80
   log_level: "info"
 schema:
@@ -51,5 +59,13 @@ schema:
   workspace_enabled: bool
   codex_bridge_enabled: bool
   codex_bridge_token: "password?"
+  weather_monitor_enabled: bool
+  weather_interval_minutes: "int(15,180)"
+  dpc_radar_enabled: bool
+  windy_api_key: "password?"
+  telegram_targets: "str?"
+  travel_tracker_enabled: bool
+  travel_poll_seconds: "int(15,300)"
+  travel_arrival_minutes: "int(15,360)"
   max_context_entities: "int(10,200)"
   log_level: "list(debug|info|warning|error)"

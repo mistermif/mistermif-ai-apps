@@ -1,4 +1,4 @@
-# mistermif AI 0.8.1
+# mistermif AI 0.9.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -24,6 +24,10 @@ della caravan.
 - gemello digitale sul Mac senza servizi Home Assistant eseguibili dal ponte.
 - scheda grafica per simulazioni e self-check, più diagramma del ponte nelle
   impostazioni.
+- sorveglianza meteo autonoma ogni 30 minuti senza consumo di token AI;
+- fusione locale di sensori HA, Open-Meteo multimodello e Radar-DPC grandine;
+- avvisi persistenti e deduplicati, con Telegram per urgenze ed emergenze;
+- diario viaggi GPS automatico con soste, velocità, distanza, report, CSV e GPX.
 
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
 sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e
@@ -63,10 +67,22 @@ PYTHONPATH=. python3 -m unittest discover -s tests -v
 Installare la repo `https://github.com/mistermif/mistermif-ai-apps` dallo Store
 delle app di Home Assistant.
 
+## Configurare meteo e viaggi
+
+Le impostazioni predefinite attivano il meteo ogni 30 minuti e il GPS ogni 30
+secondi. `telegram_targets` accetta gli ID chat separati da virgola. Windy è
+opzionale e richiede una chiave Point Forecast Professional; la chiave gratuita
+di test non è adatta a dati reali. `travel_arrival_minutes` stabilisce dopo
+quanto tempo una sosta chiude automaticamente il viaggio (predefinito 120).
+
+Le decisioni meteo sono regole locali e consumano zero richieste Gemini,
+OpenAI o Groq. Open-Meteo e Radar-DPC sono richieste dati normali, non token AI.
+
 ## Roadmap
 
 - `0.2`: monitor meteo e registro diagnostico;
 - `0.3`: proposte di azione con conferma;
 - `0.4`: strumenti Energy Pilot esplicitamente autorizzati;
 - completato in `0.8`: ponte privato Codex/MCP e consenso sulle simulazioni;
+- completato in `0.9`: supervisore meteo autonomo e diario viaggi GPS locale;
 - `0.7`: uscita vocale opzionale.

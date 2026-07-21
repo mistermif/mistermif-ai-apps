@@ -29,6 +29,11 @@ class SettingsTest(TestCase):
             self.assertFalse(settings.codex_bridge_enabled)
             self.assertEqual("", settings.codex_bridge_token)
             self.assertEqual(8100, settings.codex_bridge_port)
+            self.assertTrue(settings.weather_monitor_enabled)
+            self.assertEqual(30, settings.weather_interval_minutes)
+            self.assertTrue(settings.travel_tracker_enabled)
+            self.assertEqual(30, settings.travel_poll_seconds)
+            self.assertEqual(120, settings.travel_arrival_minutes)
 
     def test_codex_bridge_options_are_loaded_without_exposing_token(self):
         with TemporaryDirectory() as directory:

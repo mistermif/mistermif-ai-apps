@@ -13,7 +13,7 @@ from typing import Any
 
 
 SERVER_NAME = "mistermif-ai"
-SERVER_VERSION = "0.8.1"
+SERVER_VERSION = "0.9.0"
 DEFAULT_PROTOCOL = "2025-06-18"
 LOCAL_CONFIG = Path(__file__).resolve().parent.parent / ".mistermif-bridge.local.json"
 

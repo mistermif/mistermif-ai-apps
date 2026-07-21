@@ -30,6 +30,14 @@ class Settings:
     codex_bridge_enabled: bool = False
     codex_bridge_token: str = ""
     codex_bridge_port: int = 8100
+    weather_monitor_enabled: bool = True
+    weather_interval_minutes: int = 30
+    dpc_radar_enabled: bool = True
+    windy_api_key: str = ""
+    telegram_targets: tuple[str, ...] = ()
+    travel_tracker_enabled: bool = True
+    travel_poll_seconds: int = 30
+    travel_arrival_minutes: int = 120
 
     @classmethod
     def load(cls) -> "Settings":
@@ -89,6 +97,34 @@ class Settings:
         cloud_automatic_limit = min(
             cloud_daily_limit, max(0, cloud_automatic_limit)
         )
+        try:
+            weather_interval_minutes = int(
+                options.get("weather_interval_minutes", 30)
+            )
+        except (TypeError, ValueError):
+            weather_interval_minutes = 30
+        weather_interval_minutes = min(180, max(15, weather_interval_minutes))
+        try:
+            travel_poll_seconds = int(options.get("travel_poll_seconds", 30))
+        except (TypeError, ValueError):
+            travel_poll_seconds = 30
+        travel_poll_seconds = min(300, max(15, travel_poll_seconds))
+        try:
+            travel_arrival_minutes = int(
+                options.get("travel_arrival_minutes", 120)
+            )
+        except (TypeError, ValueError):
+            travel_arrival_minutes = 120
+        travel_arrival_minutes = min(360, max(15, travel_arrival_minutes))
+        raw_targets = options.get("telegram_targets", "")
+        if isinstance(raw_targets, list):
+            telegram_targets = tuple(
+                str(item).strip() for item in raw_targets if str(item).strip()
+            )
+        else:
+            telegram_targets = tuple(
+                item.strip() for item in str(raw_targets).split(",") if item.strip()
+            )
 
         model = str(options.get("model", "gpt-5.4-mini"))
         if ai_provider == "groq" and (
@@ -146,4 +182,16 @@ class Settings:
             codex_bridge_port=int(
                 os.getenv("MISTERMIF_BRIDGE_PORT", "8100")
             ),
+            weather_monitor_enabled=bool(
+                options.get("weather_monitor_enabled", True)
+            ),
+            weather_interval_minutes=weather_interval_minutes,
+            dpc_radar_enabled=bool(options.get("dpc_radar_enabled", True)),
+            windy_api_key=str(options.get("windy_api_key", "")),
+            telegram_targets=telegram_targets,
+            travel_tracker_enabled=bool(
+                options.get("travel_tracker_enabled", True)
+            ),
+            travel_poll_seconds=travel_poll_seconds,
+            travel_arrival_minutes=travel_arrival_minutes,
         )

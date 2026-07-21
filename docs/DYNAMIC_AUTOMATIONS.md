@@ -91,7 +91,7 @@ Il sistema deve:
 
 - verificare con sensori indipendenti temperatura e funzionamento del clima;
 - stimare autonomia e rischio prima di raggiungere una condizione critica;
-- inviare notifiche progressive e ripetute sui canali configurati;
+- inviare notifiche progressive solo quando il rischio è nuovo o peggiora;
 - segnalare immediatamente perdita di sensori, alimentazione o connettività;
 - mantenere allarmi locali indipendenti dall'AI;
 - richiedere un contatto reperibile e un piano di intervento umano.

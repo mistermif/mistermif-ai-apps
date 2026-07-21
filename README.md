@@ -9,7 +9,7 @@ Il progetto nasce su una caravan Knaus, ma l'architettura è pensata per essere
 configurabile e adattabile ad altri camper e caravan.
 
 > Il progetto è in sviluppo attivo. La versione corrente fornisce la base sicura
-> del copilota; viaggio, campeggi, frigorifero e decisioni energetiche complete
+> del copilota; campeggi, frigorifero e decisioni energetiche complete
 > sono ancora in sviluppo progressivo.
 
 ## Perché esiste
@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.8.1
+## Cosa funziona oggi — versione 0.9.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -79,6 +79,11 @@ deterministiche e indipendenti dall'AI e da Internet.
   condivisione con Codex.
 - risultati delle simulazioni rappresentati con indicatori grafici di SOC,
   corrente, rete, solare, colonnina, severità e stato del self-check.
+- sorveglianza meteo deterministica ogni 30 minuti senza token AI;
+- fusione di sensori locali, Open-Meteo multimodello e Radar-DPC grandine;
+- deduplicazione persistente ed escalation soltanto quando il quadro peggiora;
+- diario GPS automatico con pianificazione in chat, soste, arrivo, report e
+  esportazione CSV/GPX.
 
 ### Laboratorio sul Mac e dialogo con Codex
 
@@ -233,7 +238,7 @@ meteo, ristorante, campeggio o ricambio e le fonti vengono mostrate in fondo.
 
 ### Livelli di allarme
 
-- **Emergenza:** intervento immediato, escalation e notifiche ripetute;
+- **Emergenza:** intervento immediato e invio su Home Assistant più Telegram;
 - **Urgenza:** intervento richiesto entro 10–15 minuti;
 - **Allerta:** nessun intervento necessario, ma attenzione e monitoraggio.
 
@@ -247,11 +252,48 @@ caravan richiede anche la motrice. Nomi e ruoli dell'equipaggio vengono
 conservati esclusivamente nella memoria SQLite locale e sono esclusi dal
 contesto cloud filtrato.
 
-## Cosa è progettato per la 0.4
+## Sorveglianza meteo autonoma 0.9
+
+Il supervisore meteo lavora ogni 30 minuti senza usare un modello AI e quindi
+senza consumare token. Combina sensori Home Assistant, GPS, previsione
+multimodello Open-Meteo e, in Italia, il prodotto puntuale di probabilità di
+grandine del Radar-DPC. Windy Point Forecast può essere aggiunto solo con una
+chiave Professional: la chiave gratuita di test restituisce dati alterati e non
+viene mai usata per decisioni di sicurezza.
+
+Lo stato dell'ultimo evento è persistente. Un avviso non viene ripetuto finché
+la severità e i fenomeni restano invariati. Una nuova notifica viene emessa
+soltanto quando il quadro peggiora sensibilmente, compare grandine oppure viene
+rilevato un temporale sviluppato. Le allerte ordinarie usano il servizio
+`notify.*`; urgenze ed emergenze aggiungono Telegram quando sono configurati i
+destinatari.
+
+Le fonti esterne integrano, ma non sostituiscono, IT-Alert, Protezione Civile,
+allarmi locali o decisioni dell'utente. Radar-DPC può avere copertura parziale o
+dati non validati in tempo reale.
+
+Fonti e condizioni d'uso: [Open-Meteo](https://open-meteo.com/en/docs),
+[piattaforma Radar-DPC](https://mappe.protezionecivile.gov.it/it/mappe-e-dashboard-rischi/piattaforma-radar/)
+e [Windy Point Forecast](https://api.windy.com/point-forecast/docs). Open-Meteo
+richiede attribuzione CC BY 4.0; i dati Radar-DPC sono pubblicati con licenza
+CC BY-SA 4.0. Windy resta completamente opzionale.
+
+## Diario viaggi autonomo 0.9
+
+Il GPS viene letto localmente ogni 30 secondi. Due campioni consecutivi sopra
+5 km/h avviano un viaggio; una sosta prolungata, predefinita a due ore, chiude
+il diario e viene interpretata come arrivo. Distanza, durata totale, tempo in
+movimento e in sosta, velocità media e massima, numero di soste, temperatura,
+umidità e pressione rimangono nel database SQLite locale.
+
+È possibile scrivere in chat `Venerdì parto per il Camping Club degli Amici`:
+la destinazione viene associata automaticamente alla partenza successiva.
+`Fammi il report del viaggio` restituisce il riepilogo; `Esporta il viaggio`
+prepara CSV e GPX. Coordinate e tracce non sono inviate al provider AI.
+
+## Cosa è progettato per le versioni successive
 
 - profilo conversazionale del mezzo e dei suoi apparati;
-- diario viaggi e contachilometri stimato dal GPS;
-- rilevamento automatico di partenza, arrivo e sosta prolungata;
 - riconoscimento di campeggi e aree dalle coordinate;
 - memoria di piazzola, ampere, orientamento ed esposizione solare;
 - preparazione del viaggio usando meteo ed esperienze precedenti;
@@ -521,13 +563,15 @@ creato e recuperare la copia più recente da `/config/mistermif_ai/backup`.
 - **0.4:** viaggi, campeggi, meteo, frigorifero, energia e comfort;
 - **0.5:** collegamento controllato con Codex sul Mac;
 - **0.6:** voce opzionale attraverso l'impianto audio.
+- **0.9:** sorveglianza meteo locale, Radar-DPC, deduplicazione degli avvisi e
+  diario viaggi GPS esportabile.
 
 ## Privacy
 
 Il repository non contiene token, password, indirizzi privati, coordinate GPS o
 configurazioni personali di Home Assistant. Percorsi e coordinate sono dati
-sensibili: nella futura versione 0.4 resteranno locali e saranno esportabili o
-cancellabili dall'utente.
+sensibili: restano nel database locale e vengono trasmessi soltanto quando
+l'utente richiede esplicitamente un'esportazione CSV o GPX.
 
 ## Stato del progetto
 
