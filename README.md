@@ -12,6 +12,57 @@ configurabile e adattabile ad altri camper e caravan.
 > del copilota; campeggi, frigorifero e decisioni energetiche complete
 > sono ancora in sviluppo progressivo.
 
+## Punto della situazione
+
+La versione **0.9.1** è una base già funzionante, installabile come app di Home
+Assistant. Non è ancora un sistema che può modificare liberamente la caravan:
+lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
+separa chiaramente funzioni operative, simulazioni e sviluppi futuri.
+
+| Area | Stato attuale | Cosa fa realmente |
+|---|---|---|
+| Chat e memoria | Operativa | Dialoga e conserva localmente conversazioni, profilo del mezzo e informazioni autorizzate |
+| Home Assistant | Operativa | Legge soltanto sensori ed entità ammessi dalla politica di sicurezza |
+| Controllo apparati | Limitato | Può spegnere esclusivamente il climatizzatore configurato; Animali a bordo ne impedisce lo spegnimento |
+| Simulazioni energetiche | Operative | Simula batteria, solare, colonnina, PZEM, presa esterna e clima senza comandare dispositivi reali |
+| Generazione configurazioni | Operativa come bozza | Prepara plance, helper e automazioni dentro `/config/mistermif_ai`, con manifest e rollback |
+| Meteo autonomo | Operativo | Analizza ogni 30 minuti sensori, Open-Meteo e Radar-DPC; Windy è opzionale |
+| Revisione Gemini meteo | Operativa e selettiva | Nessuna chiamata se il quadro è sereno o stabile; massimo 10 valutazioni al giorno quando compare un rischio |
+| Diario viaggi | Operativo | Riconosce partenza e arrivo, registra percorso e soste, produce report ed esportazioni CSV/GPX |
+| Collegamento con Codex | Operativo ma consultivo | Condivide stato filtrato, simulazioni e proposte; il ponte non esegue comandi reali |
+| Apprendimento | Prima fase operativa | Registra osservazioni e risultati per posizione, senza modificare autonomamente codice o soglie |
+
+### Cosa può fare autonomamente oggi
+
+- eseguire il controllo meteo locale ogni 30 minuti;
+- osservare barometro, temperatura e umidità esterna e confrontarne l'andamento;
+- evitare notifiche duplicate e aumentare il livello solo se il rischio peggiora;
+- chiedere una revisione Gemini soltanto quando i controlli locali la
+  giustificano;
+- riconoscere il movimento della caravan e compilare il diario del viaggio;
+- inviare notifiche Home Assistant e, per urgenze configurate, Telegram;
+- registrare localmente motivazioni, risultati e modifiche prodotte nel proprio
+  workspace;
+- applicare soltanto le azioni già presenti nella whitelist e bloccarle tutte
+  tramite l'interruttore del potere decisionale.
+
+### Cosa non fa ancora
+
+- non modifica autonomamente parametri di inverter, BMS o ventilazione;
+- non installa da solo una bozza nell'impianto reale senza il ciclo di prova e
+  l'autorizzazione richiesta;
+- non controlla ancora frigorifero, TPMS o altri apparati non configurati;
+- non riconosce ancora automaticamente il nome del campeggio dalle coordinate;
+- non ha ancora automazioni energetiche predittive complete abilitate sui
+  dispositivi reali;
+- non sostituisce protezioni elettriche, allarmi gas/fumo, IT-Alert,
+  Protezione Civile o verifiche professionali.
+
+La direzione del progetto è trasformare queste funzioni in un unico copilota
+capace di osservare, ricordare, simulare, consigliare e intervenire nel solo
+perimetro autorizzato, mantenendo sempre un comando immediato per bloccarne
+l'autonomia.
+
 ## Perché esiste
 
 In una caravan i dati sono distribuiti tra inverter, batteria, sensori, clima,
