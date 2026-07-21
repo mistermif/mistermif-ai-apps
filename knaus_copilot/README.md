@@ -1,4 +1,4 @@
-# mistermif AI 0.5.6
+# mistermif AI 0.6.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -13,7 +13,8 @@ della caravan.
 - workspace isolato in `/config/mistermif_ai`;
 - file ponte compatibile con un `/config/packages` già esistente;
 - interruttore generale dell'autonomia;
-- Energy Safety Lab con scenari virtuali e storico locale;
+- simulazioni energetiche descritte direttamente nella chat;
+- autovalutazione locale del risultato e self-check completo;
 - creazione isolata di plancia, helper, automazione fissa e policy dinamica;
 - collaudo in simulazione e ombra prima di qualunque azione reale;
 - blocco esplicito di batteria, inverter, ventilazione e firmware.
@@ -39,9 +40,11 @@ vengono descritti come dati mancanti e non bastano, da soli, a generare
 un'emergenza. Le indicazioni su pneumatici e TPMS separano dati verificati,
 precauzioni e pericoli reali.
 
-I test energetici non richiedono di scaricare realmente la batteria: gli
-scenari del laboratorio producono decisioni e proposte, ma la lista delle
-azioni eseguite resta vuota. La modalità attiva è bloccata finché non sono
+I test energetici non richiedono di scaricare realmente la batteria. Basta
+scrivere, per esempio, `Simula batteria al 19%, senza sole e clima acceso` oppure
+`Fai un test completo delle simulazioni energetiche`. Mistermif AI interpreta i
+valori, esegue le regole e controlla da solo la coerenza; la lista delle azioni
+eseguite resta sempre vuota. La modalità attiva è bloccata finché non sono
 associati e convalidati i sensori reali in modalità ombra.
 
 ## Sviluppo locale
@@ -60,4 +63,4 @@ delle app di Home Assistant.
 - `0.3`: proposte di azione con conferma;
 - `0.4`: strumenti Energy Pilot esplicitamente autorizzati;
 - `0.5`: endpoint MCP per Codex sul Mac;
-- `0.6`: uscita vocale opzionale.
+- `0.7`: uscita vocale opzionale.

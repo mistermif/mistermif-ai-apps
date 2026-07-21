@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.5.6
+# Guida semplice a mistermif AI 0.6.0
 
 ## Installazione in cinque minuti
 
@@ -74,18 +74,27 @@ equipaggio, mezzo, viaggi e piazzole non vengono inclusi nel contesto cloud.
 
 ## Provare le automazioni senza scaricare la batteria
 
-Apri mistermif AI e scorri fino a **Energy Safety Lab**:
+Apri la chat di mistermif AI e descrivi semplicemente la condizione. Per esempio:
 
-1. premi **Crea plancia e helper**;
-2. seleziona uno scenario virtuale;
-3. premi **Esegui test**;
-4. controlla decisione, motivazione e azioni che avrebbe proposto.
+```text
+Simula batteria al 19%, senza sole, corrente -42 A e clima acceso.
+```
+
+Oppure chiedi:
+
+```text
+Fai un test completo di tutte le simulazioni energetiche.
+```
+
+L'assistente interpreta i dati, esegue la simulazione e controlla da solo se
+decisione e protezioni sono coerenti. La risposta mostra dati virtuali,
+decisione, motivo, azioni proposte, autoverifica ed eventuali assunzioni.
 
 Il test non accende il clima, non cambia SBU/SUB, non usa la presa esterna e non
 scarica la batteria. Scrive soltanto il risultato nel registro locale
 `/config/mistermif_ai/log/energy_safety_lab.jsonl`.
 
-I file preparati sono separati:
+I file tecnici eventualmente preparati restano separati:
 
 - `packages/mistermif_ai_energy_lab.yaml`: helper virtuali caricabili da HA;
 - `plance/energy_safety_lab.yaml`: plancia Lovelace pronta;
@@ -107,7 +116,7 @@ Ogni nuova logica segue:
 Un sensore `unknown` o `unavailable` rende la prova inconcludente e non può
 generare un comando.
 
-Per preparare la modalità ombra apri **Associazione sensori reali**, scegli:
+Per preparare in seguito la modalità ombra occorre associare:
 
 - SOC batteria;
 - potenza rete/PZEM;
@@ -115,9 +124,9 @@ Per preparare la modalità ombra apri **Associazione sensori reali**, scegli:
 - facoltativamente corrente batteria e climatizzatore;
 - ampere disponibili.
 
-Premi **Salva associazione** e poi **Prova in ombra**. Anche questa prova
-registra soltanto ciò che l'assistente avrebbe deciso: le azioni reali restano
-zero.
+Anche la prova in ombra registra soltanto ciò che l'assistente avrebbe deciso:
+le azioni reali restano zero. La configurazione verrà guidata dalla chat e non è
+più esposta come pannello tecnico nella schermata principale.
 
 ## AI facoltativa, anche gratuita
 

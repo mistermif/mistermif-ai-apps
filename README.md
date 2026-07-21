@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.5.6
+## Cosa funziona oggi — versione 0.6.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -61,20 +61,37 @@ deterministiche e indipendenti dall'AI e da Internet.
 - intervista locale al primo avvio per mezzo, motrice ed equipaggio;
 - tre livelli operativi: emergenza, urgenza e allerta;
 - collegamento compatibile con installazioni che usano già `/config/packages`.
-- Energy Safety Lab completamente locale con sensori virtuali;
+- simulazioni energetiche richieste direttamente nella chat, completamente locali;
 - generazione nel workspace di plancia, helper, automazione fissa e policy
   dinamica;
-- sei scenari ripetibili che non scaricano la batteria e non comandano apparati;
+- interpretazione di SOC, corrente batteria, PZEM, presa esterna, solare,
+  colonnina, clima, orario e animali descritti in linguaggio naturale;
+- self-check completo dei sei scenari di sicurezza senza scaricare la batteria
+  e senza comandare apparati;
 - ciclo obbligatorio bozza → simulazione → ombra → attiva;
 - backup automatico di ogni file generato prima di una sua sovrascrittura;
 - registro locale di input, decisione e azioni che sarebbero state proposte.
 
-### Energy Safety Lab
+### Simulazioni conversazionali
 
-La versione 0.5.6 introduce un laboratorio indipendente dal provider AI. Può
-quindi essere usato anche senza Gemini e quando i dispositivi ESP sono offline.
-Il pulsante **Crea plancia e helper** prepara esclusivamente dentro
-`/config/mistermif_ai`:
+La versione 0.6.0 elimina il pannello tecnico del laboratorio. La simulazione si
+usa direttamente nella chat ed è indipendente dal provider AI: funziona anche
+senza Gemini e quando i dispositivi ESP sono offline.
+
+Esempi:
+
+- `Simula batteria al 19%, senza sole, corrente -42 A e clima acceso`;
+- `Simula colonnina 10 A, PZEM 720 W e presa esterna 1420 W`;
+- `Simula batteria al 18%, cani a bordo e nessuna ricarica`;
+- `Fai un test completo di tutte le simulazioni energetiche`.
+
+Mistermif AI traduce la frase in uno snapshot virtuale, applica le regole locali,
+controlla automaticamente isolamento, decisione, protezione della colonnina,
+recupero energetico e tutela degli animali, quindi risponde con **coerente** o
+**da correggere**. Specifica sempre i valori interpretati, le assunzioni, le
+azioni che avrebbe proposto e conferma che le azioni reali eseguite sono zero.
+
+Il backend può ancora preparare esclusivamente dentro `/config/mistermif_ai`:
 
 - un package di helper e sensori virtuali;
 - una plancia Lovelace YAML pronta da collegare;
@@ -82,7 +99,7 @@ Il pulsante **Crea plancia e helper** prepara esclusivamente dentro
 - una policy leggibile per le automazioni dinamiche;
 - manifest, storico delle prove e copie di rollback.
 
-Gli scenari inclusi coprono sensori offline, batteria critica, recupero solare,
+Il self-check incluso copre sensori offline, batteria critica, recupero solare,
 colonnina da 6 A, colonnina da 10 A con presa esterna e animali a bordo. Durante
 una simulazione vengono eseguiti zero servizi Home Assistant: il consumo della
 batteria reale causato dal test è sempre zero.
@@ -92,11 +109,10 @@ convalidati e osservati in modalità ombra. Questo evita che un nome errato o un
 valore `unknown` producano un comando. In modalità ombra l'assistente registra
 cosa avrebbe fatto senza cambiare alcuno stato.
 
-La sezione di associazione guidata richiede inizialmente soltanto SOC batteria,
-potenza rete/PZEM e produzione solare. Corrente batteria e clima sono opzionali.
-Le entità possono essere selezionate anche quando il loro stato è offline; la
-prova ombra resterà inconcludente finché i tre valori obbligatori non saranno
-validi.
+L'associazione dei sensori per la modalità ombra resta disponibile tramite API e
+configurazione assistita, ma non occupa più la schermata principale. Una prova
+ombra resta inconcludente finché SOC, potenza rete/PZEM e produzione solare non
+sono associati e validi.
 
 Il backend espone inoltre un costruttore generale per bozze di tipo dashboard,
 helper, automazione fissa, automazione dinamica, script e template. Le bozze

@@ -20,6 +20,7 @@ from .automation_lab import (
     snapshot_from_home_assistant,
 )
 from .config import Settings
+from .conversational_simulator import run_conversational_simulation
 from .cloud_usage import CloudUsage
 from .home_assistant import HomeAssistantClient
 from .learning import ContextLearner
@@ -89,7 +90,7 @@ async def lifespan(_: FastAPI):
         await learning_task
 
 
-APP_VERSION = "0.5.6"
+APP_VERSION = "0.6.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -361,6 +362,27 @@ async def chat(
         x_remote_user_id, x_remote_user_display_name
     )
     normalized = payload.message.casefold()
+    simulation = run_conversational_simulation(payload.message)
+    if simulation is not None:
+        memory.add_message(user_id, "user", payload.message)
+        memory.add_message(user_id, "assistant", simulation["answer"])
+        try:
+            if simulation["kind"] == "single":
+                workspace.record_lab_result(simulation["result"])
+            elif simulation["kind"] == "full":
+                for item in simulation["items"]:
+                    workspace.record_lab_result(item["result"])
+        except WorkspaceError:
+            logger.exception("Registrazione della simulazione conversazionale non riuscita")
+        return {
+            "answer": simulation["answer"],
+            "user": display_name,
+            "simulation": {
+                key: value
+                for key, value in simulation.items()
+                if key != "answer"
+            },
+        }
     requests_climate_off = (
         ("spegni" in normalized or "disattiva" in normalized)
         and ("clima" in normalized or "climatizzatore" in normalized)

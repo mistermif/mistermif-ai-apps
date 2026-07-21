@@ -50,11 +50,13 @@ La promozione non può saltare simulazione e ombra. Un sensore non associato,
 stale, `unknown` o `unavailable` blocca la decisione invece di essere convertito
 in zero.
 
-## Energy Safety Lab 0.5.6
+## Simulazioni conversazionali 0.6.0
 
-Il laboratorio locale contiene scenari ripetibili per SOC basso, recupero
-solare, sovraccarico della colonnina, presa esterna e animali a bordo. Ogni
-risultato dichiara:
+L'utente descrive la condizione direttamente nella chat oppure chiede un
+self-check completo. Il motore locale interpreta i valori e confronta da solo
+il risultato con i vincoli di sicurezza per SOC basso, recupero solare,
+sovraccarico della colonnina, presa esterna e animali a bordo. Ogni risultato
+dichiara:
 
 - dati di ingresso;
 - limite elettrico virtuale;
@@ -62,6 +64,7 @@ risultato dichiara:
 - decisione e motivazione;
 - azioni consentite che avrebbe proposto;
 - raccomandazioni ancora protette;
+- esito della propria autoverifica;
 - conferma che nessun servizio reale è stato chiamato.
 
 I risultati sono salvati in
