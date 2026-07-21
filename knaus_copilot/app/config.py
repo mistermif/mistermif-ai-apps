@@ -35,6 +35,8 @@ class Settings:
     dpc_radar_enabled: bool = True
     windy_api_key: str = ""
     telegram_targets: tuple[str, ...] = ()
+    weather_ai_enabled: bool = True
+    weather_ai_daily_limit: int = 10
     travel_tracker_enabled: bool = True
     travel_poll_seconds: int = 30
     travel_arrival_minutes: int = 120
@@ -104,6 +106,13 @@ class Settings:
         except (TypeError, ValueError):
             weather_interval_minutes = 30
         weather_interval_minutes = min(180, max(15, weather_interval_minutes))
+        try:
+            weather_ai_daily_limit = int(
+                options.get("weather_ai_daily_limit", 10)
+            )
+        except (TypeError, ValueError):
+            weather_ai_daily_limit = 10
+        weather_ai_daily_limit = min(10, max(0, weather_ai_daily_limit))
         try:
             travel_poll_seconds = int(options.get("travel_poll_seconds", 30))
         except (TypeError, ValueError):
@@ -189,6 +198,8 @@ class Settings:
             dpc_radar_enabled=bool(options.get("dpc_radar_enabled", True)),
             windy_api_key=str(options.get("windy_api_key", "")),
             telegram_targets=telegram_targets,
+            weather_ai_enabled=bool(options.get("weather_ai_enabled", True)),
+            weather_ai_daily_limit=weather_ai_daily_limit,
             travel_tracker_enabled=bool(
                 options.get("travel_tracker_enabled", True)
             ),

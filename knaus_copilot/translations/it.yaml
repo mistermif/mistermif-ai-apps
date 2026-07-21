@@ -56,6 +56,12 @@ configuration:
   telegram_targets:
     name: "Destinatari Telegram"
     description: "ID chat separati da virgola per urgenze ed emergenze."
+  weather_ai_enabled:
+    name: "Valutazione meteo Gemini"
+    description: "Consulta Gemini solo se il controllo locale rileva peggioramento o rischio."
+  weather_ai_daily_limit:
+    name: "Limite Gemini meteo giornaliero"
+    description: "Massimo 10 valutazioni automatiche al giorno; con cielo sereno non effettua chiamate."
   travel_tracker_enabled:
     name: "Diario viaggi automatico"
     description: "Rileva partenza, soste e arrivo tramite GPS locale."

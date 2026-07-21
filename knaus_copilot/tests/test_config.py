@@ -31,6 +31,8 @@ class SettingsTest(TestCase):
             self.assertEqual(8100, settings.codex_bridge_port)
             self.assertTrue(settings.weather_monitor_enabled)
             self.assertEqual(30, settings.weather_interval_minutes)
+            self.assertTrue(settings.weather_ai_enabled)
+            self.assertEqual(10, settings.weather_ai_daily_limit)
             self.assertTrue(settings.travel_tracker_enabled)
             self.assertEqual(30, settings.travel_poll_seconds)
             self.assertEqual(120, settings.travel_arrival_minutes)

@@ -56,6 +56,12 @@ configuration:
   telegram_targets:
     name: "Telegram recipients"
     description: "Comma-separated chat IDs for urgent and emergency alerts."
+  weather_ai_enabled:
+    name: "Gemini weather assessment"
+    description: "Calls Gemini only when local checks detect deterioration or risk."
+  weather_ai_daily_limit:
+    name: "Daily Gemini weather limit"
+    description: "At most 10 automatic assessments per day; clear weather makes no calls."
   travel_tracker_enabled:
     name: "Automatic trip log"
     description: "Detects departure, stops, and arrival using local GPS."

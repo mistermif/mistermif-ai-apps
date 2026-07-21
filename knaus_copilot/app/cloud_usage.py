@@ -21,18 +21,20 @@ class CloudUsage:
         daily_limit: int,
         automatic_limit: int,
         timezone_name: str = "Europe/Rome",
+        storage_key: str = "cloud_usage",
     ):
         self.memory = memory
         self.daily_limit = daily_limit
         self.automatic_limit = automatic_limit
         self.timezone = ZoneInfo(timezone_name)
+        self.storage_key = storage_key
         self._lock = threading.Lock()
 
     def _today(self) -> str:
         return datetime.now(self.timezone).date().isoformat()
 
     def snapshot(self) -> dict[str, Any]:
-        value = self.memory.get_json_setting("cloud_usage") or {}
+        value = self.memory.get_json_setting(self.storage_key) or {}
         if value.get("date") != self._today():
             value = {"date": self._today(), "total": 0, "automatic": 0}
         total = int(value.get("total", 0))
@@ -64,5 +66,5 @@ class CloudUsage:
                 "total": usage["total"] + 1,
                 "automatic": usage["automatic"] + (1 if automatic else 0),
             }
-            self.memory.set_json_setting("cloud_usage", payload)
+            self.memory.set_json_setting(self.storage_key, payload)
             return self.snapshot()

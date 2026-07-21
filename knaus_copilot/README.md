@@ -1,4 +1,4 @@
-# mistermif AI 0.9.0
+# mistermif AI 0.9.1
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -26,6 +26,8 @@ della caravan.
   impostazioni.
 - sorveglianza meteo autonoma ogni 30 minuti senza consumo di token AI;
 - fusione locale di sensori HA, Open-Meteo multimodello e Radar-DPC grandine;
+- andamento di barometro, temperatura e umidità esterna registrato localmente;
+- revisione Gemini solo per nuovi rischi o peggioramenti, massimo 10 al giorno;
 - avvisi persistenti e deduplicati, con Telegram per urgenze ed emergenze;
 - diario viaggi GPS automatico con soste, velocità, distanza, report, CSV e GPX.
 
@@ -76,7 +78,10 @@ di test non è adatta a dati reali. `travel_arrival_minutes` stabilisce dopo
 quanto tempo una sosta chiude automaticamente il viaggio (predefinito 120).
 
 Le decisioni meteo sono regole locali e consumano zero richieste Gemini,
-OpenAI o Groq. Open-Meteo e Radar-DPC sono richieste dati normali, non token AI.
+OpenAI o Groq quando il quadro è sereno o stabile. Se `weather_ai_enabled` è
+attivo, un nuovo rischio può richiedere una singola revisione Gemini. Il limite
+`weather_ai_daily_limit` non può superare 10. Open-Meteo e Radar-DPC sono
+richieste dati normali, non token AI.
 
 ## Roadmap
 

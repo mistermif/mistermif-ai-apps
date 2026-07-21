@@ -426,7 +426,7 @@
               <div class="setting-row"><span>Controllo</span><span id="setting-weather-enabled">—</span></div>
               <div class="setting-row"><span>Intervallo</span><span id="setting-weather-interval">—</span></div>
               <div class="setting-row"><span>Ultimo livello</span><span id="setting-weather-severity">—</span></div>
-              <div class="setting-row"><span>Token AI</span><span id="setting-weather-tokens">—</span></div>
+              <div class="setting-row"><span>Gemini meteo oggi</span><span id="setting-weather-tokens">—</span></div>
             </section>
             <section class="settings-card">
               <h3>Diario viaggi</h3>
@@ -479,7 +479,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.9.0 · CONSOLE ESSENZIALE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.9.1 · CONSOLE ESSENZIALE</span></footer>
     </div>
   </div>
 
@@ -667,7 +667,12 @@
       setText("setting-weather-enabled", data.weather_monitor.enabled ? "Attivo" : "Disattivato");
       setText("setting-weather-interval", `${data.weather_monitor.interval_minutes} min`);
       setText("setting-weather-severity", data.weather_monitor.severity);
-      setText("setting-weather-tokens", String(data.weather_monitor.ai_tokens_used));
+      setText(
+        "setting-weather-tokens",
+        data.weather_monitor.gemini_enabled
+          ? `${data.weather_monitor.gemini_budget.total}/${data.weather_monitor.gemini_budget.daily_limit}`
+          : "Disattivato"
+      );
       setText("setting-travel-enabled", data.travel_tracker.enabled ? "Attivo" : "Disattivato");
       setText("setting-travel-poll", `${data.travel_tracker.poll_seconds} s`);
       setText(

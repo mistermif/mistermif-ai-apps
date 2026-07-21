@@ -67,6 +67,12 @@ agent = KnausAgent(
     cloud_usage,
     settings.gemini_search_enabled,
 )
+weather_ai_usage = CloudUsage(
+    memory,
+    settings.weather_ai_daily_limit,
+    settings.weather_ai_daily_limit,
+    storage_key="weather_ai_usage",
+)
 workspace = WorkspaceManager(settings.homeassistant_config_dir)
 learner = ContextLearner(memory)
 weather_monitor = WeatherMonitor(
@@ -76,6 +82,12 @@ weather_monitor = WeatherMonitor(
     settings.telegram_targets,
     settings.dpc_radar_enabled,
     settings.windy_api_key,
+    (
+        agent.evaluate_weather
+        if settings.weather_ai_enabled and agent.can_evaluate_weather()
+        else None
+    ),
+    weather_ai_usage if settings.weather_ai_enabled else None,
 )
 travel_tracker = TravelTracker(memory, settings.travel_arrival_minutes)
 
@@ -192,7 +204,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "0.9.0"
+APP_VERSION = "0.9.1"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -372,7 +384,11 @@ async def status() -> dict:
             "notified": bool(weather_state.get("notified", False)),
             "sources": weather_state.get("sources", {}),
             "local_decisions": True,
-            "ai_tokens_used": 0,
+            "gemini_enabled": settings.weather_ai_enabled,
+            "gemini_ready": agent.can_evaluate_weather(),
+            "gemini_budget": weather_ai_usage.snapshot(),
+            "local_observation": weather_state.get("local_observation", {}),
+            "local_trend": weather_state.get("local_trend", {}),
         },
         "travel_tracker": {
             "enabled": settings.travel_tracker_enabled,

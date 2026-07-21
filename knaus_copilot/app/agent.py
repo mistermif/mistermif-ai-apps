@@ -198,6 +198,118 @@ class KnausAgent:
             else None
         )
 
+    def can_evaluate_weather(self) -> bool:
+        return (
+            self.provider == "gemini"
+            and bool(self.api_key)
+            and self.privacy_mode != "local_only"
+        )
+
+    async def evaluate_weather(
+        self,
+        assessment: dict[str, Any],
+        local_observation: dict[str, Any],
+    ) -> dict[str, Any]:
+        """One compact Gemini call for an already detected weather concern."""
+        if not self.can_evaluate_weather():
+            raise RuntimeError("Gemini meteo non configurato")
+        context = {
+            "deterministic_assessment": assessment,
+            "external_sensors": local_observation,
+        }
+        prompt = (
+            "Valuta questo quadro meteo per una caravan. Rispondi esclusivamente "
+            "con JSON valido contenente: severity (nessuna|allerta|urgenza), "
+            "worsening (boolean), confidence (0..1), summary (massimo 240 caratteri), "
+            "recommendations (massimo 3 stringhe brevi). Non creare dati mancanti e "
+            "non dichiarare emergenza basandoti soltanto sul modello AI.\n"
+            + json.dumps(context, ensure_ascii=False)
+        )
+        payload: dict[str, Any] = {
+            "systemInstruction": {
+                "parts": [
+                    {
+                        "text": (
+                            "Sei il revisore meteo di mistermif AI. Confronta sensori "
+                            "locali, tendenze e fonti previsionali già raccolte. "
+                            "Sii prudente, conciso e non inventare misure."
+                        )
+                    }
+                ]
+            },
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "thinkingConfig": {"thinkingLevel": "low"},
+                "maxOutputTokens": 384,
+                "responseMimeType": "application/json",
+                "responseSchema": {
+                    "type": "object",
+                    "properties": {
+                        "severity": {
+                            "type": "string",
+                            "enum": ["nessuna", "allerta", "urgenza"],
+                        },
+                        "worsening": {"type": "boolean"},
+                        "confidence": {"type": "number"},
+                        "summary": {"type": "string"},
+                        "recommendations": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                    },
+                    "required": [
+                        "severity",
+                        "worsening",
+                        "confidence",
+                        "summary",
+                        "recommendations",
+                    ],
+                },
+            },
+        }
+        async with httpx.AsyncClient(timeout=35) as client:
+            response = await client.post(
+                f"{self.base_url}/models/{self.model}:generateContent",
+                headers={
+                    "x-goog-api-key": self.api_key,
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+        if response.status_code in {401, 403}:
+            raise RuntimeError("Chiave Gemini non valida o non autorizzata")
+        if response.status_code == 429:
+            raise RuntimeError("Limite Gemini temporaneamente raggiunto")
+        response.raise_for_status()
+        candidates = response.json().get("candidates") or []
+        if not candidates:
+            raise RuntimeError("Gemini non ha restituito una valutazione meteo")
+        text = "".join(
+            str(part.get("text", ""))
+            for part in candidates[0].get("content", {}).get("parts", [])
+        ).strip()
+        try:
+            result = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("Valutazione meteo Gemini non valida") from exc
+        if not isinstance(result, dict):
+            raise RuntimeError("Valutazione meteo Gemini non valida")
+        severity = str(result.get("severity", "nessuna")).casefold()
+        if severity not in {"nessuna", "allerta", "urgenza"}:
+            severity = "nessuna"
+        recommendations = result.get("recommendations") or []
+        try:
+            confidence = float(result.get("confidence", 0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+        return {
+            "severity": severity,
+            "worsening": bool(result.get("worsening", False)),
+            "confidence": max(0.0, min(1.0, confidence)),
+            "summary": str(result.get("summary", ""))[:240],
+            "recommendations": [str(item)[:180] for item in recommendations[:3]],
+        }
+
     async def chat(
         self,
         user_id: str,

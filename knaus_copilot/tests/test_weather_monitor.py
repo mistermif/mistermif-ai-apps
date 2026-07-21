@@ -66,3 +66,49 @@ class WeatherMonitorTest(TestCase):
         self.assertEqual("urgenza", assessment["severity"])
         self.assertIn("vento", assessment["kinds"])
         self.assertIn("temporale", assessment["kinds"])
+
+    def test_external_barometer_temperature_and_humidity_are_read(self):
+        observation = WeatherMonitor.extract_local_observation(
+            [
+                {
+                    "entity_id": "sensor.caravan_sensor_esterno_temperatura",
+                    "state": "23.4",
+                },
+                {
+                    "entity_id": "sensor.caravan_sensor_esterno_umidita",
+                    "state": "67",
+                },
+                {"entity_id": "sensor.barometro_pressione", "state": "1004.2"},
+            ]
+        )
+        self.assertEqual(
+            {"temperature": 23.4, "humidity": 67.0, "pressure": 1004.2},
+            observation,
+        )
+
+    def test_falling_pressure_combined_with_external_change_is_urgent(self):
+        risks = WeatherMonitor.analyse_local_trend(
+            {
+                "hours": 1.5,
+                "pressure_delta": -3.2,
+                "temperature_delta": -2.5,
+                "humidity_delta": 14,
+            }
+        )
+        self.assertEqual("urgenza", risks[0].severity)
+        self.assertEqual("pressione_in_calo", risks[0].kind)
+
+    def test_gemini_is_not_called_for_clear_or_unchanged_weather(self):
+        with TemporaryDirectory() as directory:
+            memory = MemoryStore(Path(directory) / "memory.sqlite3")
+            monitor = WeatherMonitor(memory, object(), "notify.test")
+            clear = WeatherMonitor.assess([])
+            self.assertFalse(monitor.should_consult_ai(clear))
+            concern = WeatherMonitor.assess(
+                [WeatherRisk("vento", "allerta", 50, "test", "raffiche")]
+            )
+            self.assertTrue(monitor.should_consult_ai(concern))
+            memory.set_json_setting(
+                "weather_monitor_state", {"deterministic": concern}
+            )
+            self.assertFalse(monitor.should_consult_ai(concern))

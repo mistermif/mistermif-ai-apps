@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.9.0
+# Guida semplice a mistermif AI 0.9.1
 
 ## Installazione in cinque minuti
 
@@ -80,6 +80,13 @@ Il controllo predefinito avviene ogni 30 minuti e non interroga l'AI. Usa:
 - Open-Meteo Best Match, che combina più modelli previsionali;
 - Radar-DPC in Italia per il prodotto puntuale POH, probabilità di grandine;
 - Windy Point Forecast soltanto quando è configurata una chiave Professional.
+
+Il barometro e i sensori esterni di temperatura e umidità vengono registrati
+localmente. Il sistema confronta le ultime ore per riconoscere calo della
+pressione, diminuzione della temperatura e aumento dell'umidità. Se il quadro è
+sereno o uguale al controllo precedente Gemini non viene chiamato. Se compare
+un rischio o il quadro peggiora, Gemini può effettuare una revisione compatta,
+fino al limite configurato e comunque mai oltre 10 volte al giorno.
 
 Il monitor salva l'ultima valutazione nel database locale. Non ripete lo stesso
 messaggio: notifica nuovamente solo se aumenta la severità, il punteggio cresce

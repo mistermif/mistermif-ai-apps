@@ -27,3 +27,13 @@ class CloudUsageTest(TestCase):
             usage.consume()
             with self.assertRaises(CloudBudgetExceeded):
                 usage.consume()
+
+    def test_separate_budget_uses_an_independent_counter(self):
+        with TemporaryDirectory() as directory:
+            store = MemoryStore(Path(directory) / "memory.sqlite3")
+            chat = CloudUsage(store, 2, 1)
+            weather = CloudUsage(store, 10, 10, storage_key="weather_ai_usage")
+            chat.consume(automatic=True)
+            weather.consume(automatic=True)
+            self.assertEqual(1, chat.snapshot()["automatic"])
+            self.assertEqual(1, weather.snapshot()["automatic"])

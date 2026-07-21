@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.9.0
+## Cosa funziona oggi — versione 0.9.1
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -82,6 +82,10 @@ deterministiche e indipendenti dall'AI e da Internet.
 - sorveglianza meteo deterministica ogni 30 minuti senza token AI;
 - fusione di sensori locali, Open-Meteo multimodello e Radar-DPC grandine;
 - deduplicazione persistente ed escalation soltanto quando il quadro peggiora;
+- monitoraggio locale di barometro, temperatura e umidità esterna, comprese le
+  variazioni combinate nelle ultime ore;
+- revisione Gemini dinamica solo in caso di nuovo rischio o peggioramento, con
+  tetto indipendente e non superabile di 10 chiamate al giorno;
 - diario GPS automatico con pianificazione in chat, soste, arrivo, report e
   esportazione CSV/GPX.
 
@@ -277,6 +281,22 @@ Fonti e condizioni d'uso: [Open-Meteo](https://open-meteo.com/en/docs),
 e [Windy Point Forecast](https://api.windy.com/point-forecast/docs). Open-Meteo
 richiede attribuzione CC BY 4.0; i dati Radar-DPC sono pubblicati con licenza
 CC BY-SA 4.0. Windy resta completamente opzionale.
+
+### Revisione Gemini su richiesta del rischio
+
+Barometro, temperatura e umidità esterna vengono campionati localmente e
+conservati per 24 ore. Il motore confronta la pressione e le variazioni
+combinate di temperatura e umidità: un calo significativo genera prima una
+valutazione deterministica. Gemini viene interrogato soltanto quando compare un
+nuovo rischio o il quadro peggiora; con condizioni serene o stabili non parte
+alcuna chiamata. Il budget `weather_ai_daily_limit` è separato dalla chat ed è
+limitato dal programma a un massimo assoluto di 10 valutazioni al giorno.
+
+Alla revisione vengono inviati soltanto il quadro meteo già sintetizzato e le
+tre misure esterne; non vengono inviati coordinate precise, cronologia dei
+viaggi, profilo dell'equipaggio, token o chiavi. Gemini può proporre al massimo
+`allerta` o `urgenza`: non può dichiarare da solo un'emergenza e non sostituisce
+le protezioni locali.
 
 ## Diario viaggi autonomo 0.9
 
@@ -565,6 +585,8 @@ creato e recuperare la copia più recente da `/config/mistermif_ai/backup`.
 - **0.6:** voce opzionale attraverso l'impianto audio.
 - **0.9:** sorveglianza meteo locale, Radar-DPC, deduplicazione degli avvisi e
   diario viaggi GPS esportabile.
+- **0.9.1:** tendenze barometriche e revisione Gemini dinamica fino a 10 volte
+  al giorno, senza chiamate quando il quadro è sereno o invariato.
 
 ## Privacy
 

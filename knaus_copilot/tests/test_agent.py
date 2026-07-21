@@ -130,6 +130,41 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
         generation = client.requests[0]["json"]["generationConfig"]
         self.assertEqual(192, generation["maxOutputTokens"])
 
+    async def test_weather_review_is_one_compact_json_call(self):
+        client = FakeAsyncClient(
+            [
+                response(
+                    200,
+                    {
+                        "candidates": [
+                            {
+                                "content": {
+                                    "parts": [
+                                        {
+                                            "text": (
+                                                '{"severity":"urgenza","worsening":true,'
+                                                '"confidence":0.82,"summary":"Pressione in calo",'
+                                                '"recommendations":["Chiudi il tendalino"]}'
+                                            )
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                )
+            ]
+        )
+        with patch("app.agent.httpx.AsyncClient", return_value=client):
+            result = await self.make_agent().evaluate_weather(
+                {"severity": "allerta", "risks": []},
+                {"pressure": 999, "trend": {"pressure_delta": -4}},
+            )
+        self.assertEqual("urgenza", result["severity"])
+        self.assertEqual(1, len(client.urls))
+        generation = client.requests[0]["json"]["generationConfig"]
+        self.assertEqual("application/json", generation["responseMimeType"])
+
     async def test_minimal_chat_does_not_send_old_memories_or_history(self):
         memory = Mock()
         memory.recent_messages.return_value = [

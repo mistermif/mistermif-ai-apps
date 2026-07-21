@@ -4,16 +4,20 @@ import logging
 import math
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 import httpx
 
 from .home_assistant import HomeAssistantClient
 from .memory import MemoryStore
+from .cloud_usage import CloudBudgetExceeded, CloudUsage
 
 
 logger = logging.getLogger("mistermif-ai.weather")
 SEVERITY_RANK = {"nessuna": 0, "allerta": 1, "urgenza": 2, "emergenza": 3}
+WeatherAIEvaluator = Callable[
+    [dict[str, Any], dict[str, Any]], Awaitable[dict[str, Any]]
+]
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,8 @@ class WeatherMonitor:
         telegram_targets: tuple[str, ...] = (),
         dpc_enabled: bool = True,
         windy_api_key: str = "",
+        ai_evaluator: WeatherAIEvaluator | None = None,
+        ai_usage: CloudUsage | None = None,
     ):
         self.memory = memory
         self.ha = ha
@@ -43,12 +49,20 @@ class WeatherMonitor:
         self.telegram_targets = telegram_targets
         self.dpc_enabled = dpc_enabled
         self.windy_api_key = windy_api_key
+        self.ai_evaluator = ai_evaluator
+        self.ai_usage = ai_usage
 
     async def monitor_once(self) -> dict[str, Any]:
         states = await self.ha.monitoring_states()
         location = self._location(states)
         risks = self.analyse_local(states)
         sources = {"sensori_home_assistant": "ok" if states else "non disponibili"}
+        local_observation = self.extract_local_observation(states)
+        local_trend = self.record_local_observation(local_observation)
+        risks.extend(self.analyse_local_trend(local_trend))
+        sources["sensori_esterni"] = (
+            "ok" if local_observation else "non disponibili"
+        )
 
         if location is not None:
             latitude, longitude = location
@@ -85,11 +99,55 @@ class WeatherMonitor:
         else:
             sources["posizione_gps"] = "non disponibile"
 
-        assessment = self.assess(risks)
+        deterministic = self.assess(risks)
+        assessment = dict(deterministic)
+        ai_review = None
+        if self.ai_evaluator is None or self.ai_usage is None:
+            sources["gemini_meteo"] = "non configurato"
+        elif not self.should_consult_ai(deterministic):
+            sources["gemini_meteo"] = "non chiamato: quadro stabile o sereno"
+        else:
+            try:
+                self.ai_usage.consume(automatic=True)
+                ai_review = await self.ai_evaluator(
+                    deterministic,
+                    {**local_observation, "trend": local_trend},
+                )
+                sources["gemini_meteo"] = "valutazione eseguita"
+                ai_rank = SEVERITY_RANK.get(str(ai_review.get("severity")), 0)
+                current_rank = SEVERITY_RANK.get(deterministic["severity"], 0)
+                if (
+                    ai_review.get("worsening")
+                    and float(ai_review.get("confidence", 0)) >= 0.65
+                    and ai_rank > current_rank
+                    and current_rank > 0
+                ):
+                    risks.append(
+                        WeatherRisk(
+                            "valutazione_ai",
+                            "urgenza" if ai_rank >= 2 else "allerta",
+                            min(79, max(55, deterministic["score"] + 10)),
+                            "Gemini",
+                            str(ai_review.get("summary") or "peggioramento probabile"),
+                        )
+                    )
+                    assessment = self.assess(risks)
+            except CloudBudgetExceeded:
+                sources["gemini_meteo"] = "limite giornaliero raggiunto"
+            except (httpx.HTTPError, RuntimeError, ValueError, TypeError):
+                logger.exception("Valutazione meteo Gemini non disponibile")
+                sources["gemini_meteo"] = "errore: controllo locale attivo"
         assessment["checked_at"] = datetime.now(timezone.utc).isoformat()
         movement = self._movement(states)
         assessment["moving"] = movement
         assessment["sources"] = sources
+        assessment["local_observation"] = local_observation
+        assessment["local_trend"] = local_trend
+        assessment["deterministic"] = deterministic
+        assessment["gemini_review"] = ai_review
+        assessment["gemini_budget"] = (
+            self.ai_usage.snapshot() if self.ai_usage is not None else None
+        )
         should_notify, reason = self.should_notify(assessment)
         assessment["notification_reason"] = reason
         assessment["notified"] = False
@@ -98,6 +156,19 @@ class WeatherMonitor:
             assessment["notified"] = True
         self.memory.set_json_setting("weather_monitor_state", assessment)
         return assessment
+
+    def should_consult_ai(self, current: dict[str, Any]) -> bool:
+        if SEVERITY_RANK.get(str(current.get("severity")), 0) == 0:
+            return False
+        previous_state = self.memory.get_json_setting("weather_monitor_state") or {}
+        previous = previous_state.get("deterministic") or previous_state
+        current_rank = SEVERITY_RANK.get(str(current.get("severity")), 0)
+        previous_rank = SEVERITY_RANK.get(str(previous.get("severity")), 0)
+        if previous_rank == 0 or current_rank > previous_rank:
+            return True
+        if set(current.get("kinds") or []) - set(previous.get("kinds") or []):
+            return True
+        return int(current.get("score") or 0) >= int(previous.get("score") or 0) + 10
 
     async def fetch_open_meteo(self, latitude: float, longitude: float) -> dict:
         params = {
@@ -194,6 +265,102 @@ class WeatherMonitor:
                 elif value is not None and value < 970:
                     risks.append(WeatherRisk("pressione", "allerta", 35, "barometro locale", f"{value:.0f} hPa"))
         return risks
+
+    @classmethod
+    def extract_local_observation(
+        cls, states: list[dict[str, Any]]
+    ) -> dict[str, float]:
+        observation: dict[str, float] = {}
+        for item in states:
+            candidate = f'{item.get("entity_id", "")} {item.get("name", "")}'.casefold()
+            value = cls._number(item.get("state"))
+            if value is None:
+                continue
+            if "temperature" not in observation and (
+                ("estern" in candidate or "outdoor" in candidate)
+                and any(term in candidate for term in ("temper", "temperature"))
+            ):
+                observation["temperature"] = value
+            if "humidity" not in observation and (
+                ("estern" in candidate or "outdoor" in candidate)
+                and any(term in candidate for term in ("umid", "humidity"))
+            ):
+                observation["humidity"] = value
+            if "pressure" not in observation and any(
+                term in candidate for term in ("pression", "pressure", "barometr")
+            ):
+                observation["pressure"] = value
+        return observation
+
+    def record_local_observation(
+        self, observation: dict[str, float]
+    ) -> dict[str, Any]:
+        if not observation:
+            return {}
+        now = datetime.now(timezone.utc)
+        stored = self.memory.get_json_setting("weather_local_history") or {}
+        samples = [item for item in stored.get("samples", []) if isinstance(item, dict)]
+        recent = []
+        for item in samples:
+            observed_at = self._datetime(item.get("observed_at"))
+            if observed_at is not None and (now - observed_at).total_seconds() <= 86400:
+                recent.append(item)
+        reference = None
+        for item in recent:
+            observed_at = self._datetime(item.get("observed_at"))
+            age = (now - observed_at).total_seconds() if observed_at else 0
+            if 1500 <= age <= 10800:
+                reference = item
+                break
+        trend: dict[str, Any] = {}
+        if reference is not None:
+            reference_time = self._datetime(reference.get("observed_at")) or now
+            trend["hours"] = round((now - reference_time).total_seconds() / 3600, 2)
+            for key in ("pressure", "temperature", "humidity"):
+                current_value = self._number(observation.get(key))
+                old_value = self._number(reference.get(key))
+                if current_value is not None and old_value is not None:
+                    trend[f"{key}_delta"] = round(current_value - old_value, 2)
+        recent.append({"observed_at": now.isoformat(), **observation})
+        self.memory.set_json_setting("weather_local_history", {"samples": recent[-49:]})
+        return trend
+
+    @staticmethod
+    def analyse_local_trend(trend: dict[str, Any]) -> list[WeatherRisk]:
+        pressure_delta = float(trend.get("pressure_delta", 0))
+        temperature_delta = float(trend.get("temperature_delta", 0))
+        humidity_delta = float(trend.get("humidity_delta", 0))
+        hours = float(trend.get("hours", 0))
+        if pressure_delta <= -5:
+            return [
+                WeatherRisk(
+                    "pressione_in_calo",
+                    "urgenza",
+                    73,
+                    "barometro locale",
+                    f"calo di {abs(pressure_delta):.1f} hPa in {hours:.1f} ore",
+                )
+            ]
+        if pressure_delta <= -2.5:
+            severity = (
+                "urgenza"
+                if humidity_delta >= 10 and temperature_delta <= -2
+                else "allerta"
+            )
+            return [
+                WeatherRisk(
+                    "pressione_in_calo",
+                    severity,
+                    68 if severity == "urgenza" else 50,
+                    "sensori esterni",
+                    (
+                        f"pressione {pressure_delta:.1f} hPa, temperatura "
+                        f"{temperature_delta:+.1f} °C, umidità {humidity_delta:+.0f}% "
+                        f"in {hours:.1f} ore"
+                    ),
+                )
+            ]
+        return []
 
     @classmethod
     def analyse_open_meteo(cls, payload: dict[str, Any]) -> list[WeatherRisk]:
@@ -303,6 +470,11 @@ class WeatherMonitor:
             f'{risk["kind"]}: {risk["detail"]} ({risk["source"]})'
             for risk in risks[:5]
         )
+        ai_summary = str(
+            (assessment.get("gemini_review") or {}).get("summary") or ""
+        ).strip()
+        if ai_summary:
+            summary = f"{summary}. Valutazione Gemini: {ai_summary}" if summary else ai_summary
         movement = " Caravan in movimento." if assessment.get("moving") else ""
         message = f"{summary}.{movement}" if summary else f"Rischio meteo {severity}.{movement}"
         try:
@@ -371,6 +543,15 @@ class WeatherMonitor:
     @staticmethod
     def _inside_europe(latitude: float, longitude: float) -> bool:
         return 27.0 <= latitude <= 72.0 and -25.0 <= longitude <= 45.0
+
+    @staticmethod
+    def _datetime(value: Any) -> datetime | None:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
 
     @staticmethod
     def _number(value: Any) -> float | None:
