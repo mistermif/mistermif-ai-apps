@@ -86,7 +86,25 @@ essere presentati come parametri ufficiali. Se il modello non è identificato co
 certezza, l'assistente deve chiedere foto della targhetta o ulteriori dati e non
 deve assumere valori universali.
 
-## Sensori opzionali
+## Sensori e dispositivi
+
+### Requisiti minimi per prendere il controllo
+
+La gestione reale delle ventole è possibile soltanto con tutti questi elementi:
+
+- sonda di temperatura installata sul radiatore superiore;
+- sonda di temperatura esterna;
+- ventola PWM comandabile e modulabile da Home Assistant;
+- sonda interna al frigorifero, cablata oppure senza fili.
+
+Una sonda interna wireless è valida se fornisce aggiornamenti regolari, espone
+lo stato di disponibilità e, quando previsto, il livello della batteria. Un dato
+fermo, scaduto, `unknown` o `unavailable` sospende l'affinamento e impedisce che
+la sola sonda venga usata per nuove decisioni.
+
+La sonda sul radiatore superiore è il riferimento obbligatorio della regola
+iniziale a 40 °C. Una sonda generica del vano non può sostituirla senza conferma
+esplicita della sua posizione fisica.
 
 Il modulo deve scoprire e validare, quando presenti:
 

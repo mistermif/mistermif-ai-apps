@@ -395,6 +395,37 @@ avvierà immediatamente monitoraggio e regola iniziale, con ventole al 100% a
 strategia, non a ritardarne l'avvio. Il blocco generale dell'autonomia rimarrà
 sempre disponibile.
 
+### Presa in gestione della ventilazione frigorifero
+
+Mistermif AI è progettato per riconoscere un impianto di ventilazione del
+frigorifero e, dopo aver raccolto i dati del modello e ricevuto il consenso
+esplicito dell'utente, prendere in gestione **soltanto la ventola PWM**. Nella
+versione corrente il flusso è specificato ma il comando reale non è ancora
+abilitato.
+
+I requisiti minimi previsti sono:
+
+- **sonda sul radiatore superiore**, usata come riferimento caldo e come soglia
+  iniziale per il boost;
+- **sonda di temperatura esterna**, necessaria per distinguere il rendimento del
+  frigorifero dalle condizioni ambientali;
+- **ventola PWM controllabile da Home Assistant**, con comando e stato validi e
+  possibilità di modulazione dallo 0% al 100%;
+- **sonda di temperatura interna al frigorifero**, anche senza fili, purché sia
+  integrata in Home Assistant, aggiornata con regolarità e con stato batteria o
+  disponibilità verificabile.
+
+Servono inoltre marca e modello del frigorifero, associazione confermata delle
+entità e autorizzazione dell'utente. Appena l'assistente rileverà componenti
+compatibili invierà una notifica e aprirà la raccolta guidata dei dati in chat.
+Dopo il consenso attiverà immediatamente il monitoraggio e la regola iniziale:
+ventola al 100% quando la sonda del radiatore superiore raggiunge 40 °C. I dati
+successivi serviranno ad affinare modulazione e anticipo della ventilazione per
+ridurre oscillazioni e stress, senza alzare autonomamente il limite iniziale.
+
+Senza tutti e quattro i requisiti validi Mistermif AI potrà osservare e indicare
+cosa manca, ma non prenderà il controllo della ventilazione.
+
 La specifica dettagliata è disponibile in
 [`docs/COPILOT_04_SPEC.md`](docs/COPILOT_04_SPEC.md).
 
