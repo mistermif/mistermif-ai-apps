@@ -387,6 +387,11 @@ La logica prevista per l'ottimizzazione del frigorifero è descritta nella
 [specifica dedicata](docs/FRIDGE_OPTIMIZATION_SPEC.md): apprendimento locale
 dopo almeno 48 ore, riconoscimento prudente di porta e irraggiamento, controllo
 delle sole ventole autorizzate e inattività automatica quando mancano i sensori.
+Non è previsto un pulsante dedicato: l'assistente scoprirà autonomamente
+sensori e comando ventole, chiederà marca e modello, cercherà i parametri nei
+documenti tecnici e domanderà in chat il consenso soltanto quando tutti i
+presupposti saranno verificati. Il blocco generale dell'autonomia rimarrà
+sempre disponibile.
 
 La specifica dettagliata è disponibile in
 [`docs/COPILOT_04_SPEC.md`](docs/COPILOT_04_SPEC.md).

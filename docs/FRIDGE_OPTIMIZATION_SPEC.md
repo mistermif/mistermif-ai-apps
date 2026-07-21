@@ -16,6 +16,65 @@ frigorifero per ottenere:
 Il controllo non deve modificare protezioni, alimentazione, gas o parametri
 interni del frigorifero.
 
+## Integrazione conversazionale senza pulsanti dedicati
+
+Il controllo del frigorifero deve essere una capacità integrata di Mistermif AI,
+non un pannello separato. Non deve comparire un interruttore dedicato nella
+schermata principale.
+
+L'assistente deve eseguire periodicamente una scoperta locale delle capacità e
+riconoscere da solo quando sono presenti:
+
+- un frigorifero o sensori con nomi e unità coerenti;
+- i sensori minimi necessari;
+- almeno un comando ventole realmente controllabile;
+- dati aggiornati e privi di lunghi periodi `unknown` o `unavailable`;
+- un periodo di osservazione sufficiente;
+- limiti e strategia di ripristino verificati.
+
+Quando tutti i presupposti sono soddisfatti, deve presentarsi in chat con una
+richiesta simile:
+
+> Ho riconosciuto temperatura interna, evaporatore, ambiente e comando ventole.
+> Ho raccolto 48 ore di dati validi e completato la modalità ombra. Vuoi
+> autorizzarmi a gestire esclusivamente le ventole del frigorifero entro i limiti
+> indicati?
+
+La richiesta deve spiegare sensori trovati, dati mancanti, strategia proposta,
+limiti, rischi e metodo di ripristino. Una risposta negativa lascia il modulo in
+osservazione. L'autorizzazione positiva è persistente ma circoscritta alle sole
+ventole e può essere revocata in chat. L'interruttore generale del potere
+decisionale rimane il blocco immediato di tutte le azioni autonome.
+
+## Identificazione del frigorifero e ricerca tecnica
+
+Durante l'intervista iniziale, oppure quando vengono rilevate entità compatibili,
+Mistermif AI deve chiedere:
+
+- marca e modello esatto del frigorifero;
+- tecnologia, se nota: assorbimento o compressore;
+- fonte energetica normalmente utilizzata;
+- posizione e tipo delle griglie di ventilazione;
+- modello e caratteristiche delle ventole installate;
+- eventuali modifiche già realizzate nel vano.
+
+Prima di proporre una strategia deve cercare documentazione tecnica del modello,
+privilegiando manuale del costruttore, istruzioni di installazione, bollettini
+tecnici e ricambi ufficiali. Deve ricavare, quando realmente documentati:
+
+- temperature e condizioni ambientali ammesse;
+- classe climatica e prestazioni dichiarate;
+- requisiti di ventilazione e distanze delle griglie;
+- posizione consigliata di sonde e ventole;
+- limiti che non devono essere superati;
+- eventuali indicazioni del produttore per massimizzare lo scambio termico.
+
+Ogni informazione deve conservare fonte e data di verifica. Recensioni, forum e
+esperienze di altri utenti possono generare ipotesi da provare, ma non devono
+essere presentati come parametri ufficiali. Se il modello non è identificato con
+certezza, l'assistente deve chiedere foto della targhetta o ulteriori dati e non
+deve assumere valori universali.
+
 ## Sensori opzionali
 
 Il modulo deve scoprire e validare, quando presenti:
@@ -107,7 +166,8 @@ un sensore che le confermi.
 
 ## Sicurezza e controllo utente
 
-- interruttore dedicato per disattivare il controllo adattivo;
+- nessun pulsante dedicato: consenso richiesto e revocabile attraverso la chat;
+- interruttore generale del potere decisionale sempre valido come arresto;
 - modalità predefinita di osservazione dopo installazione o cambio sensori;
 - limiti minimi e massimi delle ventole non apprendibili;
 - registro locale di ogni decisione e del risultato osservato;
@@ -118,9 +178,12 @@ un sensore che le confermi.
 
 ## Criteri prima dell'attivazione reale
 
+- marca e modello identificati o dichiarati esplicitamente non disponibili;
+- documentazione e limiti tecnici registrati con le relative fonti;
 - almeno 48 ore di campioni validi;
 - entità Home Assistant associate e unità di misura verificate;
 - comportamento delle ventole provato manualmente;
 - simulazioni di sensori offline, porta aperta, caldo esterno e recupero;
 - confronto in modalità ombra con la strategia attuale;
+- richiesta autonoma dell'assistente quando tutti i criteri risultano veri;
 - autorizzazione esplicita dell'utente alla sola gestione delle ventole.
