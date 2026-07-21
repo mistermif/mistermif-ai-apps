@@ -137,7 +137,7 @@ class HomeAssistantClient:
                     "last_updated": state.get("last_updated"),
                     "attributes": {
                         key: attributes.get(key)
-                        for key in ("percentage", "min", "max", "step")
+                        for key in ("percentage", "min", "max", "step", "options")
                         if attributes.get(key) is not None
                     },
                 }
@@ -236,3 +236,27 @@ class HomeAssistantClient:
             "percentage": percentage,
             "service": f"{domain}.{service}",
         }
+
+    async def set_fridge_parameter(self, entity_id: str, value: float) -> dict:
+        if not self.token:
+            raise RuntimeError("Home Assistant non è collegato")
+        if not self.policy.can_control_fridge(entity_id):
+            raise PermissionError("Parametro frigorifero non autorizzato")
+        domain = entity_id.split(".", 1)[0]
+        if domain == "select":
+            unit = "%" if "pwm" in entity_id else "°C"
+            service = "select_option"
+            data = {"entity_id": entity_id, "option": f"{round(value)} {unit}"}
+        elif domain in {"number", "input_number"}:
+            service = "set_value"
+            data = {"entity_id": entity_id, "value": round(float(value), 1)}
+        else:
+            raise PermissionError("Parametro frigo non supportato")
+        async with httpx.AsyncClient(timeout=12) as client:
+            response = await client.post(
+                f"{self.base_url}/services/{domain}/{service}",
+                headers=self.headers,
+                json=data,
+            )
+            response.raise_for_status()
+        return {"ok": True, "entity_id": entity_id, "value": value, "service": f"{domain}.{service}"}

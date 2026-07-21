@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.0.0** è una base già funzionante, installabile come app di Home
+La versione **1.1.0** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -29,7 +29,7 @@ separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
 | Meteo autonomo | Operativo | Analizza ogni 30 minuti sensori, Open-Meteo e Radar-DPC; Windy è opzionale |
 | Revisione Gemini meteo | Operativa e selettiva | Nessuna chiamata se il quadro è sereno o stabile; massimo 10 valutazioni al giorno quando compare un rischio |
 | Diario viaggi | Operativo | Riconosce partenza e arrivo, registra percorso e soste, produce report ed esportazioni CSV/GPX |
-| Ventilazione frigorifero | Operativa con consenso | Rileva gli apparati, raccoglie modello e associazioni in chat e comanda soltanto il PWM autorizzato; regola iniziale 100% a 40 °C |
+| Ventilazione frigorifero | Operativa con consenso | Ottimizza i parametri di un controller locale oppure gestisce direttamente un PWM semplice; garantisce il 100% a 40 °C |
 | Apprendimento | Prima fase operativa | Registra osservazioni e risultati per posizione, senza modificare autonomamente codice o soglie |
 
 ### Cosa può fare autonomamente oggi
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.0.0
+## Cosa funziona oggi — versione 1.1.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -137,10 +137,14 @@ deterministiche e indipendenti dall'AI e da Internet.
   esportazione CSV/GPX.
 - scoperta locale di sensori e comandi riconducibili al frigorifero;
 - notifica immediata e raccolta in chat di marca, modello e associazioni;
-- autorizzazione persistente limitata a una singola entità PWM `fan.*` o
-  `number.*`, senza accesso alla ventilazione inverter;
-- campionamento del frigorifero ogni minuto e boost iniziale al 100% quando la
-  sonda confermata del radiatore superiore raggiunge 40 °C;
+- autorizzazione persistente limitata alle entità confermate del frigorifero,
+  senza accesso alla ventilazione inverter;
+- riconoscimento automatico di un controller ESPHome con parametri giorno/notte
+  oppure di una installazione semplice con PWM diretto;
+- campionamento del frigorifero ogni minuto, controllo diretto 0–100% o taratura
+  vincolata di temperatura iniziale, temperatura al 100%, PWM e isteresi;
+- affinamento locale dopo una cronologia sufficiente, senza modificare firmware
+  o superare i valori ammessi dal controller;
 - blocco immediato del comando ventole tramite l'interruttore generale.
 
 ### Laboratorio esterno
@@ -393,9 +397,14 @@ vengono registrati localmente per le successive analisi di rendimento.
 Senza tutti e quattro i requisiti validi Mistermif AI potrà osservare e indicare
 cosa manca, ma non prenderà il controllo della ventilazione.
 
-Il comando è accettato esclusivamente se l'entità confermata è `fan.*`,
-`number.*` o `input_number.*`; l'autorizzazione è un confronto esatto e non può
-estendersi alle ventole dell'inverter. Il pulsante generale del potere
+Con un controller locale compatibile l'app modifica soltanto le entità
+`select.*`, `number.*` o `input_number.*` che regolano avvio, piena velocità,
+PWM iniziale e isteresi. Le correzioni avvengono al massimo ogni sei ore. Con
+un'installazione priva di logica locale comanda direttamente la sola entità
+`fan.*` o `number.*` autorizzata, usando una curva progressiva e isteresi.
+
+L'autorizzazione è un confronto esatto e non può estendersi alle ventole
+dell'inverter. Il pulsante generale del potere
 decisionale blocca immediatamente anche questo comando. Stato e prova manuale
 sono disponibili tramite `GET /api/fridge` e `POST /api/fridge/check`.
 

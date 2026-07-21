@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -13,6 +14,7 @@ class FakeHA:
         self.states = states or []
         self.notifications = []
         self.commands = []
+        self.parameters = []
 
     async def fridge_states(self):
         return self.states
@@ -22,6 +24,10 @@ class FakeHA:
 
     async def set_fridge_fan(self, entity_id, percentage):
         self.commands.append((entity_id, percentage))
+
+    async def set_fridge_parameter(self, entity_id, value):
+        self.parameters.append((entity_id, value))
+        return {"entity_id": entity_id, "value": value}
 
 
 def state(entity_id, name, value, unit=None):
@@ -37,7 +43,7 @@ class FridgeOptimizerTest(TestCase):
             state("sensor.frigo_temperatura_controllo_ventole", "Frigo Temperatura Controllo Ventole", "41", "°C"),
             state("sensor.frigo_temperatura_esterna", "Frigo Temperatura Esterna", "29", "°C"),
             state("sensor.frigo_temperatura_interna", "Frigo Temperatura Interna", "7", "°C"),
-            state("number.frigo_manuale_pwm", "Frigo Manuale PWM", "40", "%"),
+            state("fan.frigo_ventola_pwm", "Frigo Ventola PWM", "40", "%"),
         ]
         self.ha = FakeHA(self.states)
         self.optimizer = FridgeOptimizer(self.memory, self.ha, self.policy, "notify.notify")
@@ -57,12 +63,12 @@ class FridgeOptimizerTest(TestCase):
             "Il frigorifero modello Dometic RM 7655L, autorizzo la gestione delle ventole frigo"
         )
         self.assertIn("Autorizzazione registrata", answer)
-        self.assertTrue(self.policy.can_control_fridge("number.frigo_manuale_pwm"))
+        self.assertTrue(self.policy.can_control_fridge("fan.frigo_ventola_pwm"))
         self.assertFalse(self.policy.can_control_fridge("fan.inverter_cooling_ventola_destra"))
 
         result = asyncio.run(self.optimizer.monitor_once())
-        self.assertEqual("fan_100", result["last_action"])
-        self.assertEqual([("number.frigo_manuale_pwm", 100.0)], self.ha.commands)
+        self.assertEqual("direct_pwm:100", result["last_action"])
+        self.assertEqual([("fan.frigo_ventola_pwm", 100.0)], self.ha.commands)
 
     def test_kill_switch_blocks_real_command(self):
         asyncio.run(self.optimizer.monitor_once())
@@ -71,7 +77,7 @@ class FridgeOptimizerTest(TestCase):
         )
         self.policy.runtime_enabled = False
         result = asyncio.run(self.optimizer.monitor_once())
-        self.assertEqual("fan_100_blocked_by_autonomy", result["last_action"])
+        self.assertEqual("control_blocked_by_autonomy", result["last_action"])
         self.assertEqual([], self.ha.commands)
 
     def test_authorized_profile_cannot_be_remapped_without_new_authorization(self):
@@ -83,7 +89,7 @@ class FridgeOptimizerTest(TestCase):
             "Come va il frigorifero? ventola fan.inverter_cooling_ventola_destra"
         )
         self.assertIn("Gestione frigorifero attiva", answer)
-        self.assertTrue(self.policy.can_control_fridge("number.frigo_manuale_pwm"))
+        self.assertTrue(self.policy.can_control_fridge("fan.frigo_ventola_pwm"))
         self.assertFalse(self.policy.can_control_fridge("fan.inverter_cooling_ventola_destra"))
 
     def test_inverter_cooling_cannot_be_authorized_as_fridge_fan(self):
@@ -93,3 +99,58 @@ class FridgeOptimizerTest(TestCase):
         )
         self.assertIn("Non autorizzo", answer)
         self.assertFalse(self.optimizer.public_status()["authorized"])
+
+    def test_existing_local_controller_is_tuned_instead_of_forced_manual(self):
+        parameter_states = []
+        names = {
+            "day_start_pwm": ("Frigo Giorno PWM Start", "30 %"),
+            "day_start_temp": ("Frigo Giorno Temp Start", "35 °C"),
+            "day_full_temp": ("Frigo Giorno Temp PWM 100", "45 °C"),
+            "day_hysteresis": ("Frigo Giorno Isteresi", "2 °C"),
+            "night_start_pwm": ("Frigo Notte PWM Start", "30 %"),
+            "night_start_temp": ("Frigo Notte Temp Start", "38 °C"),
+            "night_full_temp": ("Frigo Notte Temp PWM 100", "45 °C"),
+            "night_hysteresis": ("Frigo Notte Isteresi", "2 °C"),
+        }
+        for key, (name, value) in names.items():
+            parameter_states.append(state(f"select.frigo_{key}", name, value))
+        self.ha.states = self.states[:3] + parameter_states
+        asyncio.run(self.optimizer.monitor_once())
+        result = self.optimizer.public_status()
+        self.assertEqual("local_controller", result["control_mode"])
+        answer = self.optimizer.handle_message(
+            "Frigorifero modello Dometic RM 7655L, autorizzo la gestione delle ventole frigo"
+        )
+        self.assertIn("parametri giorno/notte", answer)
+
+        result = asyncio.run(self.optimizer.monitor_once())
+        self.assertTrue(result["last_action"].startswith("controller_tuned:"))
+        changed = dict(self.ha.parameters)
+        self.assertEqual(39, changed["select.frigo_day_full_temp"])
+        self.assertNotIn(("fan.frigo_ventola_pwm", 100.0), self.ha.commands)
+
+    def test_two_day_history_makes_weak_cooling_more_aggressive(self):
+        start = datetime.now(timezone.utc) - timedelta(hours=48)
+        for index in range(97):
+            self.memory.add_learning_observation(
+                "fridge:adaptive",
+                {"internal_c": 8.5, "radiator_c": 36, "external_c": 28},
+                observed_at=(start + timedelta(minutes=30 * index)).isoformat(),
+            )
+        targets = self.optimizer._controller_targets(6.5, 28)
+        self.assertEqual(30, targets["day_start_temp"])
+        self.assertEqual(80, targets["day_start_pwm"])
+        self.assertEqual(1.0, self.optimizer.profile["learning_confidence"])
+
+    def test_legacy_manual_pwm_authorization_is_revoked(self):
+        self.memory.set_json_setting(
+            "fridge_optimizer_profile",
+            {
+                "authorized": True,
+                "status": "monitoring",
+                "entities": {"fan": "number.frigo_manuale_pwm"},
+            },
+        )
+        migrated = FridgeOptimizer(self.memory, self.ha, self.policy, "notify.notify")
+        self.assertFalse(migrated.public_status()["authorized"])
+        self.assertEqual("searching", migrated.public_status()["status"])

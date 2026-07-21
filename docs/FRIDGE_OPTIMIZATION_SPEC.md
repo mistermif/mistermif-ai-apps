@@ -1,10 +1,11 @@
 # Ottimizzazione adattiva del frigorifero
 
-Stato: specifica per una prossima versione, non ancora operativa.
+Stato: controllo base operativo dalla versione 1.1.0; riconoscimento avanzato di
+porta, sole e ricerca tecnica automatica restano requisiti evolutivi.
 
 ## Obiettivo
 
-Mistermif AI dovrà controllare esclusivamente le ventole autorizzate del vano
+Mistermif AI controlla esclusivamente le ventole autorizzate del vano
 frigorifero per ottenere:
 
 - temperatura interna bassa e soprattutto stabile;
@@ -13,8 +14,10 @@ frigorifero per ottenere:
 - consumi, rumore e accensioni inutili ridotti;
 - consigli pratici quando il controllo delle ventole non può risolvere la causa.
 
-Il controllo non deve modificare protezioni, alimentazione, gas o parametri
-interni del frigorifero.
+Il controllo non modifica protezioni, alimentazione, gas o parametri interni del
+frigorifero. Se esiste un controller locale può modificare soltanto i parametri
+esterni autorizzati della sua strategia ventole: soglia iniziale, soglia al
+100%, PWM iniziale e isteresi.
 
 ## Integrazione conversazionale senza pulsanti dedicati
 
@@ -53,8 +56,9 @@ precedente configurazione viene cancellata.
 
 Una risposta negativa lascia il modulo inattivo. Dopo aver ricevuto i dati e
 l'autorizzazione positiva, il monitoraggio e la creazione della regola iniziano
-immediatamente. L'autorizzazione è persistente ma circoscritta alle sole ventole
-e può essere revocata in chat. L'interruttore generale del potere decisionale
+immediatamente. L'autorizzazione è persistente ma circoscritta alla ventola
+diretta o ai parametri del controller elencati e può essere revocata in chat.
+L'interruttore generale del potere decisionale
 rimane il blocco immediato di tutte le azioni autonome.
 
 ## Identificazione del frigorifero e ricerca tecnica
@@ -94,7 +98,8 @@ La gestione reale delle ventole è possibile soltanto con tutti questi elementi:
 
 - sonda di temperatura installata sul radiatore superiore;
 - sonda di temperatura esterna;
-- ventola PWM comandabile e modulabile da Home Assistant;
+- ventola PWM comandabile e modulabile da Home Assistant, direttamente oppure
+  attraverso un controller locale che espone i parametri della curva;
 - sonda interna al frigorifero, cablata oppure senza fili.
 
 Una sonda interna wireless è valida se fornisce aggiornamenti regolari, espone

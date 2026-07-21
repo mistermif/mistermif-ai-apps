@@ -58,7 +58,7 @@ class PermissionPolicy:
         self.fridge_control_entities = {
             entity_id
             for entity_id in entity_ids
-            if entity_id.startswith(("fan.", "number.", "input_number."))
+            if entity_id.startswith(("fan.", "number.", "input_number.", "select."))
             and any(word in entity_id.casefold() for word in ("frigo", "fridge", "refriger"))
             and not any(
                 word in entity_id.casefold()

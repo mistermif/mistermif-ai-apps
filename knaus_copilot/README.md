@@ -1,4 +1,4 @@
-# mistermif AI 1.0.0
+# mistermif AI 1.1.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -31,8 +31,8 @@ della caravan.
 - avvisi persistenti e deduplicati, con Telegram per urgenze ed emergenze;
 - diario viaggi GPS automatico con soste, velocità, distanza, report, CSV e GPX.
 - scoperta automatica dei componenti del frigorifero con richiesta in chat;
-- controllo della sola ventola PWM confermata e autorizzata, con boost iniziale
-  al 100% a 40 °C e blocco tramite interruttore generale.
+- ottimizzazione vincolata dei parametri ESPHome giorno/notte oppure controllo
+  PWM diretto negli impianti semplici, sempre con blocco generale.
 
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
 sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e
@@ -93,3 +93,10 @@ marca, modello, sonda radiatore superiore, temperatura esterna, temperatura
 interna e comando PWM. Senza tutti i dati e la frase esplicita di autorizzazione
 resta in osservazione. L'autorizzazione vale soltanto per l'entity ID confermato
 e non include mai le ventole dell'inverter.
+
+Se trova temperatura iniziale, temperatura PWM 100, velocità iniziale e
+isteresi per giorno e notte, conserva la logica rapida sull'ESP e ne affina i
+parametri al massimo ogni sei ore. Se trova soltanto un comando PWM, applica
+direttamente una curva progressiva con 100% a 40 °C. Dopo una cronologia locale
+sufficiente rende la strategia più aggressiva quando la temperatura interna non
+rimane stabile.
