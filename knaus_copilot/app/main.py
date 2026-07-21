@@ -37,7 +37,11 @@ logging.basicConfig(
 logger = logging.getLogger("mistermif-ai")
 
 memory = MemoryStore(settings.data_dir / "knaus_copilot.sqlite3")
-policy = PermissionPolicy(settings.autonomy_mode, settings.climate_entity)
+policy = PermissionPolicy(
+    settings.autonomy_mode,
+    settings.climate_entity,
+    runtime_enabled=memory.get_setting("autonomy_enabled", "false") == "true",
+)
 ha = HomeAssistantClient(
     settings.ha_base_url,
     settings.supervisor_token,
@@ -90,7 +94,7 @@ async def lifespan(_: FastAPI):
         await learning_task
 
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -146,6 +150,10 @@ class AutonomyRequest(BaseModel):
     confirmed: bool = False
 
 
+class AnimalsRequest(BaseModel):
+    enabled: bool
+
+
 class NotificationRequest(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     message: str = Field(min_length=1, max_length=2000)
@@ -167,6 +175,10 @@ class OnboardingRequest(BaseModel):
 
 def autonomy_enabled() -> bool:
     return memory.get_setting("autonomy_enabled", "false") == "true"
+
+
+def animals_on_board() -> bool:
+    return memory.get_setting("animals_on_board", "false") == "true"
 
 
 def require_autonomy() -> None:
@@ -232,6 +244,7 @@ async def status() -> dict:
         "gemini_search_enabled": settings.gemini_search_enabled,
         "permissions": policy.public_summary(),
         "autonomy_enabled": autonomy_enabled(),
+        "animals_on_board": animals_on_board(),
         "home_assistant": await ha.health(),
         "workspace": workspace.summary() if settings.workspace_enabled else None,
         "onboarding": {
@@ -362,7 +375,10 @@ async def chat(
         x_remote_user_id, x_remote_user_display_name
     )
     normalized = payload.message.casefold()
-    simulation = run_conversational_simulation(payload.message)
+    simulation = run_conversational_simulation(
+        payload.message,
+        animals_default=animals_on_board(),
+    )
     if simulation is not None:
         memory.add_message(user_id, "user", payload.message)
         memory.add_message(user_id, "assistant", simulation["answer"])
@@ -387,20 +403,25 @@ async def chat(
         ("spegni" in normalized or "disattiva" in normalized)
         and ("clima" in normalized or "climatizzatore" in normalized)
     )
-    if requests_climate_off and policy.can_execute("turn_off_climate"):
-        require_autonomy()
-        if policy.autonomy_mode == "confirm":
+    if requests_climate_off and animals_on_board():
+        return {
+            "answer": (
+                "Non spengo il climatizzatore mentre Animali a bordo è attivo. "
+                "Prima verifica personalmente la situazione e disattiva quella "
+                "modalità con il pulsante dedicato."
+            ),
+            "user": display_name,
+        }
+    if requests_climate_off:
+        if not policy.can_execute("turn_off_climate"):
             return {
                 "answer": (
-                    "Posso spegnere il climatizzatore autorizzato. "
-                    "Premi Conferma per eseguire il comando."
+                    "Il potere decisionale è bloccato. Attivalo con il pulsante "
+                    "dedicato se vuoi consentirmi di comandare il climatizzatore."
                 ),
                 "user": display_name,
-                "pending_action": {
-                    "name": "turn_off_climate",
-                    "label": "Conferma spegnimento clima",
-                },
             }
+        require_autonomy()
         try:
             action_result = await ha.turn_off_climate()
         except (PermissionError, RuntimeError, httpx.HTTPError) as exc:
@@ -431,6 +452,7 @@ async def chat(
             await ha.states(),
             automatic=payload.automatic,
             web_search=web_search,
+            runtime_context={"animals_on_board": animals_on_board()},
         )
     except Exception as exc:
         logger.exception("Errore durante la conversazione")
@@ -441,9 +463,14 @@ async def chat(
 @app.post("/api/actions/execute")
 async def execute_action(payload: ActionRequest) -> dict:
     require_autonomy()
+    if payload.name == "turn_off_climate" and animals_on_board():
+        raise HTTPException(
+            status_code=423,
+            detail="Climatizzatore protetto: animali a bordo",
+        )
     if payload.name != "turn_off_climate":
         raise HTTPException(status_code=403, detail="Azione non autorizzata")
-    if policy.autonomy_mode != "confirm" or not payload.confirmed:
+    if not payload.confirmed:
         raise HTTPException(status_code=403, detail="Conferma esplicita richiesta")
     try:
         return await ha.turn_off_climate()
@@ -459,11 +486,30 @@ async def set_autonomy(payload: AutonomyRequest) -> dict:
             detail="Conferma esplicita richiesta per riattivare l'autonomia",
         )
     memory.set_setting("autonomy_enabled", "true" if payload.enabled else "false")
+    policy.runtime_enabled = payload.enabled
     logger.warning(
         "Interruttore autonomia AI impostato su %s",
         "ATTIVO" if payload.enabled else "BLOCCATO",
     )
     return {"enabled": payload.enabled}
+
+
+@app.post("/api/animals")
+async def set_animals(payload: AnimalsRequest) -> dict:
+    memory.set_setting("animals_on_board", "true" if payload.enabled else "false")
+    logger.warning(
+        "Modalità animali a bordo impostata su %s",
+        "ATTIVA" if payload.enabled else "DISATTIVA",
+    )
+    return {
+        "enabled": payload.enabled,
+        "climate_protected": payload.enabled,
+        "message": (
+            "Animali a bordo attivo: il clima diventa prioritario."
+            if payload.enabled
+            else "Animali a bordo disattivato."
+        ),
+    }
 
 
 @app.post("/api/notifications")

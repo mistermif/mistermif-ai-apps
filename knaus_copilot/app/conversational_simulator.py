@@ -93,10 +93,17 @@ def _semantic_base(message: str) -> tuple[LabSnapshot, str]:
     return scenario.snapshot, scenario.label
 
 
-def snapshot_from_message(message: str) -> tuple[LabSnapshot, list[str], str]:
+def snapshot_from_message(
+    message: str,
+    *,
+    animals_default: bool = False,
+) -> tuple[LabSnapshot, list[str], str]:
     text = message.casefold()
     base, base_label = _semantic_base(message)
     values = asdict(base)
+    values["animals_on_board"] = bool(
+        values["animals_on_board"] or animals_default
+    )
     recognized: set[str] = set()
 
     soc = _number(
@@ -229,6 +236,10 @@ def snapshot_from_message(message: str) -> tuple[LabSnapshot, list[str], str]:
         assumptions.append(
             f"I valori non specificati restano quelli prudenziali dello scenario base: {base_label}."
         )
+    if animals_default and "animali a bordo" not in recognized:
+        assumptions.append(
+            "Ho applicato automaticamente la modalità persistente Animali a bordo."
+        )
     return snapshot, assumptions, base_label
 
 
@@ -315,7 +326,11 @@ def _format_snapshot(snapshot: LabSnapshot) -> str:
     )
 
 
-def run_conversational_simulation(message: str) -> dict[str, Any] | None:
+def run_conversational_simulation(
+    message: str,
+    *,
+    animals_default: bool = False,
+) -> dict[str, Any] | None:
     if not is_simulation_request(message):
         return None
     if is_full_self_check_request(message):
@@ -332,7 +347,10 @@ def run_conversational_simulation(message: str) -> dict[str, Any] | None:
             ),
         }
 
-    snapshot, assumptions, base_label = snapshot_from_message(message)
+    snapshot, assumptions, base_label = snapshot_from_message(
+        message,
+        animals_default=animals_default,
+    )
     result = evaluate_snapshot(snapshot)
     assessment = assess_result(snapshot, result)
     result["simulation_input"] = asdict(snapshot)
@@ -353,7 +371,7 @@ def run_conversational_simulation(message: str) -> dict[str, Any] | None:
             f"Raccomandazioni protette: {protected}.",
             f"Autoverifica: {checks}.",
             "Azioni reali eseguite: 0. Batteria reale utilizzata: 0%.",
-            assumptions[0],
+            " ".join(assumptions),
         )
     )
     return {

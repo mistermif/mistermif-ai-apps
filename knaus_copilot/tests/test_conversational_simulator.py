@@ -54,6 +54,19 @@ class ConversationalSimulatorTest(TestCase):
         )
         self.assertTrue(simulation["assessment"]["passed"])
 
+    def test_persistent_animal_mode_is_applied_without_repeating_it(self):
+        simulation = run_conversational_simulation(
+            "Simula batteria al 18%, niente sole e clima acceso",
+            animals_default=True,
+        )
+
+        self.assertTrue(simulation["snapshot"]["animals_on_board"])
+        self.assertEqual(
+            "protect_climate_and_escalate",
+            simulation["result"]["decision"],
+        )
+        self.assertIn("modalità persistente", simulation["answer"])
+
     def test_full_self_check_compares_all_known_scenarios(self):
         simulation = run_conversational_simulation(
             "Fai un test completo di tutte le simulazioni energetiche"

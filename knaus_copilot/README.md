@@ -1,4 +1,4 @@
-# mistermif AI 0.6.0
+# mistermif AI 0.7.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -13,6 +13,8 @@ della caravan.
 - workspace isolato in `/config/mistermif_ai`;
 - file ponte compatibile con un `/config/packages` già esistente;
 - interruttore generale dell'autonomia;
+- interruttore persistente Animali a bordo con protezione del clima;
+- console essenziale con chat e due soli comandi permanenti;
 - simulazioni energetiche descritte direttamente nella chat;
 - autovalutazione locale del risultato e self-check completo;
 - creazione isolata di plancia, helper, automazione fissa e policy dinamica;

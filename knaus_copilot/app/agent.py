@@ -205,6 +205,7 @@ class KnausAgent:
         ha_states: list[dict[str, Any]],
         automatic: bool = False,
         web_search: bool = False,
+        runtime_context: dict[str, Any] | None = None,
     ) -> str:
         self.memory.add_message(user_id, "user", message)
         cloud_ready = (
@@ -254,6 +255,7 @@ class KnausAgent:
             "home_assistant": self.privacy.sanitize_states(selected_states),
             "memories": self.privacy.sanitize_memories(memories),
             "permissions": self.policy.public_summary(),
+            "runtime": runtime_context or {},
         }
         conversation = [
             {

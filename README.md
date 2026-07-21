@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.6.0
+## Cosa funziona oggi — versione 0.7.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -55,6 +55,7 @@ deterministiche e indipendenti dall'AI e da Internet.
 - backup controllato di `configuration.yaml` prima dell'inserimento dell'include;
 - registro delle modifiche e inventario con hash SHA-256;
 - interruttore persistente per bloccare il potere decisionale;
+- interruttore persistente Animali a bordo che rende il clima prioritario;
 - spegnimento del solo climatizzatore configurato;
 - notifiche tramite un servizio Home Assistant `notify.*` configurato;
 - blocco di BMS, firmware, ventilazione inverter e parametri critici;
@@ -113,6 +114,20 @@ L'associazione dei sensori per la modalità ombra resta disponibile tramite API 
 configurazione assistita, ma non occupa più la schermata principale. Una prova
 ombra resta inconcludente finché SOC, potenza rete/PZEM e produzione solare non
 sono associati e validi.
+
+### Console essenziale
+
+La schermata principale mostra soltanto la chat e due interruttori:
+
+- **Potere decisionale** abilita o blocca immediatamente tutte le azioni già
+  comprese nella whitelist sicura dell'assistente;
+- **Animali a bordo** applica un vincolo persistente alle analisi, alle
+  simulazioni e ai comandi, impedendo lo spegnimento del clima finché resta
+  attivo.
+
+L'interruttore non autorizza modifiche a BMS, inverter, firmware o ventilazione.
+Queste categorie rimangono protette e richiedono un intervento progettato e
+convalidato separatamente.
 
 Il backend espone inoltre un costruttore generale per bozze di tipo dashboard,
 helper, automazione fissa, automazione dinamica, script e template. Le bozze

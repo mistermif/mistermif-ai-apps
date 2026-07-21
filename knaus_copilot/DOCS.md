@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.6.0
+# Guida semplice a mistermif AI 0.7.0
 
 ## Installazione in cinque minuti
 
@@ -71,6 +71,20 @@ equipaggio, mezzo, viaggi e piazzole non vengono inclusi nel contesto cloud.
 - **Emergenza:** intervento immediato.
 - **Urgenza:** intervento entro 10–15 minuti.
 - **Allerta:** nessun intervento richiesto, ma occorre prestare attenzione.
+
+## I due interruttori
+
+La schermata principale contiene soltanto la chat e due pulsanti permanenti:
+
+- **Potere decisionale:** quando è attivo, Mistermif AI può usare senza altre
+  conferme le azioni già autorizzate; quando è bloccato continua a osservare,
+  ricordare, simulare e consigliare;
+- **Animali a bordo:** quando è attivo il clima diventa prioritario. Mistermif AI
+  applica automaticamente questa informazione alle simulazioni e rifiuta di
+  spegnere il climatizzatore finché la modalità non viene disattivata.
+
+Le protezioni su BMS, parametri inverter, firmware e ventilazione non vengono
+rimosse dal pulsante del potere decisionale.
 
 ## Provare le automazioni senza scaricare la batteria
 
