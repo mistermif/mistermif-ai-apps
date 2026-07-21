@@ -87,6 +87,17 @@
       box-shadow: 0 0 24px rgba(0, 217, 255, .12), 0 0 22px rgba(255, 0, 200, .08);
     }
     .brand-mark img { width: 52px; height: 52px; object-fit: contain; border-radius: 12px; }
+    .settings-gear {
+      min-width: 50px;
+      width: 50px;
+      height: 50px;
+      padding: 0;
+      color: var(--text);
+      border-color: rgba(0, 217, 255, .4);
+      background: rgba(0, 217, 255, .08);
+      box-shadow: 0 0 18px rgba(0, 217, 255, .08);
+      font-size: 24px;
+    }
     h1, h2, h3, p { margin-top: 0; }
     h1 { margin-bottom: 3px; font-size: clamp(25px, 3vw, 36px); letter-spacing: -.6px; }
     .tagline { margin: 0; color: var(--muted); }
@@ -202,6 +213,31 @@
     }
     .onboarding-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
     .onboarding-actions button { min-height: 46px; }
+    .settings-dialog { width: min(780px, calc(100vw - 24px)); }
+    .settings-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .settings-head button { min-height: 42px; color: var(--text); background: rgba(255,255,255,.06); box-shadow: none; }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .settings-card {
+      padding: 14px;
+      border: 1px solid rgba(88, 113, 156, .34);
+      border-radius: 13px;
+      background: rgba(2, 7, 19, .68);
+    }
+    .settings-card.full { grid-column: 1 / -1; }
+    .settings-card h3 { margin-bottom: 11px; color: var(--cyan); font-size: 14px; text-transform: uppercase; letter-spacing: .6px; }
+    .setting-row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px solid rgba(88,113,156,.18); }
+    .setting-row:last-child { border-bottom: 0; }
+    .setting-row span:first-child { color: var(--muted); }
+    .setting-row span:last-child { text-align: right; font-weight: 800; }
+    .settings-note { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .settings-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .settings-actions button { min-height: 46px; }
     .footer {
       display: flex;
       justify-content: space-between;
@@ -220,6 +256,7 @@
       button { min-height: 50px; }
       #messages { height: 46vh; }
       .quick-controls { grid-template-columns: 1fr; }
+      .settings-grid, .settings-actions { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -234,6 +271,7 @@
             <p class="tagline">Il copilota intelligente della caravan</p>
           </div>
         </div>
+        <button id="settings-open" class="settings-gear" type="button" aria-label="Impostazioni">⚙</button>
       </header>
 
       <main class="content">
@@ -274,6 +312,50 @@
           </form>
         </dialog>
 
+        <dialog id="settings-dialog" class="settings-dialog">
+          <div class="settings-head">
+            <div class="panel-head"><div class="panel-icon">⚙</div><h2>Impostazioni</h2></div>
+            <button id="settings-close" type="button">CHIUDI</button>
+          </div>
+          <div class="settings-grid">
+            <section class="settings-card">
+              <h3>Sistema</h3>
+              <div class="setting-row"><span>Versione</span><span id="setting-version">—</span></div>
+              <div class="setting-row"><span>Home Assistant</span><span id="setting-ha">—</span></div>
+              <div class="setting-row"><span>Entità visibili</span><span id="setting-entities">—</span></div>
+              <div class="setting-row"><span>Workspace</span><span id="setting-workspace">—</span></div>
+            </section>
+            <section class="settings-card">
+              <h3>Intelligenza artificiale</h3>
+              <div class="setting-row"><span>Provider</span><span id="setting-provider">—</span></div>
+              <div class="setting-row"><span>Modello</span><span id="setting-model">—</span></div>
+              <div class="setting-row"><span>Privacy</span><span id="setting-privacy">—</span></div>
+              <div class="setting-row"><span>Cloud oggi</span><span id="setting-cloud">—</span></div>
+              <p class="settings-note">Provider, chiavi e limiti si modificano dalla scheda Configurazione dell'add-on.</p>
+            </section>
+            <section class="settings-card">
+              <h3>Apprendimento locale</h3>
+              <div class="setting-row"><span>Campioni sosta</span><span id="setting-samples">—</span></div>
+              <div class="setting-row"><span>Confidenza</span><span id="setting-confidence">—</span></div>
+              <div class="setting-row"><span>Soste apprese</span><span id="setting-sites">—</span></div>
+            </section>
+            <section class="settings-card">
+              <h3>Profilo del mezzo</h3>
+              <p id="setting-profile" class="settings-note">Caricamento…</p>
+              <button id="profile-edit" type="button">MODIFICA PROFILO</button>
+            </section>
+            <section class="settings-card full">
+              <h3>Sicurezza</h3>
+              <div class="setting-row"><span>Livelli allarme</span><span id="setting-alerts">—</span></div>
+              <div class="setting-row"><span>Categorie protette</span><span id="setting-blocked">—</span></div>
+              <p class="settings-note">Il potere decisionale abilita soltanto le azioni presenti nella whitelist. I limiti critici restano sempre protetti.</p>
+              <div class="settings-actions">
+                <button id="workspace-install" type="button" hidden>ATTIVA CARTELLA DEDICATA</button>
+              </div>
+            </section>
+          </div>
+        </dialog>
+
         <section class="quick-controls" aria-label="Comandi principali">
           <button id="autonomy-toggle" class="control-btn" type="button">POTERE DECISIONALE BLOCCATO</button>
           <button id="animals-toggle" class="control-btn animals" type="button">ANIMALI A BORDO DISATTIVO</button>
@@ -292,7 +374,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.7.0 · CONSOLE ESSENZIALE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.7.1 · CONSOLE ESSENZIALE</span></footer>
     </div>
   </div>
 
@@ -304,7 +386,9 @@
     const onboardingForm = document.querySelector("#onboarding-form");
     const vehicleType = document.querySelector("#vehicle-type");
     const towField = document.querySelector("#tow-field");
+    const settingsDialog = document.querySelector("#settings-dialog");
     let onboardingShown = false;
+    let lastStatus = null;
 
     function add(text, role) {
       const element = document.createElement("div");
@@ -347,9 +431,61 @@
       return response.json();
     }
 
+    function setText(id, value) {
+      document.querySelector(`#${id}`).textContent = value;
+    }
+
+    function renderSettings(data) {
+      setText("setting-version", data.version);
+      setText("setting-ha", data.home_assistant.connected ? "Collegato" : "Non collegato");
+      setText("setting-entities", String(data.home_assistant.visible_entities || 0));
+      setText("setting-workspace", data.workspace?.include_installed ? "Collegato" : "Da collegare");
+      setText("setting-provider", data.ai_provider);
+      setText("setting-model", data.model);
+      setText(
+        "setting-privacy",
+        data.privacy_mode === "local_only"
+          ? "Solo locale"
+          : data.privacy_mode === "contextual_cloud"
+            ? "Cloud contestuale"
+            : "Cloud con redazione"
+      );
+      setText("setting-cloud", `${data.cloud_usage.total}/${data.cloud_usage.daily_limit}`);
+      setText("setting-samples", String(data.learning.samples));
+      setText("setting-confidence", `${Math.round(data.learning.confidence * 100)}%`);
+      setText("setting-sites", String(data.learning.learned_sites));
+      setText(
+        "setting-alerts",
+        data.alert_levels.map(item => item.level).join(" · ")
+      );
+      setText(
+        "setting-blocked",
+        data.permissions.blocked_categories.join(", ")
+      );
+      document.querySelector("#workspace-install").hidden =
+        !data.workspace || data.workspace.include_installed;
+    }
+
+    async function refreshProfile() {
+      const data = await api("api/onboarding");
+      const profile = data.profile;
+      if (!profile) {
+        setText("setting-profile", "Profilo non ancora compilato.");
+        return;
+      }
+      const crew = (profile.crew || []).map(item => `${item.name} (${item.role})`).join(", ");
+      setText(
+        "setting-profile",
+        `${profile.brand} ${profile.model}${profile.year ? ` · ${profile.year}` : ""}` +
+        `${profile.tow_vehicle ? ` · Motrice: ${profile.tow_vehicle}` : ""}` +
+        `${crew ? ` · Equipaggio: ${crew}` : ""}`
+      );
+    }
+
     async function refresh() {
       try {
         const data = await api("api/status");
+        lastStatus = data;
         const autonomyButton = document.querySelector("#autonomy-toggle");
         autonomyButton.dataset.enabled = String(data.autonomy_enabled);
         autonomyButton.textContent = data.autonomy_enabled
@@ -363,6 +499,7 @@
           ? "ANIMALI A BORDO ATTIVO"
           : "ANIMALI A BORDO DISATTIVO";
         animalsButton.classList.toggle("active", data.animals_on_board);
+        renderSettings(data);
         if (!data.onboarding.completed && !onboardingShown) {
           onboardingShown = true;
           onboardingDialog.showModal();
@@ -371,6 +508,40 @@
         add(`Stato non disponibile: ${error.message}`, "assistant");
       }
     }
+
+    document.querySelector("#settings-open").addEventListener("click", async () => {
+      try {
+        if (!lastStatus) await refresh();
+        await refreshProfile();
+        settingsDialog.showModal();
+      } catch (error) {
+        add(`Impostazioni non disponibili: ${error.message}`, "assistant");
+      }
+    });
+
+    document.querySelector("#settings-close").addEventListener("click", () => {
+      settingsDialog.close();
+    });
+
+    document.querySelector("#profile-edit").addEventListener("click", async () => {
+      try {
+        const data = await api("api/onboarding");
+        const profile = data.profile || {};
+        vehicleType.value = profile.vehicle_type || "caravan";
+        document.querySelector("#vehicle-year").value = profile.year || "";
+        document.querySelector("#vehicle-brand").value = profile.brand || "";
+        document.querySelector("#vehicle-model").value = profile.model || "";
+        document.querySelector("#tow-vehicle").value = profile.tow_vehicle || "";
+        document.querySelector("#crew-members").value = (profile.crew || [])
+          .map(item => `${item.name} (${item.role})`)
+          .join(", ");
+        updateTowField();
+        settingsDialog.close();
+        onboardingDialog.showModal();
+      } catch (error) {
+        add(`Profilo non disponibile: ${error.message}`, "assistant");
+      }
+    });
 
     form.addEventListener("submit", async event => {
       event.preventDefault();
@@ -425,8 +596,29 @@
         });
         onboardingDialog.close();
         add("Profilo iniziale salvato nella memoria locale.", "assistant");
+        await refreshProfile();
       } catch (error) {
         add(`Profilo non salvato: ${error.message}`, "assistant");
+      }
+    });
+
+    document.querySelector("#workspace-install").addEventListener("click", async event => {
+      if (!window.confirm(
+        "Creare /config/mistermif_ai e aggiungere il collegamento packages a configuration.yaml?"
+      )) return;
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        await api("api/workspace/install", {
+          method: "POST",
+          body: JSON.stringify({confirmed: true})
+        });
+        add("Cartella dedicata attivata con backup di configuration.yaml.", "assistant");
+        await refresh();
+      } catch (error) {
+        add(`Workspace non attivato: ${error.message}`, "assistant");
+      } finally {
+        button.disabled = false;
       }
     });
 

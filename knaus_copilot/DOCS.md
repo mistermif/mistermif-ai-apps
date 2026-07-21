@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.7.0
+# Guida semplice a mistermif AI 0.7.1
 
 ## Installazione in cinque minuti
 
@@ -85,6 +85,11 @@ La schermata principale contiene soltanto la chat e due pulsanti permanenti:
 
 Le protezioni su BMS, parametri inverter, firmware e ventilazione non vengono
 rimosse dal pulsante del potere decisionale.
+
+L'icona **⚙** apre le impostazioni con stato del collegamento, provider AI,
+privacy, quote, apprendimento, profilo del mezzo, workspace e protezioni. Da qui
+si può anche modificare il profilo iniziale e, se necessario, attivare la
+cartella dedicata.
 
 ## Provare le automazioni senza scaricare la batteria
 

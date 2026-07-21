@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.7.0
+## Cosa funziona oggi — versione 0.7.1
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -128,6 +128,11 @@ La schermata principale mostra soltanto la chat e due interruttori:
 L'interruttore non autorizza modifiche a BMS, inverter, firmware o ventilazione.
 Queste categorie rimangono protette e richiedono un intervento progettato e
 convalidato separatamente.
+
+Una piccola icona a ingranaggio apre le impostazioni tecniche: collegamento Home
+Assistant, provider e modello AI, privacy, quote cloud, apprendimento locale,
+profilo del mezzo, workspace, livelli di allarme e categorie protette. Queste
+informazioni non occupano più la console principale.
 
 Il backend espone inoltre un costruttore generale per bozze di tipo dashboard,
 helper, automazione fissa, automazione dinamica, script e template. Le bozze
