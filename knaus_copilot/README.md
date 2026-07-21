@@ -1,4 +1,4 @@
-# mistermif AI 0.9.1
+# mistermif AI 1.0.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -20,7 +20,7 @@ della caravan.
 - creazione isolata di plancia, helper, automazione fissa e policy dinamica;
 - collaudo in simulazione e ombra prima di qualunque azione reale;
 - blocco esplicito di batteria, inverter, ventilazione e firmware.
-- ponte consultivo Codex/MCP autenticato per stato, simulazioni e proposte;
+- ponte consultivo di laboratorio/MCP autenticato per stato, simulazioni e proposte;
 - gemello digitale sul Mac senza servizi Home Assistant eseguibili dal ponte.
 - scheda grafica per simulazioni e self-check, più diagramma del ponte nelle
   impostazioni.
@@ -30,6 +30,9 @@ della caravan.
 - revisione Gemini solo per nuovi rischi o peggioramenti, massimo 10 al giorno;
 - avvisi persistenti e deduplicati, con Telegram per urgenze ed emergenze;
 - diario viaggi GPS automatico con soste, velocità, distanza, report, CSV e GPX.
+- scoperta automatica dei componenti del frigorifero con richiesta in chat;
+- controllo della sola ventola PWM confermata e autorizzata, con boost iniziale
+  al 100% a 40 °C e blocco tramite interruttore generale.
 
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
 sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e
@@ -83,11 +86,10 @@ attivo, un nuovo rischio può richiedere una singola revisione Gemini. Il limite
 `weather_ai_daily_limit` non può superare 10. Open-Meteo e Radar-DPC sono
 richieste dati normali, non token AI.
 
-## Roadmap
+## Ventilazione frigorifero
 
-- `0.2`: monitor meteo e registro diagnostico;
-- `0.3`: proposte di azione con conferma;
-- `0.4`: strumenti Energy Pilot esplicitamente autorizzati;
-- completato in `0.8`: ponte privato Codex/MCP e consenso sulle simulazioni;
-- completato in `0.9`: supervisore meteo autonomo e diario viaggi GPS locale;
-- `0.7`: uscita vocale opzionale.
+L'app individua le entità compatibili, notifica l'utente e raccoglie in chat
+marca, modello, sonda radiatore superiore, temperatura esterna, temperatura
+interna e comando PWM. Senza tutti i dati e la frase esplicita di autorizzazione
+resta in osservazione. L'autorizzazione vale soltanto per l'entity ID confermato
+e non include mai le ventole dell'inverter.

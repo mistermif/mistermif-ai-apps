@@ -112,6 +112,38 @@ class HomeAssistantClient:
                 result.append(item)
         return result
 
+    async def fridge_states(self) -> list[dict[str, Any]]:
+        """Return a minimal local-only view of possible refrigerator devices."""
+        terms = ("frigo", "fridge", "frigorif", "refriger", "ventol", "fan", "pwm")
+        result = []
+        for state in await self._raw_states():
+            entity_id = str(state.get("entity_id", ""))
+            attributes = state.get("attributes") or {}
+            name = str(attributes.get("friendly_name", ""))
+            candidate = f"{entity_id} {name}".casefold()
+            unit = str(attributes.get("unit_of_measurement", "")).casefold()
+            is_external_temperature = (
+                unit in {"°c", "c", "°f", "f"}
+                and any(word in candidate for word in ("estern", "external", "outdoor", "fuori"))
+            )
+            if not any(term in candidate for term in terms) and not is_external_temperature:
+                continue
+            result.append(
+                {
+                    "entity_id": entity_id,
+                    "state": state.get("state"),
+                    "name": name or entity_id,
+                    "unit": attributes.get("unit_of_measurement"),
+                    "last_updated": state.get("last_updated"),
+                    "attributes": {
+                        key: attributes.get(key)
+                        for key in ("percentage", "min", "max", "step")
+                        if attributes.get(key) is not None
+                    },
+                }
+            )
+        return result
+
     async def health(self) -> dict:
         try:
             states = await self.states()
@@ -175,3 +207,32 @@ class HomeAssistantClient:
             )
             response.raise_for_status()
         return {"ok": True, "service": "telegram_bot.send_message"}
+
+    async def set_fridge_fan(self, entity_id: str, percentage: float) -> dict:
+        if not self.token:
+            raise RuntimeError("Home Assistant non è collegato")
+        if not self.policy.can_control_fridge(entity_id):
+            raise PermissionError("Comando ventola frigorifero non autorizzato")
+        percentage = max(0.0, min(100.0, float(percentage)))
+        domain = entity_id.split(".", 1)[0]
+        if domain == "fan":
+            service = "set_percentage"
+            data = {"entity_id": entity_id, "percentage": round(percentage)}
+        elif domain in {"number", "input_number"}:
+            service = "set_value"
+            data = {"entity_id": entity_id, "value": round(percentage, 1)}
+        else:
+            raise PermissionError("Il comando PWM deve essere fan.* o number.*")
+        async with httpx.AsyncClient(timeout=12) as client:
+            response = await client.post(
+                f"{self.base_url}/services/{domain}/{service}",
+                headers=self.headers,
+                json=data,
+            )
+            response.raise_for_status()
+        return {
+            "ok": True,
+            "entity_id": entity_id,
+            "percentage": percentage,
+            "service": f"{domain}.{service}",
+        }

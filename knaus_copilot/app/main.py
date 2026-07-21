@@ -24,6 +24,7 @@ from .conversational_simulator import run_conversational_simulation
 from .cloud_usage import CloudUsage
 from .codex_bridge import CollaborationService, create_bridge_app
 from .home_assistant import HomeAssistantClient
+from .fridge_optimizer import FridgeOptimizer
 from .learning import ContextLearner
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
@@ -90,6 +91,7 @@ weather_monitor = WeatherMonitor(
     weather_ai_usage if settings.weather_ai_enabled else None,
 )
 travel_tracker = TravelTracker(memory, settings.travel_arrival_minutes)
+fridge_optimizer = FridgeOptimizer(memory, ha, policy, settings.notification_service)
 
 
 async def learning_loop() -> None:
@@ -135,6 +137,15 @@ async def travel_loop() -> None:
         await asyncio.sleep(settings.travel_poll_seconds)
 
 
+async def fridge_loop() -> None:
+    while True:
+        try:
+            await fridge_optimizer.monitor_once()
+        except Exception:
+            logger.exception("Monitoraggio frigorifero non riuscito")
+        await asyncio.sleep(60)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info(
@@ -156,6 +167,7 @@ async def lifespan(_: FastAPI):
         if settings.travel_tracker_enabled
         else None
     )
+    fridge_task = asyncio.create_task(fridge_loop())
     bridge_server = None
     bridge_task = None
     if settings.codex_bridge_enabled:
@@ -197,14 +209,14 @@ async def lifespan(_: FastAPI):
     learning_task.cancel()
     with suppress(asyncio.CancelledError):
         await learning_task
-    for task in (weather_task, travel_task):
+    for task in (weather_task, travel_task, fridge_task):
         if task is not None:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
 
 
-APP_VERSION = "0.9.1"
+APP_VERSION = "1.0.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -396,6 +408,7 @@ async def status() -> dict:
             "arrival_minutes": settings.travel_arrival_minutes,
             "latest": trip_state,
         },
+        "fridge_optimizer": fridge_optimizer.public_status(),
         "lab": {
             "mode": lab_mode(),
             "bundle_installed": (
@@ -565,6 +578,15 @@ async def chat(
         x_remote_user_id, x_remote_user_display_name
     )
     normalized = payload.message.casefold()
+    fridge_answer = fridge_optimizer.handle_message(payload.message)
+    if fridge_answer is not None:
+        memory.add_message(user_id, "user", payload.message)
+        memory.add_message(user_id, "assistant", fridge_answer)
+        return {
+            "answer": fridge_answer,
+            "user": display_name,
+            "fridge_optimizer": fridge_optimizer.public_status(),
+        }
     plan = travel_tracker.capture_plan(payload.message)
     if plan is not None:
         answer = (
@@ -689,6 +711,19 @@ async def chat(
         logger.exception("Errore durante la conversazione")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"answer": answer, "user": display_name}
+
+
+@app.get("/api/fridge")
+async def fridge_status() -> dict:
+    return fridge_optimizer.public_status()
+
+
+@app.post("/api/fridge/check")
+async def fridge_check() -> dict:
+    try:
+        return await fridge_optimizer.monitor_once()
+    except (PermissionError, RuntimeError, httpx.HTTPError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/api/actions/execute")

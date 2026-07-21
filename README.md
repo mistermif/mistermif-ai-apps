@@ -8,16 +8,16 @@ le azioni autorizzate.
 Il progetto nasce su una caravan Knaus, ma l'architettura è pensata per essere
 configurabile e adattabile ad altri camper e caravan.
 
-> Il progetto è in sviluppo attivo. La versione corrente fornisce la base sicura
-> del copilota; campeggi, frigorifero e decisioni energetiche complete
-> sono ancora in sviluppo progressivo.
+> Il progetto è in sviluppo attivo. Questa pagina descrive soltanto capacità
+> presenti nel codice della versione pubblicata. Le specifiche tecniche sono
+> separate e non valgono come dichiarazione di una funzione disponibile.
 
 ## Punto della situazione
 
-La versione **0.9.1** è una base già funzionante, installabile come app di Home
-Assistant. Non è ancora un sistema che può modificare liberamente la caravan:
+La versione **1.0.0** è una base già funzionante, installabile come app di Home
+Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
-separa chiaramente funzioni operative, simulazioni e sviluppi futuri.
+separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
 
 | Area | Stato attuale | Cosa fa realmente |
 |---|---|---|
@@ -29,7 +29,7 @@ separa chiaramente funzioni operative, simulazioni e sviluppi futuri.
 | Meteo autonomo | Operativo | Analizza ogni 30 minuti sensori, Open-Meteo e Radar-DPC; Windy è opzionale |
 | Revisione Gemini meteo | Operativa e selettiva | Nessuna chiamata se il quadro è sereno o stabile; massimo 10 valutazioni al giorno quando compare un rischio |
 | Diario viaggi | Operativo | Riconosce partenza e arrivo, registra percorso e soste, produce report ed esportazioni CSV/GPX |
-| Collegamento con Codex | Operativo ma consultivo | Condivide stato filtrato, simulazioni e proposte; il ponte non esegue comandi reali |
+| Ventilazione frigorifero | Operativa con consenso | Rileva gli apparati, raccoglie modello e associazioni in chat e comanda soltanto il PWM autorizzato; regola iniziale 100% a 40 °C |
 | Apprendimento | Prima fase operativa | Registra osservazioni e risultati per posizione, senza modificare autonomamente codice o soglie |
 
 ### Cosa può fare autonomamente oggi
@@ -46,15 +46,14 @@ separa chiaramente funzioni operative, simulazioni e sviluppi futuri.
 - applicare soltanto le azioni già presenti nella whitelist e bloccarle tutte
   tramite l'interruttore del potere decisionale.
 
-### Cosa non fa ancora
+### Limiti di sicurezza
 
 - non modifica autonomamente parametri di inverter, BMS o ventilazione;
 - non installa da solo una bozza nell'impianto reale senza il ciclo di prova e
   l'autorizzazione richiesta;
-- non controlla ancora frigorifero, TPMS o altri apparati non configurati;
-- non riconosce ancora automaticamente il nome del campeggio dalle coordinate;
-- non ha ancora automazioni energetiche predittive complete abilitate sui
-  dispositivi reali;
+- non comanda TPMS o altri apparati non configurati e autorizzati;
+- non ricava il nome di un campeggio dalle coordinate senza una fonte ufficiale;
+- mantiene le simulazioni energetiche separate dai dispositivi reali;
 - non sostituisce protezioni elettriche, allarmi gas/fumo, IT-Alert,
   Protezione Civile o verifiche professionali.
 
@@ -79,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.9.1
+## Cosa funziona oggi — versione 1.0.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -123,11 +122,8 @@ deterministiche e indipendenti dall'AI e da Internet.
 - ciclo obbligatorio bozza → simulazione → ombra → attiva;
 - backup automatico di ogni file generato prima di una sua sovrascrittura;
 - registro locale di input, decisione e azioni che sarebbero state proposte.
-- ponte privato Codex/MCP per parlare con Mistermif AI dal laboratorio sul Mac;
-- confronto strutturato su stato, vincoli, simulazioni e proposte, senza
-  esecuzione di comandi reali attraverso il ponte;
-- autenticazione con token locale e rimozione degli stati sensibili prima della
-  condivisione con Codex.
+- ponte privato di laboratorio/MCP, solo consultivo e autenticato con token
+  locale, per stato filtrato, simulazioni e proposte;
 - risultati delle simulazioni rappresentati con indicatori grafici di SOC,
   corrente, rete, solare, colonnina, severità e stato del self-check.
 - sorveglianza meteo deterministica ogni 30 minuti senza token AI;
@@ -139,23 +135,30 @@ deterministiche e indipendenti dall'AI e da Internet.
   tetto indipendente e non superabile di 10 chiamate al giorno;
 - diario GPS automatico con pianificazione in chat, soste, arrivo, report e
   esportazione CSV/GPX.
+- scoperta locale di sensori e comandi riconducibili al frigorifero;
+- notifica immediata e raccolta in chat di marca, modello e associazioni;
+- autorizzazione persistente limitata a una singola entità PWM `fan.*` o
+  `number.*`, senza accesso alla ventilazione inverter;
+- campionamento del frigorifero ogni minuto e boost iniziale al 100% quando la
+  sonda confermata del radiatore superiore raggiunge 40 °C;
+- blocco immediato del comando ventole tramite l'interruttore generale.
 
-### Laboratorio sul Mac e dialogo con Codex
+### Laboratorio esterno
 
 Il gemello digitale resta sul Mac. Mistermif AI continua a vivere sul Raspberry,
 dove conserva memoria, regole, contesto di Home Assistant e registro delle
 decisioni. I due ambienti comunicano tramite un ponte privato autenticato:
 
 ```text
-Codex sul Mac ── MCP locale ── token/LAN ── Mistermif AI sul Raspberry
+strumento sul Mac ── MCP locale ── token/LAN ── Mistermif AI sul Raspberry
      │                                      │
      └─ proposte e analisi                   ├─ stato HA filtrato
                                             ├─ memoria e vincoli
                                             └─ simulatore deterministico
 ```
 
-Codex dispone di cinque strumenti: stato, confronto, simulazione, self-check e
-proposta. Il risultato contiene un consenso esplicito (`agreed`,
+Il ponte espone cinque strumenti consultivi: stato, confronto, simulazione,
+self-check e proposta. Il risultato contiene un consenso esplicito (`agreed`,
 `needs_revision` o `requires_user_authorization`) e viene registrato localmente.
 Il ponte non espone strumenti di comando: non può spegnere apparati, cambiare
 file, modificare BMS/inverter/firmware o aggirare l'interruttore del potere
@@ -243,7 +246,7 @@ concessi all'assistente.
 | `gemini` Free | gratuito entro le quote del progetto | no con Gemini 3.5 Flash Free | ragionamento cloud senza carta di credito, usando dati HA e meteo già integrato |
 | `groq` Free | gratuito entro le quote | no | risposte molto rapide e buona alternativa gratuita |
 | `gemini` Paid | consumo a pagamento | Google Search Grounding con fonti | meteo contestuale, ristoranti, campeggi e ricambi aggiornati |
-| `openai` | consumo a pagamento | non ancora collegata dall'app | qualità elevata; l'API è separata dall'abbonamento ChatGPT |
+| `openai` | consumo a pagamento | no | qualità elevata; l'API è separata dall'abbonamento ChatGPT |
 
 Quote, modelli e prezzi cambiano nel tempo: prima di attivare la fatturazione
 verifica sempre le pagine ufficiali di [Gemini](https://ai.google.dev/gemini-api/docs/pricing),
@@ -362,48 +365,15 @@ la destinazione viene associata automaticamente alla partenza successiva.
 `Fammi il report del viaggio` restituisce il riepilogo; `Esporta il viaggio`
 prepara CSV e GPX. Coordinate e tracce non sono inviate al provider AI.
 
-## Cosa è progettato per le versioni successive
+## Gestione operativa della ventilazione frigorifero
 
-- profilo conversazionale del mezzo e dei suoi apparati;
-- riconoscimento di campeggi e aree dalle coordinate;
-- memoria di piazzola, ampere, orientamento ed esposizione solare;
-- preparazione del viaggio usando meteo ed esperienze precedenti;
-- monitoraggio e analisi del frigorifero e delle sue ventole;
-- integrazione TPMS opzionale per osservare pressione e temperatura degli
-  pneumatici, rilevare tendenze e suggerire una sosta o una riduzione prudente
-  della velocità senza sostituire le prescrizioni del costruttore;
-- riepiloghi giornalieri di energia, temperature e comfort;
-- allerte per vento, temporali, gelo, caldo e condensa;
-- ricerca guidata di ricambi con verifica della compatibilità;
-- autoriparazione limitata alla cartella dedicata, con test e ripristino.
-- automazioni dinamiche contestuali create dall'assistente entro una lista di
-  apparati, servizi e limiti autorizzati;
-- modalità “animali a bordo” con climatizzazione prioritaria, previsione
-  dell'autonomia ed escalation delle notifiche.
-- apprendimento locale delle abitudini e preparazione predittiva delle risorse;
-- modalità privacy locale predefinita, senza invio di dati al cloud.
+Mistermif AI cerca ogni minuto nomi ed entità riconducibili al frigorifero. Alla
+prima scoperta invia una sola notifica e avvia la raccolta dati in chat. Non
+esegue alcun comando finché marca, modello, quattro associazioni e consenso non
+sono completi. L'utente conclude il flusso scrivendo, per esempio,
+`Frigorifero modello Dometic RM 7655L, autorizzo la gestione delle ventole frigo`.
 
-La logica prevista per l'ottimizzazione del frigorifero è descritta nella
-[specifica dedicata](docs/FRIDGE_OPTIMIZATION_SPEC.md): affinamento locale
-dopo almeno 48 ore, riconoscimento prudente di porta e irraggiamento, controllo
-delle sole ventole autorizzate e inattività automatica quando mancano i sensori.
-Non è previsto un pulsante dedicato: l'assistente scoprirà autonomamente
-sensori e comando ventole e invierà subito una notifica con accesso alla chat.
-Chiederà marca, modello e funzione dei sensori; dopo la risposta e il consenso
-avvierà immediatamente monitoraggio e regola iniziale, con ventole al 100% a
-40 °C sul sensore caldo confermato. Le prime 48 ore serviranno ad affinare la
-strategia, non a ritardarne l'avvio. Il blocco generale dell'autonomia rimarrà
-sempre disponibile.
-
-### Presa in gestione della ventilazione frigorifero
-
-Mistermif AI è progettato per riconoscere un impianto di ventilazione del
-frigorifero e, dopo aver raccolto i dati del modello e ricevuto il consenso
-esplicito dell'utente, prendere in gestione **soltanto la ventola PWM**. Nella
-versione corrente il flusso è specificato ma il comando reale non è ancora
-abilitato.
-
-I requisiti minimi previsti sono:
+I requisiti minimi sono:
 
 - **sonda sul radiatore superiore**, usata come riferimento caldo e come soglia
   iniziale per il boost;
@@ -412,22 +382,25 @@ I requisiti minimi previsti sono:
 - **ventola PWM controllabile da Home Assistant**, con comando e stato validi e
   possibilità di modulazione dallo 0% al 100%;
 - **sonda di temperatura interna al frigorifero**, anche senza fili, purché sia
-  integrata in Home Assistant, aggiornata con regolarità e con stato batteria o
-  disponibilità verificabile.
+  integrata in Home Assistant e aggiornata con regolarità.
 
 Servono inoltre marca e modello del frigorifero, associazione confermata delle
-entità e autorizzazione dell'utente. Appena l'assistente rileverà componenti
-compatibili invierà una notifica e aprirà la raccolta guidata dei dati in chat.
-Dopo il consenso attiverà immediatamente il monitoraggio e la regola iniziale:
+entità e autorizzazione dell'utente. Dopo il consenso parte immediatamente il
+monitoraggio e la regola iniziale:
 ventola al 100% quando la sonda del radiatore superiore raggiunge 40 °C. I dati
-successivi serviranno ad affinare modulazione e anticipo della ventilazione per
-ridurre oscillazioni e stress, senza alzare autonomamente il limite iniziale.
+vengono registrati localmente per le successive analisi di rendimento.
 
 Senza tutti e quattro i requisiti validi Mistermif AI potrà osservare e indicare
 cosa manca, ma non prenderà il controllo della ventilazione.
 
+Il comando è accettato esclusivamente se l'entità confermata è `fan.*`,
+`number.*` o `input_number.*`; l'autorizzazione è un confronto esatto e non può
+estendersi alle ventole dell'inverter. Il pulsante generale del potere
+decisionale blocca immediatamente anche questo comando. Stato e prova manuale
+sono disponibili tramite `GET /api/fridge` e `POST /api/fridge/check`.
+
 La specifica dettagliata è disponibile in
-[`docs/COPILOT_04_SPEC.md`](docs/COPILOT_04_SPEC.md).
+[`docs/FRIDGE_OPTIMIZATION_SPEC.md`](docs/FRIDGE_OPTIMIZATION_SPEC.md).
 
 ## Architettura
 
@@ -444,7 +417,7 @@ Sensori e automazioni Home Assistant
                       ├─ memoria locale
                       ├─ analisi e consigli
                       ├─ azioni autorizzate
-                      └─ ponte consultivo ← MCP/Codex sul Mac
+                      └─ ponte consultivo ← MCP sul Mac
 ```
 
 Solo il contesto necessario viene inviato al provider AI selezionato. Database,
@@ -453,22 +426,15 @@ dall'utente. In
 modalità predefinita `local_only` non viene inviato alcun contenuto al modello
 cloud; la modalità `redacted_cloud` è opzionale e applica filtri preventivi.
 
-## Apprendimento delle abitudini
+## Apprendimento locale
 
-Il copilota è progettato per riconoscere routine ripetute e preparare il mezzo.
-Se, per esempio, la cucina a induzione viene usata spesso alle 12, può verificare
-prima SOC, produzione, ricarica, limite della colonnina e carichi differibili.
-
-Le abitudini non nascono da un singolo episodio. La versione 0.4.0 registra
+La versione corrente registra
 campioni locali e li associa a un'identità anonima della sosta derivata da GPS e
 orientamento. Campioni senza posizione non aumentano la confidenza e dati di
 luoghi diversi non vengono mescolati.
 
 L'apprendimento riguarda osservazioni e risultati: non modifica autonomamente
-codice, firmware, soglie protette o parametri dell'impianto. L'utente potrà
-correggere, sospendere e cancellare i dati appresi. Le decisioni energetiche
-predittive complete verranno abilitate soltanto dopo simulazione storica e
-modalità ombra.
+codice, firmware, soglie protette o parametri dell'impianto.
 
 ## Workspace isolato
 
@@ -522,38 +488,18 @@ della conferma deve indicare:
 Firmware, BMS, protezioni elettriche e parametri critici dell'inverter non fanno
 parte dell'autoriparazione generale.
 
-### Automazioni dinamiche
+### Bozze di automazioni dinamiche
 
-Le automazioni create da Mistermif AI possono avere piena autonomia operativa
-nel perimetro approvato. Non sono semplici soglie: considerano andamento della
-batteria, produzione solare, ricarica esterna, orario, meteo, stato di viaggio,
-temperature e priorità dichiarate dall'utente.
-
-Per esempio, una regola “spegni il clima sotto il 30%” può attendere se la
-batteria sta recuperando grazie al sole o a una fonte esterna, oppure intervenire
-prima se è sera, la produzione è in calo e non sono previste altre fonti. I
-vincoli rigidi di sicurezza restano deterministici e non possono essere rimossi
-dal ragionamento AI.
-
-Ogni automazione dinamica deve essere visibile, versionata, disattivabile,
-registrare dati e motivazione di ogni decisione e offrire ripristino della
-versione precedente. Nuovi apparati o nuove categorie di comando richiedono
-approvazione esplicita.
-
-Prima dell'attivazione ogni versione attraversa quattro fasi: bozza,
-simulazione con dati virtuali, ombra con sensori reali ma zero comandi, e infine
-attiva. Il passaggio alla fase attiva richiede interruttore generale abilitato,
-associazione esplicita dei sensori e test superati. Il laboratorio non può
-promuovere da solo comandi protetti come SBU, parametri inverter, BMS, firmware
-o ventilazione tecnica.
+Il laboratorio genera e versiona bozze nel workspace dedicato, le simula con
+dati virtuali e può osservarle in modalità ombra. Non le promuove da solo a
+comandi reali. SBU, parametri inverter, BMS, firmware e ventilazione tecnica
+restano sempre esclusi.
 
 ### Animali a bordo
 
-Quando l'utente dichiara animali a bordo, il clima diventa un carico prioritario
-e non viene spento soltanto per risparmiare batteria. L'assistente deve stimare
-in anticipo l'autonomia, usare sensori ridondanti, controllare che il clima stia
-realmente funzionando e inviare avvisi progressivi prima che la situazione
-diventi critica.
+Quando l'utente dichiara animali a bordo, l'impostazione viene conservata e il
+comando autorizzato di spegnimento del clima viene bloccato. Lo stesso vincolo
+viene applicato alle simulazioni energetiche.
 
 Mistermif AI non sostituisce la supervisione umana né può essere considerato
 l'unico sistema di protezione per persone o animali. Le soglie termiche urgenti,
@@ -561,16 +507,6 @@ gli allarmi locali e un percorso di intervento umano devono funzionare anche
 senza AI o Internet.
 
 Il contratto completo è in [`SECURITY.md`](SECURITY.md).
-
-## Campeggi, Park4night e memoria di viaggio
-
-Il copilota è progettato per ricordare campeggi visitati, accessibilità,
-corrente disponibile, servizi, piazzole, orientamento e strategie energetiche.
-
-Park4night è previsto come fonte importante, ma non è stata individuata una API
-pubblica per sviluppatori. L'integrazione verrà realizzata soltanto tramite API,
-partnership o altra autorizzazione ufficiale. Sono esclusi scraping, elusione
-dell'abbonamento e copia del database.
 
 ## Ricambi per caravan e camper
 
@@ -670,19 +606,6 @@ creato e recuperare la copia più recente da `/config/mistermif_ai/backup`.
 - [Contratto di sicurezza](SECURITY.md)
 - [Presentazione PowerPoint del progetto](outputs/mistermif-ai-presentazione.pptx)
 
-## Roadmap
-
-- **0.1:** chat, memoria e lettura filtrata;
-- **0.2:** primo controllo autorizzato del climatizzatore;
-- **0.3:** workspace isolato, backup, manifest, kill switch e notifiche;
-- **0.4:** viaggi, campeggi, meteo, frigorifero, energia e comfort;
-- **0.5:** collegamento controllato con Codex sul Mac;
-- **0.6:** voce opzionale attraverso l'impianto audio.
-- **0.9:** sorveglianza meteo locale, Radar-DPC, deduplicazione degli avvisi e
-  diario viaggi GPS esportabile.
-- **0.9.1:** tendenze barometriche e revisione Gemini dinamica fino a 10 volte
-  al giorno, senza chiamate quando il quadro è sereno o invariato.
-
 ## Privacy
 
 Il repository non contiene token, password, indirizzi privati, coordinate GPS o
@@ -692,6 +615,6 @@ l'utente richiede esplicitamente un'esportazione CSV o GPX.
 
 ## Stato del progetto
 
-Mistermif AI non è ancora un prodotto finito. È una base funzionante sviluppata
+Mistermif AI non è un dispositivo di sicurezza certificato. È una base funzionante sviluppata
 per iterazioni controllate: ogni nuova capacità deve avere permessi espliciti,
 test, registrazione delle decisioni e possibilità di disattivazione.

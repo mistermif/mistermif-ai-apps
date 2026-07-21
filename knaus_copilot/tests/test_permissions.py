@@ -37,3 +37,13 @@ class PermissionPolicyTest(TestCase):
 
         policy.runtime_enabled = False
         self.assertFalse(policy.can_execute("turn_off_climate"))
+
+    def test_fridge_control_is_exact_and_requires_runtime_switch(self):
+        policy = PermissionPolicy(runtime_enabled=True)
+        policy.authorize_fridge_control(
+            {"number.frigo_pwm", "fan.inverter_cooling_ventola_frigo"}
+        )
+        self.assertTrue(policy.can_control_fridge("number.frigo_pwm"))
+        self.assertFalse(policy.can_control_fridge("fan.inverter_cooling"))
+        policy.runtime_enabled = False
+        self.assertFalse(policy.can_control_fridge("number.frigo_pwm"))
