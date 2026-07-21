@@ -26,6 +26,34 @@ class SettingsTest(TestCase):
             self.assertEqual("local-rules", settings.model)
             self.assertEqual("observe", settings.autonomy_mode)
             self.assertEqual("local_only", settings.privacy_mode)
+            self.assertFalse(settings.codex_bridge_enabled)
+            self.assertEqual("", settings.codex_bridge_token)
+            self.assertEqual(8100, settings.codex_bridge_port)
+
+    def test_codex_bridge_options_are_loaded_without_exposing_token(self):
+        with TemporaryDirectory() as directory:
+            options_file = Path(directory) / "options.json"
+            options_file.write_text(
+                json.dumps(
+                    {
+                        "codex_bridge_enabled": True,
+                        "codex_bridge_token": "x" * 40,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "KNAUS_DATA_DIR": directory,
+                    "KNAUS_OPTIONS_FILE": str(options_file),
+                },
+                clear=True,
+            ):
+                settings = Settings.load()
+
+            self.assertTrue(settings.codex_bridge_enabled)
+            self.assertEqual("x" * 40, settings.codex_bridge_token)
 
     def test_context_limit_is_clamped(self):
         with TemporaryDirectory() as directory:

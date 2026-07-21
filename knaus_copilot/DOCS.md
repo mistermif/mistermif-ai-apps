@@ -1,4 +1,4 @@
-# Guida semplice a mistermif AI 0.7.1
+# Guida semplice a mistermif AI 0.8.0
 
 ## Installazione in cinque minuti
 
@@ -90,6 +90,68 @@ L'icona **⚙** apre le impostazioni con stato del collegamento, provider AI,
 privacy, quote, apprendimento, profilo del mezzo, workspace e protezioni. Da qui
 si può anche modificare il profilo iniziale e, se necessario, attivare la
 cartella dedicata.
+
+## Collegare Codex sul Mac
+
+Questa funzione mantiene il laboratorio e il gemello digitale sul Mac, mentre
+Mistermif AI resta sul Raspberry. Il collegamento è consultivo: Codex può leggere
+lo stato filtrato, chiedere simulazioni, eseguire il self-check e sottoporre una
+proposta. Non riceve uno strumento per comandare Home Assistant.
+
+### 1. Crea il token
+
+Sul Mac apri Terminale ed esegui:
+
+```bash
+openssl rand -hex 32
+```
+
+Copia il risultato. È una password privata: non pubblicarla e non inserirla in
+GitHub.
+
+### 2. Attiva il ponte nell'add-on
+
+In **mistermif AI → Configurazione** imposta:
+
+```yaml
+codex_bridge_enabled: true
+codex_bridge_token: "INCOLLA_QUI_IL_TOKEN"
+```
+
+Salva e riavvia l'add-on. Nelle impostazioni dell'app, **Ponte Codex** deve
+mostrare **Pronto**. La porta usata è `8100`; deve rimanere accessibile soltanto
+dalla LAN e non va inoltrata dal router verso Internet.
+
+### 3. Abbina il Mac senza salvare segreti nella repo
+
+Dalla cartella clonata della repo esegui:
+
+```bash
+python3 tools/setup_mistermif_bridge.py
+```
+
+Indica `http://knaus.local:8100` e incolla lo stesso token. Lo script crea
+`.mistermif-bridge.local.json`, con permessi solo per l'utente e già escluso da
+Git. Se `knaus.local` non risponde, usa temporaneamente l'IP corrente del
+Raspberry.
+
+### 4. Aggiungi il server MCP a Codex
+
+Nell'app ChatGPT/Codex apri **Impostazioni → MCP servers → Add server**:
+
+- nome: `mistermif-ai`;
+- tipo: `STDIO`;
+- comando: `python3`;
+- argomento: il percorso completo di `tools/mistermif_mcp.py` nella repo.
+
+Salva e riavvia Codex. Da quel momento sono disponibili gli strumenti
+`mistermif_status`, `mistermif_discuss`, `mistermif_simulate`,
+`mistermif_self_check` e `mistermif_propose`.
+
+Ogni scambio viene registrato nella memoria locale di Mistermif AI. Gli stati
+marcati sensibili non vengono restituiti. Modifiche e comandi reali vengono
+sempre esclusi dal ponte; le proposte protette tornano con
+`requires_user_authorization`.
 
 ## Provare le automazioni senza scaricare la batteria
 

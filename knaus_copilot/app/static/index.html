@@ -324,6 +324,7 @@
               <div class="setting-row"><span>Home Assistant</span><span id="setting-ha">—</span></div>
               <div class="setting-row"><span>Entità visibili</span><span id="setting-entities">—</span></div>
               <div class="setting-row"><span>Workspace</span><span id="setting-workspace">—</span></div>
+              <div class="setting-row"><span>Ponte Codex</span><span id="setting-bridge">—</span></div>
             </section>
             <section class="settings-card">
               <h3>Intelligenza artificiale</h3>
@@ -374,7 +375,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.7.1 · CONSOLE ESSENZIALE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.8.0 · CONSOLE ESSENZIALE</span></footer>
     </div>
   </div>
 
@@ -440,6 +441,10 @@
       setText("setting-ha", data.home_assistant.connected ? "Collegato" : "Non collegato");
       setText("setting-entities", String(data.home_assistant.visible_entities || 0));
       setText("setting-workspace", data.workspace?.include_installed ? "Collegato" : "Da collegare");
+      setText(
+        "setting-bridge",
+        data.codex_bridge?.ready ? "Pronto" : "Disattivato"
+      );
       setText("setting-provider", data.ai_provider);
       setText("setting-model", data.model);
       setText(

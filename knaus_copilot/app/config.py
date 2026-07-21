@@ -27,6 +27,9 @@ class Settings:
     data_dir: Path = Path("/data")
     supervisor_token: str = ""
     ha_base_url: str = "http://supervisor/core/api"
+    codex_bridge_enabled: bool = False
+    codex_bridge_token: str = ""
+    codex_bridge_port: int = 8100
 
     @classmethod
     def load(cls) -> "Settings":
@@ -133,4 +136,14 @@ class Settings:
             ha_base_url=os.getenv(
                 "HOME_ASSISTANT_API_URL", "http://supervisor/core/api"
             ).rstrip("/"),
+            codex_bridge_enabled=bool(
+                options.get("codex_bridge_enabled", False)
+            ),
+            codex_bridge_token=str(
+                options.get("codex_bridge_token")
+                or os.getenv("MISTERMIF_BRIDGE_TOKEN", "")
+            ),
+            codex_bridge_port=int(
+                os.getenv("MISTERMIF_BRIDGE_PORT", "8100")
+            ),
         )

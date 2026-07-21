@@ -1,5 +1,5 @@
 name: "mistermif AI"
-version: "0.7.1"
+version: "0.8.0"
 slug: "knaus_copilot"
 description: "Assistente AI personale per supervisione, memoria e diario della caravan."
 url: "https://github.com/mistermif/mistermif-ai-apps"
@@ -12,6 +12,10 @@ boot: auto
 init: false
 ingress: true
 ingress_port: 8099
+ports:
+  8100/tcp: 8100
+ports_description:
+  8100/tcp: "Ponte privato Codex/MCP (richiede token)"
 panel_icon: "mdi:caravan"
 panel_title: "mistermif AI"
 homeassistant_api: true
@@ -28,6 +32,7 @@ options:
   notification_service: "notify.notify"
   privacy_mode: "local_only"
   workspace_enabled: true
+  codex_bridge_enabled: false
   max_context_entities: 80
   log_level: "info"
 schema:
@@ -44,5 +49,7 @@ schema:
   cloud_automatic_limit: "int(0,490)?"
   gemini_search_enabled: "bool?"
   workspace_enabled: bool
+  codex_bridge_enabled: bool
+  codex_bridge_token: "password?"
   max_context_entities: "int(10,200)"
   log_level: "list(debug|info|warning|error)"

@@ -22,6 +22,7 @@ from .automation_lab import (
 from .config import Settings
 from .conversational_simulator import run_conversational_simulation
 from .cloud_usage import CloudUsage
+from .codex_bridge import CollaborationService, create_bridge_app
 from .home_assistant import HomeAssistantClient
 from .learning import ContextLearner
 from .memory import MemoryStore
@@ -88,13 +89,50 @@ async def lifespan(_: FastAPI):
     if settings.workspace_enabled:
         workspace.bootstrap()
     learning_task = asyncio.create_task(learning_loop())
+    bridge_server = None
+    bridge_task = None
+    if settings.codex_bridge_enabled:
+        if len(settings.codex_bridge_token) < 32:
+            logger.error(
+                "Ponte Codex non avviato: configura un token di almeno 32 caratteri"
+            )
+        else:
+            collaboration = CollaborationService(
+                memory=memory,
+                policy=policy,
+                learner=learner,
+                states_provider=ha.states,
+                health_provider=ha.health,
+                autonomy_provider=autonomy_enabled,
+                animals_provider=animals_on_board,
+                lab_mode_provider=lab_mode,
+            )
+            bridge_server = uvicorn.Server(
+                uvicorn.Config(
+                    create_bridge_app(settings.codex_bridge_token, collaboration),
+                    host="0.0.0.0",
+                    port=settings.codex_bridge_port,
+                    log_level=settings.log_level,
+                    access_log=False,
+                )
+            )
+            bridge_task = asyncio.create_task(bridge_server.serve())
+            logger.info(
+                "Ponte privato Codex attivo sulla porta %d",
+                settings.codex_bridge_port,
+            )
     yield
+    if bridge_server is not None:
+        bridge_server.should_exit = True
+    if bridge_task is not None:
+        with suppress(asyncio.CancelledError):
+            await bridge_task
     learning_task.cancel()
     with suppress(asyncio.CancelledError):
         await learning_task
 
 
-APP_VERSION = "0.7.1"
+APP_VERSION = "0.8.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -242,6 +280,13 @@ async def status() -> dict:
         "privacy_mode": settings.privacy_mode,
         "cloud_usage": cloud_usage.snapshot(),
         "gemini_search_enabled": settings.gemini_search_enabled,
+        "codex_bridge": {
+            "enabled": settings.codex_bridge_enabled,
+            "ready": settings.codex_bridge_enabled
+            and len(settings.codex_bridge_token) >= 32,
+            "port": settings.codex_bridge_port,
+            "real_actions": False,
+        },
         "permissions": policy.public_summary(),
         "autonomy_enabled": autonomy_enabled(),
         "animals_on_board": animals_on_board(),

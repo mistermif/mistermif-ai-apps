@@ -28,7 +28,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 0.7.1
+## Cosa funziona oggi — versione 0.8.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -72,6 +72,36 @@ deterministiche e indipendenti dall'AI e da Internet.
 - ciclo obbligatorio bozza → simulazione → ombra → attiva;
 - backup automatico di ogni file generato prima di una sua sovrascrittura;
 - registro locale di input, decisione e azioni che sarebbero state proposte.
+- ponte privato Codex/MCP per parlare con Mistermif AI dal laboratorio sul Mac;
+- confronto strutturato su stato, vincoli, simulazioni e proposte, senza
+  esecuzione di comandi reali attraverso il ponte;
+- autenticazione con token locale e rimozione degli stati sensibili prima della
+  condivisione con Codex.
+
+### Laboratorio sul Mac e dialogo con Codex
+
+Il gemello digitale resta sul Mac. Mistermif AI continua a vivere sul Raspberry,
+dove conserva memoria, regole, contesto di Home Assistant e registro delle
+decisioni. I due ambienti comunicano tramite un ponte privato autenticato:
+
+```text
+Codex sul Mac ── MCP locale ── token/LAN ── Mistermif AI sul Raspberry
+     │                                      │
+     └─ proposte e analisi                   ├─ stato HA filtrato
+                                            ├─ memoria e vincoli
+                                            └─ simulatore deterministico
+```
+
+Codex dispone di cinque strumenti: stato, confronto, simulazione, self-check e
+proposta. Il risultato contiene un consenso esplicito (`agreed`,
+`needs_revision` o `requires_user_authorization`) e viene registrato localmente.
+Il ponte non espone strumenti di comando: non può spegnere apparati, cambiare
+file, modificare BMS/inverter/firmware o aggirare l'interruttore del potere
+decisionale. Un accordo consente quindi di preparare e collaudare una soluzione,
+non di applicarla di nascosto.
+
+La porta 8100 deve restare sulla rete locale: non aprirla sul router e non
+pubblicarla su Internet. Il token non va mai salvato nella repo.
 
 ### Simulazioni conversazionali
 
@@ -249,13 +279,14 @@ Sensori e automazioni Home Assistant
                  ▼
         filtro delle autorizzazioni
                  │
-        ┌────────┴────────┐
-        ▼                 ▼
+        ┌────────┼───────────────┐
+        ▼        ▼               ▼
  automazioni rapide   mistermif AI
  e deterministiche    ├─ chat
                       ├─ memoria locale
                       ├─ analisi e consigli
-                      └─ azioni autorizzate
+                      ├─ azioni autorizzate
+                      └─ ponte consultivo ← MCP/Codex sul Mac
 ```
 
 Solo il contesto necessario viene inviato al provider AI selezionato. Database,
