@@ -383,6 +383,11 @@ prepara CSV e GPX. Coordinate e tracce non sono inviate al provider AI.
 - apprendimento locale delle abitudini e preparazione predittiva delle risorse;
 - modalità privacy locale predefinita, senza invio di dati al cloud.
 
+La logica prevista per l'ottimizzazione del frigorifero è descritta nella
+[specifica dedicata](docs/FRIDGE_OPTIMIZATION_SPEC.md): apprendimento locale
+dopo almeno 48 ore, riconoscimento prudente di porta e irraggiamento, controllo
+delle sole ventole autorizzate e inattività automatica quando mancano i sensori.
+
 La specifica dettagliata è disponibile in
 [`docs/COPILOT_04_SPEC.md`](docs/COPILOT_04_SPEC.md).
 
@@ -621,6 +626,7 @@ creato e recuperare la copia più recente da `/config/mistermif_ai/backup`.
 - [Specifica funzionale del copilota 0.4](docs/COPILOT_04_SPEC.md)
 - [Competenze viaggio e ricambi](docs/EXPERTISE.md)
 - [Automazioni dinamiche e modalità animali a bordo](docs/DYNAMIC_AUTOMATIONS.md)
+- [Ottimizzazione adattiva del frigorifero](docs/FRIDGE_OPTIMIZATION_SPEC.md)
 - [Apprendimento locale e routine predittive](docs/LOCAL_LEARNING.md)
 - [Privacy e conservazione locale](docs/PRIVACY.md)
 - [Contratto di sicurezza](SECURITY.md)
