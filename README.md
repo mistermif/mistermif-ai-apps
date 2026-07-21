@@ -384,13 +384,15 @@ prepara CSV e GPX. Coordinate e tracce non sono inviate al provider AI.
 - modalità privacy locale predefinita, senza invio di dati al cloud.
 
 La logica prevista per l'ottimizzazione del frigorifero è descritta nella
-[specifica dedicata](docs/FRIDGE_OPTIMIZATION_SPEC.md): apprendimento locale
+[specifica dedicata](docs/FRIDGE_OPTIMIZATION_SPEC.md): affinamento locale
 dopo almeno 48 ore, riconoscimento prudente di porta e irraggiamento, controllo
 delle sole ventole autorizzate e inattività automatica quando mancano i sensori.
 Non è previsto un pulsante dedicato: l'assistente scoprirà autonomamente
-sensori e comando ventole, chiederà marca e modello, cercherà i parametri nei
-documenti tecnici e domanderà in chat il consenso soltanto quando tutti i
-presupposti saranno verificati. Il blocco generale dell'autonomia rimarrà
+sensori e comando ventole e invierà subito una notifica con accesso alla chat.
+Chiederà marca, modello e funzione dei sensori; dopo la risposta e il consenso
+avvierà immediatamente monitoraggio e regola iniziale, con ventole al 100% a
+40 °C sul sensore caldo confermato. Le prime 48 ore serviranno ad affinare la
+strategia, non a ritardarne l'avvio. Il blocco generale dell'autonomia rimarrà
 sempre disponibile.
 
 La specifica dettagliata è disponibile in

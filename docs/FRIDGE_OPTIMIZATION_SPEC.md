@@ -22,29 +22,40 @@ Il controllo del frigorifero deve essere una capacità integrata di Mistermif AI
 non un pannello separato. Non deve comparire un interruttore dedicato nella
 schermata principale.
 
-L'assistente deve eseguire periodicamente una scoperta locale delle capacità e
-riconoscere da solo quando sono presenti:
+L'assistente deve eseguire periodicamente una scoperta locale delle capacità.
+Appena trova una ventola, un comando o sensori i cui nomi e unità potrebbero
+ricondurre al frigorifero, deve avviare subito la procedura guidata. Non deve
+attendere 48 ore per fare la prima richiesta.
+
+La rilevazione iniziale deve cercare:
 
 - un frigorifero o sensori con nomi e unità coerenti;
 - i sensori minimi necessari;
 - almeno un comando ventole realmente controllabile;
 - dati aggiornati e privi di lunghi periodi `unknown` o `unavailable`;
-- un periodo di osservazione sufficiente;
-- limiti e strategia di ripristino verificati.
+- indizi sufficienti per proporre che gli apparati appartengano al frigorifero.
 
-Quando tutti i presupposti sono soddisfatti, deve presentarsi in chat con una
-richiesta simile:
+Alla prima rilevazione deve inviare una notifica Home Assistant con collegamento
+alla chat di Mistermif AI e, se configurato, un messaggio Telegram informativo.
+La notifica deve permettere all'utente di aprire la conversazione e fornire i
+dati richiesti. La chat deve iniziare con una richiesta simile:
 
-> Ho riconosciuto temperatura interna, evaporatore, ambiente e comando ventole.
-> Ho raccolto 48 ore di dati validi e completato la modalità ombra. Vuoi
-> autorizzarmi a gestire esclusivamente le ventole del frigorifero entro i limiti
-> indicati?
+> Ho trovato una ventola e alcuni sensori che potrebbero appartenere al
+> frigorifero. Mi indichi marca, modello e a quale parte corrisponde ogni sensore?
+> Dopo la verifica vuoi autorizzarmi a monitorare il frigorifero e gestire
+> esclusivamente queste ventole?
 
-La richiesta deve spiegare sensori trovati, dati mancanti, strategia proposta,
-limiti, rischi e metodo di ripristino. Una risposta negativa lascia il modulo in
-osservazione. L'autorizzazione positiva è persistente ma circoscritta alle sole
-ventole e può essere revocata in chat. L'interruttore generale del potere
-decisionale rimane il blocco immediato di tutte le azioni autonome.
+La richiesta deve elencare le entità trovate e chiedere conferma della loro
+funzione. La stessa installazione non deve produrre notifiche ripetute: una firma
+locale delle entità ricorda che la richiesta è già stata inviata. Una nuova
+richiesta è ammessa se cambiano le entità, l'utente la richiede oppure la
+precedente configurazione viene cancellata.
+
+Una risposta negativa lascia il modulo inattivo. Dopo aver ricevuto i dati e
+l'autorizzazione positiva, il monitoraggio e la creazione della regola iniziano
+immediatamente. L'autorizzazione è persistente ma circoscritta alle sole ventole
+e può essere revocata in chat. L'interruttore generale del potere decisionale
+rimane il blocco immediato di tutte le azioni autonome.
 
 ## Identificazione del frigorifero e ricerca tecnica
 
@@ -92,10 +103,24 @@ Se i sensori minimi non sono disponibili o restituiscono `unknown` oppure
 `unavailable`, il modulo non deve intervenire, non deve inventare valori e non
 deve generare falsi guasti. Deve limitarsi a indicare quali misure mancano.
 
-## Prima fase: osservazione
+## Avvio immediato e prima fase di apprendimento
 
-Per almeno 48 ore di funzionamento valido il sistema deve lavorare in modalità
-osservazione, senza cambiare la strategia delle ventole. Deve registrare
+Dopo identificazione delle entità e autorizzazione, il sistema deve attivare una
+regola iniziale prudente e contemporaneamente iniziare a raccogliere dati.
+
+La regola predefinita è:
+
+- ventole al **100% quando il sensore caldo confermato raggiunge 40 °C**;
+- la soglia deve riferirsi esplicitamente al sensore dell'evaporatore,
+  condensatore o vano tecnico identificato dall'utente;
+- se non è chiaro quale sensore rappresenti il lato caldo, nessun comando viene
+  eseguito finché l'utente non lo conferma;
+- sotto la soglia di boost rimane valida la strategia precedente o manuale,
+  evitando accensioni e spegnimenti rapidi;
+- 40 °C resta il limite iniziale di boost e non può essere spostato verso valori
+  più alti dall'apprendimento senza una nuova autorizzazione.
+
+Per almeno 48 ore di funzionamento valido il sistema deve poi registrare
 localmente:
 
 - temperatura interna, evaporatore, vano tecnico ed esterna;
@@ -107,7 +132,9 @@ localmente:
 - eventi compatibili con apertura porta o irraggiamento solare.
 
 I campioni di soste diverse non devono essere mescolati senza conservare il
-relativo contesto ambientale.
+relativo contesto ambientale. Durante questo periodo la regola a 40 °C rimane
+attiva; l'assistente può preparare strategie migliori ma le applica soltanto
+entro i limiti già autorizzati e dopo confronto con i risultati precedenti.
 
 ## Algoritmo adattivo
 
@@ -178,12 +205,15 @@ un sensore che le confermi.
 
 ## Criteri prima dell'attivazione reale
 
-- marca e modello identificati o dichiarati esplicitamente non disponibili;
-- documentazione e limiti tecnici registrati con le relative fonti;
-- almeno 48 ore di campioni validi;
+- rilevazione automatica di entità compatibili e notifica immediata all'utente;
+- marca e modello forniti oppure impossibilità dichiarata esplicitamente;
+- sensore caldo e comando ventole confermati dall'utente;
 - entità Home Assistant associate e unità di misura verificate;
 - comportamento delle ventole provato manualmente;
-- simulazioni di sensori offline, porta aperta, caldo esterno e recupero;
-- confronto in modalità ombra con la strategia attuale;
-- richiesta autonoma dell'assistente quando tutti i criteri risultano veri;
-- autorizzazione esplicita dell'utente alla sola gestione delle ventole.
+- autorizzazione esplicita dell'utente alla sola gestione delle ventole;
+- prova della regola iniziale: boost al 100% a 40 °C e ripristino della strategia
+  precedente sotto soglia;
+- avvio immediato del monitoraggio e della raccolta dati;
+- almeno 48 ore di campioni per iniziare l'affinamento adattivo;
+- simulazioni successive di sensori offline, porta aperta, caldo esterno e
+  recupero prima di applicare strategie più evolute.
