@@ -69,9 +69,11 @@ class WeatherMonitor:
             try:
                 forecast = await self.fetch_open_meteo(latitude, longitude)
                 risks.extend(self.analyse_open_meteo(forecast))
+                forecast_summary = self.forecast_summary(forecast)
                 sources["open_meteo_multimodello"] = "ok"
             except (httpx.HTTPError, ValueError, KeyError, TypeError):
                 logger.exception("Open-Meteo non disponibile")
+                forecast_summary = {}
                 sources["open_meteo_multimodello"] = "errore"
             if self.dpc_enabled and self._inside_italy(latitude, longitude):
                 try:
@@ -97,6 +99,7 @@ class WeatherMonitor:
             else:
                 sources["windy_professional"] = "non configurato"
         else:
+            forecast_summary = {}
             sources["posizione_gps"] = "non disponibile"
 
         deterministic = self.assess(risks)
@@ -143,6 +146,7 @@ class WeatherMonitor:
         assessment["sources"] = sources
         assessment["local_observation"] = local_observation
         assessment["local_trend"] = local_trend
+        assessment["forecast"] = forecast_summary
         assessment["deterministic"] = deterministic
         assessment["gemini_review"] = ai_review
         assessment["gemini_budget"] = (
@@ -174,9 +178,15 @@ class WeatherMonitor:
         params = {
             "latitude": latitude,
             "longitude": longitude,
+            "current": (
+                "temperature_2m,relative_humidity_2m,apparent_temperature,"
+                "weather_code,precipitation,rain,wind_speed_10m,"
+                "wind_direction_10m,wind_gusts_10m,surface_pressure"
+            ),
             "hourly": (
                 "weather_code,precipitation_probability,precipitation,rain,"
-                "showers,wind_gusts_10m,cape,temperature_2m"
+                "showers,wind_speed_10m,wind_direction_10m,wind_gusts_10m,"
+                "cape,temperature_2m,relative_humidity_2m"
             ),
             "forecast_hours": 12,
             "timezone": "auto",
@@ -188,6 +198,83 @@ class WeatherMonitor:
             )
             response.raise_for_status()
             return response.json()
+
+    @classmethod
+    def forecast_summary(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        """Return a compact, presentation-safe weather snapshot."""
+        current = payload.get("current") or {}
+        hourly = payload.get("hourly") or {}
+
+        def first(key: str) -> float | None:
+            values = hourly.get(key) or []
+            return cls._number(values[0]) if values else None
+
+        def number(key: str, hourly_key: str | None = None) -> float | None:
+            value = cls._number(current.get(key))
+            return value if value is not None else first(hourly_key or key)
+
+        code_value = number("weather_code")
+        code = int(code_value) if code_value is not None else None
+        direction = number("wind_direction_10m")
+        probability_values = [
+            cls._number(value) or 0
+            for value in (hourly.get("precipitation_probability") or [])[:8]
+        ]
+        gust_values = [
+            cls._number(value) or 0
+            for value in (hourly.get("wind_gusts_10m") or [])[:8]
+        ]
+        return {
+            "condition": cls.weather_label(code),
+            "weather_code": code,
+            "temperature_c": number("temperature_2m"),
+            "apparent_temperature_c": number("apparent_temperature"),
+            "humidity_percent": number("relative_humidity_2m"),
+            "pressure_hpa": number("surface_pressure"),
+            "wind_speed_kmh": number("wind_speed_10m"),
+            "wind_direction_deg": direction,
+            "wind_direction": cls.compass_direction(direction),
+            "wind_gust_kmh": number("wind_gusts_10m"),
+            "max_gust_8h_kmh": max(gust_values, default=0),
+            "precipitation_probability_8h": max(probability_values, default=0),
+            "observed_at": current.get("time") or ((hourly.get("time") or [None])[0]),
+        }
+
+    @staticmethod
+    def weather_label(code: int | None) -> str:
+        if code is None:
+            return "Dati meteo in attesa"
+        labels = {
+            0: "Sereno",
+            1: "Prevalentemente sereno",
+            2: "Parzialmente nuvoloso",
+            3: "Coperto",
+            45: "Nebbia",
+            48: "Nebbia con brina",
+            51: "Pioviggine debole",
+            53: "Pioviggine",
+            55: "Pioviggine intensa",
+            61: "Pioggia debole",
+            63: "Pioggia",
+            65: "Pioggia intensa",
+            71: "Neve debole",
+            73: "Neve",
+            75: "Neve intensa",
+            80: "Rovesci deboli",
+            81: "Rovesci",
+            82: "Rovesci intensi",
+            95: "Temporale",
+            96: "Temporale con grandine",
+            99: "Temporale forte con grandine",
+        }
+        return labels.get(code, "Condizioni variabili")
+
+    @staticmethod
+    def compass_direction(degrees: float | None) -> str | None:
+        if degrees is None:
+            return None
+        points = ("N", "NE", "E", "SE", "S", "SO", "O", "NO")
+        return points[int((degrees % 360 + 22.5) // 45) % 8]
 
     async def fetch_dpc_hail_probability(
         self, latitude: float, longitude: float

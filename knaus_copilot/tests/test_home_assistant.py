@@ -44,21 +44,35 @@ class DashboardSnapshotTest(unittest.IsolatedAsyncioTestCase):
             [
                 raw("sensor.batteria_knaus_soc", 82, "Batteria Knaus SOC", "%"),
                 raw("sensor.batteria_knaus_corrente", -14.2, "Batteria Knaus Corrente", "A"),
+                raw("sensor.batteria_knaus_tensione", 13.3, "Batteria Knaus Tensione", "V"),
+                raw("sensor.batteria_knaus_potenza", -188, "Batteria Knaus Potenza", "W"),
                 raw("sensor.pv_input_power", 436, "PV Input Power", "W"),
                 raw("sensor.pv_energia_giornaliera", 1200, "PV Energia giornaliera", "Wh"),
                 raw("sensor.pzem_power", 680, "PZEM Power", "W"),
+                raw("sensor.inverter_cooling_pzem_voltage", 228, "Inverter Cooling PZEM Voltage", "V"),
+                raw("sensor.inverter_cooling_pzem_current", 3.1, "Inverter Cooling PZEM Current", "A"),
+                raw("sensor.inverter_load_power", 910, "Inverter Load Power", "W"),
                 raw("sensor.caravan_temperatura_interna", 23.4, "Caravan Temperatura Interna", "°C"),
                 raw("sensor.caravan_temperatura_esterna", 28.1, "Caravan Temperatura Esterna", "°C"),
+                raw("sensor.caravan_umidita_esterna", 61, "Caravan Umidità Esterna", "%"),
+                raw("sensor.barometro_pressione", 1009, "Barometro Pressione", "hPa"),
                 raw("sensor.frigo_temperatura_interna", 6.2, "Frigo Temperatura Interna", "°C"),
             ]
         )
         result = await client.dashboard_snapshot()
         self.assertEqual("82", result["battery_soc"]["state"])
         self.assertEqual("-14.2", result["battery_current"]["state"])
+        self.assertEqual("13.3", result["battery_voltage"]["state"])
+        self.assertEqual("-188", result["battery_power"]["state"])
         self.assertEqual("sensor.pv_input_power", result["solar_power"]["entity_id"])
         self.assertEqual("sensor.pzem_power", result["grid_power"]["entity_id"])
+        self.assertEqual("228", result["grid_voltage"]["state"])
+        self.assertEqual("3.1", result["grid_current"]["state"])
+        self.assertEqual("910", result["load_power"]["state"])
         self.assertEqual("23.4", result["internal_temperature"]["state"])
         self.assertEqual("28.1", result["external_temperature"]["state"])
+        self.assertEqual("61", result["external_humidity"]["state"])
+        self.assertEqual("1009", result["pressure"]["state"])
 
     async def test_location_uses_valid_caravan_tracker_attributes(self):
         client = FakeDashboardClient(

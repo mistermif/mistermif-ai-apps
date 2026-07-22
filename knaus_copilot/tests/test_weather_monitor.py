@@ -7,6 +7,31 @@ from app.weather_monitor import WeatherMonitor, WeatherRisk
 
 
 class WeatherMonitorTest(TestCase):
+    def test_forecast_summary_exposes_weather_and_wind(self):
+        summary = WeatherMonitor.forecast_summary(
+            {
+                "current": {
+                    "time": "2026-07-22T14:00",
+                    "temperature_2m": 26.4,
+                    "relative_humidity_2m": 58,
+                    "apparent_temperature": 27.1,
+                    "weather_code": 2,
+                    "wind_speed_10m": 18.2,
+                    "wind_direction_10m": 225,
+                    "wind_gusts_10m": 31,
+                    "surface_pressure": 1008.4,
+                },
+                "hourly": {
+                    "precipitation_probability": [10, 20, 45],
+                    "wind_gusts_10m": [31, 38, 42],
+                },
+            }
+        )
+        self.assertEqual("Parzialmente nuvoloso", summary["condition"])
+        self.assertEqual("SO", summary["wind_direction"])
+        self.assertEqual(42, summary["max_gust_8h_kmh"])
+        self.assertEqual(45, summary["precipitation_probability_8h"])
+
     def test_forecast_hail_and_wind_raise_urgency(self):
         risks = WeatherMonitor.analyse_open_meteo(
             {

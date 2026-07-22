@@ -265,6 +265,16 @@ class HomeAssistantClient:
                 ("batteria_knaus_corrente", "battery_current", "corrente", "current"),
                 ("a",),
             ),
+            "battery_voltage": best_any(
+                tuple((term,) for term in battery_terms),
+                ("batteria_knaus_tensione", "battery_voltage", "tensione", "voltage"),
+                ("v",),
+            ),
+            "battery_power": best_any(
+                tuple((term,) for term in battery_terms),
+                ("batteria_knaus_potenza", "battery_power", "potenza", "power"),
+                ("w", "kw"),
+            ),
             "solar_power": best_any(
                 (("pv",), ("solar",), ("fotovolta",), ("pannell",)),
                 ("input_power", "potenza", "power", "produzione"),
@@ -277,6 +287,24 @@ class HomeAssistantClient:
                 ("w", "kw"),
                 ("voltage", "volt", "energy", "energia"),
             ),
+            "grid_voltage": best_any(
+                (("pzem",), ("grid",), ("rete",), ("utility",)),
+                ("inverter_cooling_pzem_voltage", "pzem_grid_voltage", "voltage", "tensione"),
+                ("v",),
+                ("battery", "batter"),
+            ),
+            "grid_current": best_any(
+                (("pzem",), ("grid",), ("rete",), ("utility",)),
+                ("inverter_cooling_pzem_current", "pzem_grid_current", "current", "corrente"),
+                ("a",),
+                ("battery", "batter"),
+            ),
+            "load_power": best_any(
+                (("load",), ("carico",), ("output_power",), ("potenza_uscita",)),
+                ("pzem_load_power", "inverter_load", "output_power", "potenza"),
+                ("w", "kw"),
+                ("daily", "giornal", "energy", "energia"),
+            ),
             "internal_temperature": best_any(
                 (("temperatur",), ("temperature",)),
                 ("intern", "caravan", "abitacolo"),
@@ -288,6 +316,28 @@ class HomeAssistantClient:
                 ("ester", "external", "outdoor", "fuori"),
                 temperature_units,
                 ("frigo", "fridge", "inverter"),
+            ),
+            "external_humidity": best_any(
+                (("umid",), ("humidity",)),
+                ("ester", "external", "outdoor", "fuori"),
+                ("%",),
+                ("intern", "frigo", "fridge"),
+            ),
+            "pressure": best_any(
+                (("pression",), ("pressure",), ("barometr",)),
+                ("barometr", "pressione atmosferica", "pressure"),
+                ("hpa", "mbar", "pa"),
+            ),
+            "wind_speed": best_any(
+                (("vento",), ("wind",)),
+                ("veloc", "speed", "wind_speed"),
+                ("km/h", "kmh", "m/s"),
+                ("gust", "raffica", "direction", "direzione"),
+            ),
+            "wind_direction": best_any(
+                (("vento",), ("wind",)),
+                ("direzione", "direction", "bearing"),
+                ("°", "deg"),
             ),
         }
         return {key: value for key, value in metrics.items()}

@@ -195,7 +195,7 @@
     .live-state { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .5px; }
     .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #65708a; box-shadow: 0 0 0 4px rgba(101,112,138,.1); }
     .live-state.online .live-dot { background: var(--green); box-shadow: 0 0 0 4px rgba(0,230,118,.11), 0 0 13px rgba(0,230,118,.6); }
-    .mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+    .mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
     .mini-card {
       min-height: 112px;
       padding: 12px;
@@ -206,9 +206,16 @@
       background: linear-gradient(155deg, rgba(9, 22, 40, .88), rgba(4, 9, 19, .94));
     }
     .mini-card::after { content: ""; position: absolute; width: 70px; height: 70px; border-radius: 50%; right: -34px; top: -34px; background: rgba(0,217,255,.055); }
+    .mini-card.weather { background: linear-gradient(145deg, rgba(7, 30, 48, .94), rgba(11, 8, 31, .95)); }
+    .mini-card.grid-online { border-color: rgba(0,230,118,.42); box-shadow: inset 0 0 22px rgba(0,230,118,.045); }
+    .mini-card.grid-offline { border-color: rgba(255,23,104,.42); }
     .mini-label { color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
     .mini-value { margin-top: 7px; font-size: 24px; line-height: 1; font-weight: 1000; }
     .mini-sub { margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .status-value { display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; background: #65708a; box-shadow: 0 0 0 4px rgba(101,112,138,.1); }
+    .status-dot.online { background: var(--green); box-shadow: 0 0 0 4px rgba(0,230,118,.11), 0 0 13px rgba(0,230,118,.55); }
+    .status-dot.offline { background: var(--red); box-shadow: 0 0 0 4px rgba(255,23,104,.11), 0 0 13px rgba(255,23,104,.45); }
     .battery-track { height: 5px; margin-top: 11px; overflow: hidden; border-radius: 99px; background: rgba(88,113,156,.25); }
     .battery-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--pink), #ffd84d, var(--green)); transition: width .45s ease; }
     .energy-flow { display: grid; grid-template-columns: 1fr 24px 1fr; align-items: center; gap: 5px; margin-top: 13px; }
@@ -220,6 +227,16 @@
     .temp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
     .temp-pair strong { display: block; font-size: 18px; }
     .temp-pair small { color: var(--muted); font-size: 8px; text-transform: uppercase; }
+    .weather-main { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; margin-top: 8px; }
+    .weather-icon { width: 45px; height: 45px; display: grid; place-items: center; border-radius: 13px; font-size: 27px; background: rgba(0,217,255,.08); border: 1px solid rgba(0,217,255,.2); }
+    .weather-condition { font-size: 16px; font-weight: 1000; line-height: 1.15; }
+    .weather-meta { margin-top: 5px; color: var(--muted); font-size: 10px; }
+    .wind-main { display: grid; grid-template-columns: 55px 1fr; align-items: center; gap: 10px; margin-top: 7px; }
+    .wind-compass { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid rgba(0,217,255,.28); border-radius: 50%; background: rgba(0,217,255,.055); }
+    .wind-arrow { color: var(--cyan); font-size: 27px; line-height: 1; transform: rotate(0deg); transition: transform .45s ease; filter: drop-shadow(0 0 7px rgba(0,217,255,.5)); }
+    .wind-speed { font-size: 20px; font-weight: 1000; }
+    .guardian-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 9px; }
+    .guardian-pill { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid rgba(88,113,156,.23); border-radius: 10px; background: rgba(255,255,255,.022); }
     .guardian-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(88,113,156,.18); }
     .guardian-row:first-of-type { margin-top: 8px; }
     .guardian-name { color: var(--muted); font-size: 9px; text-transform: uppercase; }
@@ -370,6 +387,7 @@
       #messages { height: 46vh; }
       .quick-controls { grid-template-columns: 1fr; }
       .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .guardian-strip { grid-template-columns: 1fr; }
       .settings-grid, .settings-actions { grid-template-columns: 1fr; }
       .ai-link { grid-template-columns: 1fr; }
       .ai-wire { grid-template-columns: 1fr; }
@@ -525,30 +543,57 @@
               <div id="board-soc" class="mini-value">—</div>
               <div class="battery-track"><div id="board-soc-fill" class="battery-fill"></div></div>
               <div id="board-current" class="mini-sub">Corrente non disponibile</div>
+              <div id="board-battery-detail" class="mini-sub">Tensione e potenza in attesa</div>
+            </article>
+            <article id="board-grid-card" class="mini-card">
+              <div class="mini-label">Rete 230 V</div>
+              <div class="status-value">
+                <span id="board-grid-dot" class="status-dot"></span>
+                <div id="board-grid-state" class="mini-value">—</div>
+              </div>
+              <div id="board-grid-detail" class="mini-sub">Stato collegamento in attesa</div>
             </article>
             <article class="mini-card">
-              <div class="mini-label">Flusso energia</div>
+              <div class="mini-label">Energia istantanea</div>
               <div class="energy-flow">
                 <div class="flow-node"><strong id="board-solar">—</strong><small>Solare</small></div>
                 <div class="flow-arrow">➜</div>
-                <div class="flow-node"><strong id="board-grid">—</strong><small>Rete</small></div>
+                <div class="flow-node"><strong id="board-load">—</strong><small>Carico</small></div>
               </div>
-              <div class="mini-sub">Valori istantanei disponibili</div>
+              <div id="board-grid-power" class="mini-sub">Prelievo rete non disponibile</div>
+            </article>
+            <article class="mini-card weather">
+              <div class="mini-label">Meteo sulla posizione</div>
+              <div class="weather-main">
+                <div id="board-weather-icon" class="weather-icon">◌</div>
+                <div>
+                  <div id="board-weather-condition" class="weather-condition">In attesa</div>
+                  <div id="board-weather-temp" class="weather-meta">Temperatura non disponibile</div>
+                </div>
+              </div>
+              <div id="board-weather-rain" class="mini-sub">Precipitazioni nelle prossime 8 ore: —</div>
             </article>
             <article class="mini-card">
-              <div class="mini-label">Temperature</div>
+              <div class="mini-label">Vento</div>
+              <div class="wind-main">
+                <div class="wind-compass"><span id="board-wind-arrow" class="wind-arrow">↑</span></div>
+                <div><div id="board-wind-speed" class="wind-speed">—</div><div id="board-wind-direction" class="mini-sub">Direzione —</div></div>
+              </div>
+              <div id="board-wind-gust" class="mini-sub">Raffiche: —</div>
+            </article>
+            <article class="mini-card">
+              <div class="mini-label">Ambiente</div>
               <div class="temp-pair">
                 <div><strong id="board-temp-in">—</strong><small>Interna</small></div>
                 <div><strong id="board-temp-out">—</strong><small>Esterna</small></div>
               </div>
-              <div class="mini-sub">Sensori Home Assistant</div>
+              <div id="board-environment" class="mini-sub">Umidità e pressione in attesa</div>
             </article>
-            <article class="mini-card">
-              <div class="mini-label">Guardiani</div>
-              <div class="guardian-row"><span class="guardian-name">Meteo</span><span id="board-weather" class="guardian-value">—</span></div>
-              <div class="guardian-row"><span class="guardian-name">Frigorifero</span><span id="board-fridge" class="guardian-value">—</span></div>
-              <div class="guardian-row"><span class="guardian-name">Autonomia AI</span><span id="board-autonomy" class="guardian-value">—</span></div>
-            </article>
+          </div>
+          <div class="guardian-strip">
+            <div class="guardian-pill"><span class="guardian-name">Meteo</span><span id="board-weather" class="guardian-value">—</span></div>
+            <div class="guardian-pill"><span class="guardian-name">Frigorifero</span><span id="board-fridge" class="guardian-value">—</span></div>
+            <div class="guardian-pill"><span class="guardian-name">Autonomia AI</span><span id="board-autonomy" class="guardian-value">—</span></div>
           </div>
         </section>
 
@@ -565,7 +610,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.3.1 · PLANCIA COMPATTA</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.4.0 · PLANCIA LIVE</span></footer>
     </div>
   </div>
 
@@ -731,6 +776,29 @@
       return `${numeric.toFixed(digits)}${metric.unit ? ` ${metric.unit}` : ""}`;
     }
 
+    function metricNumber(metric) {
+      const value = Number(metric?.state);
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function hasNumber(value) {
+      return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+    }
+
+    function compactNumber(value, unit, digits = 0) {
+      return hasNumber(value) ? `${Number(value).toFixed(digits)} ${unit}` : "—";
+    }
+
+    function weatherIcon(code) {
+      if (code === 0) return "☀";
+      if ([1, 2].includes(code)) return "🌤";
+      if ([3, 45, 48].includes(code)) return "☁";
+      if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return "🌧";
+      if ([71, 73, 75].includes(code)) return "❄";
+      if ([95, 96, 99].includes(code)) return "⛈";
+      return "◌";
+    }
+
     function renderDashboard(data) {
       const metrics = data.metrics || {};
       const connected = Object.values(metrics).some(Boolean);
@@ -743,10 +811,59 @@
         : "0%";
       const current = dashboardValue(metrics.battery_current, 1);
       setText("board-current", current === "—" ? "Corrente non disponibile" : `Corrente batteria ${current}`);
+      const batteryVoltage = dashboardValue(metrics.battery_voltage, 1);
+      const batteryPower = dashboardValue(metrics.battery_power, 0);
+      setText("board-battery-detail", `Tensione ${batteryVoltage} · Potenza ${batteryPower}`);
+
+      const gridVoltage = metricNumber(metrics.grid_voltage);
+      const gridPower = metricNumber(metrics.grid_power);
+      const gridAvailable = gridVoltage !== null ? gridVoltage >= 180 : gridPower !== null && gridPower > 3;
+      const gridKnown = gridVoltage !== null || gridPower !== null;
+      setText("board-grid-state", gridKnown ? (gridAvailable ? "PRESENTE" : "ASSENTE") : "—");
+      setText(
+        "board-grid-detail",
+        gridKnown
+          ? `Tensione ${compactNumber(gridVoltage, "V", 0)} · Corrente ${dashboardValue(metrics.grid_current, 1)}`
+          : "Sensore rete non disponibile"
+      );
+      const gridCard = document.querySelector("#board-grid-card");
+      const gridDot = document.querySelector("#board-grid-dot");
+      gridCard.classList.toggle("grid-online", gridKnown && gridAvailable);
+      gridCard.classList.toggle("grid-offline", gridKnown && !gridAvailable);
+      gridDot.className = `status-dot ${gridKnown ? (gridAvailable ? "online" : "offline") : ""}`;
+
       setText("board-solar", dashboardValue(metrics.solar_power, 0));
-      setText("board-grid", dashboardValue(metrics.grid_power, 0));
+      setText("board-load", dashboardValue(metrics.load_power, 0));
+      setText("board-grid-power", gridPower === null ? "Prelievo rete non disponibile" : `Dalla rete ${dashboardValue(metrics.grid_power, 0)}`);
       setText("board-temp-in", dashboardValue(metrics.internal_temperature, 1));
       setText("board-temp-out", dashboardValue(metrics.external_temperature, 1));
+
+      const forecast = data.weather?.forecast || {};
+      const local = data.weather?.local_observation || {};
+      const weatherTemp = forecast.temperature_c ?? local.temperature ?? metricNumber(metrics.external_temperature);
+      const humidity = forecast.humidity_percent ?? local.humidity ?? metricNumber(metrics.external_humidity);
+      const pressure = forecast.pressure_hpa ?? local.pressure ?? metricNumber(metrics.pressure);
+      const apparent = forecast.apparent_temperature_c;
+      const code = hasNumber(forecast.weather_code) ? Number(forecast.weather_code) : null;
+      setText("board-weather-icon", weatherIcon(code));
+      setText("board-weather-condition", forecast.condition || "Previsione in attesa");
+      setText(
+        "board-weather-temp",
+        `Temperatura ${compactNumber(weatherTemp, "°C", 1)}${hasNumber(apparent) ? ` · Percepita ${compactNumber(apparent, "°C", 1)}` : ""}`
+      );
+      setText("board-weather-rain", `Pioggia prossime 8 ore: ${compactNumber(forecast.precipitation_probability_8h, "%", 0)}`);
+
+      const windSpeed = forecast.wind_speed_kmh ?? metricNumber(metrics.wind_speed);
+      const windDirection = forecast.wind_direction_deg ?? metricNumber(metrics.wind_direction);
+      const gust = forecast.max_gust_8h_kmh ?? forecast.wind_gust_kmh;
+      setText("board-wind-speed", compactNumber(windSpeed, "km/h", 0));
+      setText("board-wind-direction", `Direzione ${forecast.wind_direction || "—"}${hasNumber(windDirection) ? ` · ${Number(windDirection).toFixed(0)}°` : ""}`);
+      setText("board-wind-gust", `Raffiche previste: ${compactNumber(gust, "km/h", 0)}`);
+      document.querySelector("#board-wind-arrow").style.transform = hasNumber(windDirection)
+        ? `rotate(${Number(windDirection)}deg)`
+        : "rotate(0deg)";
+      setText("board-environment", `Umidità ${compactNumber(humidity, "%", 0)} · Pressione ${compactNumber(pressure, "hPa", 0)}`);
+
       setText("board-weather", data.weather?.severity || "Non analizzato");
       const fridgeMode = data.fridge?.user_mode === "observe_only"
         ? "Solo osservazione"

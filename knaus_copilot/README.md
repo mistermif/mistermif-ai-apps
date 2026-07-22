@@ -1,4 +1,4 @@
-# mistermif AI 1.3.1
+# mistermif AI 1.4.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -37,8 +37,11 @@ della caravan.
   configurazione incompleta e senza alcun comando Home Assistant.
 - fallback semantico Gemini per comprendere istruzioni contestuali ambigue,
   senza trasformare l'interpretazione del modello in autorizzazione operativa.
-- quadro di bordo compatto e responsivo con energia, temperature, meteo e stato
-  frigorifero, aggiornato ogni 30 secondi.
+- plancia live compatta e responsiva con SOC, corrente, tensione e potenza della
+  batteria, presenza rete 230 V, PZEM, solare, carico e temperature;
+- meteo della posizione GPS con condizioni, temperatura percepita, probabilità
+  di pioggia, umidità, pressione e bussola del vento con raffiche a otto ore,
+  aggiornato senza consumare token AI;
 - risposta GPS verificata localmente: coordinate valide non vengono più
   descritte dal modello AI come sensori guasti.
 
