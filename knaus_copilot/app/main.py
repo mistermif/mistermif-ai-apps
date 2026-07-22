@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.4.2"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -341,13 +341,21 @@ def user_identity(
 
 @app.get("/")
 async def index() -> FileResponse:
-    return FileResponse(os.path.join(os.path.dirname(__file__), "static", "index.html"))
+    return FileResponse(
+        os.path.join(os.path.dirname(__file__), "static", "index.html"),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @app.get("/caravan-eyes.png")
 async def caravan_icon() -> FileResponse:
     return FileResponse(
-        os.path.join(os.path.dirname(__file__), "static", "caravan-eyes.png")
+        os.path.join(os.path.dirname(__file__), "static", "caravan-eyes.png"),
+        headers={"Cache-Control": "no-cache, must-revalidate, max-age=0"},
     )
 
 

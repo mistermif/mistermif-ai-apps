@@ -229,7 +229,11 @@ class HomeAssistantClient:
                 continue
             if units and unit not in units:
                 continue
-            score = sum(3 for term in preferred if term in candidate)
+            score = sum(
+                (len(preferred) - position) * 3
+                for position, term in enumerate(preferred)
+                if term in candidate
+            )
             ranked.append((-score, index, item))
         if not ranked:
             return None
@@ -254,11 +258,38 @@ class HomeAssistantClient:
                     candidates.append(item)
             return candidates[0] if candidates else None
 
+        def exact_entity(entity_ids):
+            for entity_id in entity_ids:
+                for item in visible:
+                    if item.get("entity_id") == entity_id:
+                        return item
+            return None
+
         metrics = {
-            "battery_soc": best_any(
+            "battery_soc": exact_entity(
+                (
+                    "sensor.livello_batteria_knaus",
+                    "sensor.batteria_knaus_soc",
+                )
+            )
+            or best_any(
                 tuple((term,) for term in battery_terms),
-                ("batteria_knaus_soc", "battery_soc", " soc", "livello"),
+                (
+                    "batteria_knaus_soc",
+                    "livello_batteria_knaus",
+                    "battery_soc",
+                    " soc",
+                    "livello",
+                ),
                 ("%",),
+                (
+                    "link_quality",
+                    "battery_health",
+                    "intensita_del_segnale",
+                    "signal",
+                    "mistermif_ai_lab",
+                    "smoke",
+                ),
             ),
             "battery_current": best_any(
                 tuple((term,) for term in battery_terms),

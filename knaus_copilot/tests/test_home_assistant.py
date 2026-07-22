@@ -39,6 +39,36 @@ class FakeDashboardClient(HomeAssistantClient):
 
 
 class DashboardSnapshotTest(unittest.IsolatedAsyncioTestCase):
+    async def test_prefers_knaus_soc_over_link_quality(self):
+        client = FakeDashboardClient(
+            [
+                raw(
+                    "sensor.batteria_knaus_link_quality",
+                    100,
+                    "Link quality",
+                    "%",
+                ),
+                raw(
+                    "sensor.batteria_knaus_battery_health",
+                    103,
+                    "Battery health",
+                    "%",
+                ),
+                raw(
+                    "sensor.livello_batteria_knaus",
+                    74,
+                    "livello_batteria_knaus",
+                    "%",
+                ),
+            ]
+        )
+        result = await client.dashboard_snapshot()
+        self.assertEqual(
+            "sensor.livello_batteria_knaus",
+            result["battery_soc"]["entity_id"],
+        )
+        self.assertEqual("74", result["battery_soc"]["state"])
+
     async def test_selects_relevant_metrics_without_daily_counters(self):
         client = FakeDashboardClient(
             [
