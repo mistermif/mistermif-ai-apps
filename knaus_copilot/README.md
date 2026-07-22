@@ -1,4 +1,4 @@
-# mistermif AI 1.1.1
+# mistermif AI 1.2.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -35,6 +35,8 @@ della caravan.
   PWM diretto negli impianti semplici, sempre con blocco generale.
 - modalità persistente di sola osservazione e suggerimenti, valida anche con
   configurazione incompleta e senza alcun comando Home Assistant.
+- fallback semantico Gemini per comprendere istruzioni contestuali ambigue,
+  senza trasformare l'interpretazione del modello in autorizzazione operativa.
 
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
 sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e

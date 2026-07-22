@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.1.1** è una base già funzionante, installabile come app di Home
+La versione **1.2.0** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.1.1
+## Cosa funziona oggi — versione 1.2.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -149,6 +149,10 @@ deterministiche e indipendenti dall'AI e da Internet.
 - modalità persistente **sola osservazione**, selezionabile in linguaggio
   naturale anche quando mancano sensori: nessun comando, ma lettura dei dati
   disponibili e suggerimenti prudenti;
+- interpretazione semantica Gemini quando le regole locali non comprendono una
+  risposta contestuale, con confidenza minima e richiesta di chiarimento;
+- separazione rigida tra comprensione e autorizzazione: Gemini può spiegare
+  l'intenzione ma non può concedere il controllo o eseguire comandi;
 
 ### Laboratorio esterno
 
@@ -416,6 +420,14 @@ una scelta persistente che ha precedenza sulla procedura di configurazione. Le
 entità mancanti vengono indicate come dati non disponibili, ma non impediscono
 all'assistente di recepire l'istruzione e non provocano ulteriori richieste di
 autorizzazione.
+
+Non è necessario usare quella frase esatta. Le formulazioni chiare vengono
+comprese localmente; risposte contestuali come `per adesso lascialo stare e
+avvisami solo se noti qualcosa` vengono inviate a Gemini come richiesta compatta
+di classificazione. Se la confidenza è inferiore al 70%, Mistermif AI domanda
+che cosa si intende. Un risultato `authorize_control` non viene mai applicato:
+per concedere comandi serve comunque la dichiarazione esplicita prevista dalla
+politica di sicurezza.
 
 La specifica dettagliata è disponibile in
 [`docs/FRIDGE_OPTIMIZATION_SPEC.md`](docs/FRIDGE_OPTIMIZATION_SPEC.md).

@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.2.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -579,6 +579,44 @@ async def chat(
     )
     normalized = payload.message.casefold()
     fridge_answer = fridge_optimizer.handle_message(payload.message)
+    fridge_status_snapshot = fridge_optimizer.public_status()
+    semantic_hints = (
+        "lascia",
+        "per ora",
+        "per adesso",
+        "niente",
+        "non tocc",
+        "non fare",
+        "preferisco",
+        "come prima",
+        "stai fermo",
+        "occupatene",
+    )
+    semantic_candidate = (
+        fridge_answer is not None
+        and (
+            fridge_answer.startswith("Per attivare")
+            or fridge_answer.startswith("Ho identificato")
+        )
+    ) or (
+        fridge_answer is None
+        and bool(fridge_status_snapshot.get("entities"))
+        and any(hint in normalized for hint in semantic_hints)
+    )
+    interpretation = None
+    if semantic_candidate and agent.can_interpret_intent():
+        try:
+            interpretation = await agent.interpret_fridge_intent(
+                payload.message,
+                fridge_status_snapshot,
+            )
+            interpreted_answer = fridge_optimizer.apply_interpreted_intent(
+                interpretation
+            )
+            if interpreted_answer is not None:
+                fridge_answer = interpreted_answer
+        except Exception:
+            logger.exception("Interpretazione semantica frigorifero non riuscita")
     if fridge_answer is not None:
         memory.add_message(user_id, "user", payload.message)
         memory.add_message(user_id, "assistant", fridge_answer)
@@ -586,6 +624,7 @@ async def chat(
             "answer": fridge_answer,
             "user": display_name,
             "fridge_optimizer": fridge_optimizer.public_status(),
+            "semantic_interpretation": interpretation,
         }
     plan = travel_tracker.capture_plan(payload.message)
     if plan is not None:

@@ -108,7 +108,9 @@ Il tuo perimetro operativo è definito dalla politica ricevuta nel contesto:
 - puoi analizzare sensori, energia, meteo, GPS e memoria;
 - puoi suggerire azioni e spiegare i motivi;
 - puoi dichiarare eseguita un'azione soltanto quando ricevi il risultato reale;
-- non puoi cambiare parametri di batteria o ventilazione;
+- non puoi cambiare parametri di batteria o ventilazione dell'inverter;
+- il modulo frigorifero può osservare, suggerire o controllare esclusivamente
+  le entità frigo autorizzate; un'interpretazione AI non vale mai come consenso;
 - non puoi modificare YAML, firmware, automazioni o configurazioni;
 - se i dati sono mancanti o incoerenti, dichiaralo.
 
@@ -204,6 +206,92 @@ class KnausAgent:
             and bool(self.api_key)
             and self.privacy_mode != "local_only"
         )
+
+    def can_interpret_intent(self) -> bool:
+        return (
+            self.provider == "gemini"
+            and bool(self.api_key)
+            and self.privacy_mode != "local_only"
+        )
+
+    async def interpret_fridge_intent(
+        self,
+        message: str,
+        fridge_status: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Use Gemini only as a semantic interpreter, never as an authorizer."""
+        if not self.can_interpret_intent():
+            return {"intent": "unavailable", "confidence": 0.0, "reason": "Gemini non configurato"}
+        if self.cloud_usage:
+            self.cloud_usage.consume(automatic=False)
+        safe_context = {
+            "status": fridge_status.get("status"),
+            "user_mode": fridge_status.get("user_mode"),
+            "missing": fridge_status.get("missing", []),
+            "authorized": bool(fridge_status.get("authorized")),
+        }
+        prompt = (
+            "Classifica l'intenzione dell'utente nel contesto della gestione del "
+            "frigorifero di una caravan. Non eseguire azioni e non trasformare mai "
+            "un'intenzione implicita in autorizzazione. Rispondi solo con JSON.\n"
+            f"CONTESTO: {json.dumps(safe_context, ensure_ascii=False)}\n"
+            f"MESSAGGIO: {self.privacy.sanitize_text(message)}"
+        )
+        payload = {
+            "systemInstruction": {
+                "parts": [{"text": (
+                    "Sei un interprete semantico. Scegli un solo intent fra: "
+                    "observe_only, revoke_control, authorize_control, status, "
+                    "provide_details, unrelated, unclear. authorize_control indica "
+                    "solo che l'utente sembra voler autorizzare: il software richiederà "
+                    "comunque una conferma esplicita separata."
+                )}]
+            },
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "thinkingConfig": {"thinkingLevel": "minimal"},
+                "maxOutputTokens": 220,
+                "responseMimeType": "application/json",
+                "responseSchema": {
+                    "type": "object",
+                    "properties": {
+                        "intent": {"type": "string", "enum": [
+                            "observe_only", "revoke_control", "authorize_control",
+                            "status", "provide_details", "unrelated", "unclear"
+                        ]},
+                        "confidence": {"type": "number"},
+                        "reason": {"type": "string"},
+                    },
+                    "required": ["intent", "confidence", "reason"],
+                },
+            },
+        }
+        response, _, _ = await self._gemini_request(
+            payload,
+            allow_fallback=True,
+            preferred_model=GEMINI_FALLBACK_MODEL,
+        )
+        response.raise_for_status()
+        candidates = response.json().get("candidates") or []
+        text = "".join(
+            str(part.get("text", ""))
+            for part in (candidates[0].get("content", {}).get("parts", []) if candidates else [])
+        ).strip()
+        try:
+            result = json.loads(text)
+            confidence = max(0.0, min(1.0, float(result.get("confidence", 0))))
+        except (json.JSONDecodeError, TypeError, ValueError, AttributeError):
+            return {"intent": "unclear", "confidence": 0.0, "reason": "Risposta Gemini non valida"}
+        allowed = {
+            "observe_only", "revoke_control", "authorize_control", "status",
+            "provide_details", "unrelated", "unclear",
+        }
+        intent = str(result.get("intent", "unclear"))
+        return {
+            "intent": intent if intent in allowed else "unclear",
+            "confidence": confidence,
+            "reason": str(result.get("reason", ""))[:240],
+        }
 
     async def evaluate_weather(
         self,

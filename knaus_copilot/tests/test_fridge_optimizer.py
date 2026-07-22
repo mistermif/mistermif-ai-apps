@@ -81,6 +81,27 @@ class FridgeOptimizerTest(TestCase):
         self.assertIn("Modalità frigorifero: sola osservazione", followup)
         self.assertEqual(1, len(self.ha.notifications))
 
+    def test_semantic_interpretation_can_enable_observation_but_not_control(self):
+        asyncio.run(self.optimizer.monitor_once())
+        answer = self.optimizer.apply_interpreted_intent(
+            {"intent": "observe_only", "confidence": 0.91}
+        )
+        self.assertIn("sola osservazione", answer)
+        self.assertFalse(self.optimizer.public_status()["authorized"])
+
+        answer = self.optimizer.apply_interpreted_intent(
+            {"intent": "authorize_control", "confidence": 0.99}
+        )
+        self.assertIn("non uso un'interpretazione AI come autorizzazione", answer)
+        self.assertFalse(self.optimizer.public_status()["authorized"])
+
+    def test_low_confidence_semantics_asks_for_clarification(self):
+        answer = self.optimizer.apply_interpreted_intent(
+            {"intent": "observe_only", "confidence": 0.52}
+        )
+        self.assertIn("Non sono sicuro", answer)
+        self.assertNotEqual("observe_only", self.optimizer.public_status()["user_mode"])
+
     def test_explicit_authorization_is_scoped_and_boosts_at_40(self):
         asyncio.run(self.optimizer.monitor_once())
         answer = self.optimizer.handle_message(

@@ -165,6 +165,31 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
         generation = client.requests[0]["json"]["generationConfig"]
         self.assertEqual("application/json", generation["responseMimeType"])
 
+    async def test_fridge_intent_uses_structured_gemini_without_authorizing(self):
+        client = FakeAsyncClient(
+            [
+                response(
+                    200,
+                    {
+                        "candidates": [{"content": {"parts": [{"text": (
+                            '{"intent":"observe_only","confidence":0.94,'
+                            '"reason":"Vuole solo monitoraggio"}'
+                        )}]}}]
+                    },
+                )
+            ]
+        )
+        agent = self.make_agent()
+        with patch("app.agent.httpx.AsyncClient", return_value=client):
+            result = await agent.interpret_fridge_intent(
+                "Per adesso lascialo stare e dimmi solo se noti problemi",
+                {"status": "awaiting_details", "authorized": False, "missing": ["internal"]},
+            )
+        self.assertEqual("observe_only", result["intent"])
+        self.assertEqual(0.94, result["confidence"])
+        schema = client.requests[0]["json"]["generationConfig"]["responseSchema"]
+        self.assertIn("authorize_control", schema["properties"]["intent"]["enum"])
+
     async def test_minimal_chat_does_not_send_old_memories_or_history(self):
         memory = Mock()
         memory.recent_messages.return_value = [

@@ -100,6 +100,61 @@ class FridgeOptimizer:
             }
         self.policy.authorize_fridge_control(allowed)
 
+    def set_observe_only(self) -> str:
+        self.profile["authorized"] = False
+        self.profile["user_mode"] = "observe_only"
+        self.profile["status"] = "observing"
+        self.profile["last_action"] = "observe_only"
+        self._save()
+        return (
+            "Ricevuto e memorizzato: per il frigorifero rimango in sola "
+            "osservazione. Non cambierò parametri e non comanderò le ventole, "
+            "anche se mancano alcuni dati. Posso comunque mostrarti ciò che "
+            "rilevo e darti suggerimenti non operativi."
+        )
+
+    def observation_answer(self) -> str:
+        sample = self.profile.get("last_sample") or {}
+        recommendation = self.profile.get("last_recommendation") or (
+            "Sto raccogliendo i dati disponibili; per ora non ho abbastanza "
+            "misure per formulare un suggerimento affidabile."
+        )
+        return (
+            "Modalità frigorifero: sola osservazione. "
+            f'Radiatore {sample.get("radiator_c", "n/d")} °C, interno '
+            f'{sample.get("internal_c", "n/d")} °C, esterno '
+            f'{sample.get("external_c", "n/d")} °C. {recommendation}'
+        )
+
+    def apply_interpreted_intent(self, interpretation: dict[str, Any]) -> str | None:
+        intent = str(interpretation.get("intent", "unclear"))
+        try:
+            confidence = float(interpretation.get("confidence", 0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+        if confidence < 0.70:
+            return (
+                "Non sono sicuro di aver compreso la tua istruzione sul frigorifero. "
+                "Vuoi che osservi soltanto, che mantenga il controllo già autorizzato "
+                "oppure che raccolga i dati mancanti?"
+            )
+        if intent in {"observe_only", "revoke_control"}:
+            return self.set_observe_only()
+        if intent == "status":
+            return self.observation_answer()
+        if intent == "authorize_control":
+            return (
+                "Ho capito che potresti voler concedere il controllo, ma non uso "
+                "un'interpretazione AI come autorizzazione. Dopo aver verificato le "
+                "entità, scrivi esplicitamente “autorizzo la gestione delle ventole frigo”."
+            )
+        if intent == "unclear":
+            return (
+                "Non ho compreso con sufficiente certezza cosa desideri per il "
+                "frigorifero. Puoi specificare se devo osservare, suggerire o controllare?"
+            )
+        return None
+
     @staticmethod
     def discover(states: list[dict[str, Any]]) -> dict[str, Any]:
         mapping: dict[str, str] = {}
@@ -201,17 +256,7 @@ class FridgeOptimizer:
         )
         has_discovery = bool(self.profile.get("entities"))
         if observe_request and (fridge_context or has_discovery):
-            self.profile["authorized"] = False
-            self.profile["user_mode"] = "observe_only"
-            self.profile["status"] = "observing"
-            self.profile["last_action"] = "observe_only"
-            self._save()
-            return (
-                "Ricevuto e memorizzato: per il frigorifero rimango in sola "
-                "osservazione. Non cambierò parametri e non comanderò le ventole, "
-                "anche se mancano alcuni dati. Posso comunque mostrarti ciò che "
-                "rilevo e darti suggerimenti non operativi."
-            )
+            return self.set_observe_only()
         if not fridge_context:
             return None
         if self.profile.get("authorized") and any(
@@ -226,17 +271,7 @@ class FridgeOptimizer:
         entity_ids = re.findall(r"\b(?:sensor|fan|number|input_number|select)\.[a-z0-9_]+\b", lowered)
         wants_authorize = any(word in lowered for word in ("autorizzo", "ti autorizzo", "prendi il controllo"))
         if self.profile.get("user_mode") == "observe_only" and not wants_authorize:
-            sample = self.profile.get("last_sample") or {}
-            recommendation = self.profile.get("last_recommendation") or (
-                "Sto raccogliendo i dati disponibili; per ora non ho abbastanza "
-                "misure per formulare un suggerimento affidabile."
-            )
-            return (
-                "Modalità frigorifero: sola osservazione. "
-                f'Radiatore {sample.get("radiator_c", "n/d")} °C, interno '
-                f'{sample.get("internal_c", "n/d")} °C, esterno '
-                f'{sample.get("external_c", "n/d")} °C. {recommendation}'
-            )
+            return self.observation_answer()
         if self.profile.get("authorized") and not (entity_ids and wants_authorize):
             sample = self.profile.get("last_sample") or {}
             return (
