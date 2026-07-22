@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -491,6 +491,17 @@ async def export_trip_gpx(trip_id: int) -> PlainTextResponse:
 @app.get("/api/context")
 async def context() -> dict:
     return {"entities": await ha.states()}
+
+
+@app.get("/api/dashboard")
+async def dashboard() -> dict:
+    return {
+        "metrics": await ha.dashboard_snapshot(),
+        "weather": memory.get_json_setting("weather_monitor_state") or {},
+        "fridge": fridge_optimizer.public_status(),
+        "autonomy_enabled": autonomy_enabled(),
+        "animals_on_board": animals_on_board(),
+    }
 
 
 @app.get("/api/alerts")

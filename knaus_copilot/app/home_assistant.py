@@ -144,6 +144,87 @@ class HomeAssistantClient:
             )
         return result
 
+    @staticmethod
+    def _dashboard_metric(
+        states: list[dict[str, Any]],
+        required: tuple[str, ...],
+        preferred: tuple[str, ...],
+        units: tuple[str, ...],
+        excluded: tuple[str, ...] = (),
+    ) -> dict[str, Any] | None:
+        ranked = []
+        for index, item in enumerate(states):
+            candidate = f'{item.get("entity_id", "")} {item.get("name", "")}'.casefold()
+            unit = str(item.get("unit") or "").casefold()
+            if not all(term in candidate for term in required):
+                continue
+            if excluded and any(term in candidate for term in excluded):
+                continue
+            if units and unit not in units:
+                continue
+            score = sum(3 for term in preferred if term in candidate)
+            ranked.append((-score, index, item))
+        if not ranked:
+            return None
+        ranked.sort(key=lambda row: (row[0], row[1]))
+        return ranked[0][2]
+
+    async def dashboard_snapshot(self) -> dict[str, Any]:
+        """Small read-only set for the onboard dashboard, independent of AI context."""
+        visible = []
+        for raw in await self._raw_states():
+            item = self._visible_state(raw)
+            if item is not None:
+                visible.append(item)
+        battery_terms = ("batter", "battery")
+        temperature_units = ("°c", "c", "°f", "f")
+
+        def best_any(required_groups, preferred, units, excluded=()):
+            candidates = []
+            for required in required_groups:
+                item = self._dashboard_metric(visible, required, preferred, units, excluded)
+                if item:
+                    candidates.append(item)
+            return candidates[0] if candidates else None
+
+        metrics = {
+            "battery_soc": best_any(
+                tuple((term,) for term in battery_terms),
+                ("batteria_knaus_soc", "battery_soc", " soc", "livello"),
+                ("%",),
+            ),
+            "battery_current": best_any(
+                tuple((term,) for term in battery_terms),
+                ("batteria_knaus_corrente", "battery_current", "corrente", "current"),
+                ("a",),
+            ),
+            "solar_power": best_any(
+                (("pv",), ("solar",), ("fotovolta",), ("pannell",)),
+                ("input_power", "potenza", "power", "produzione"),
+                ("w", "kw"),
+                ("daily", "giornal", "energy", "energia"),
+            ),
+            "grid_power": best_any(
+                (("pzem",), ("grid",), ("rete",), ("utility",)),
+                ("pzem_power", "potenza", "power", "input"),
+                ("w", "kw"),
+                ("voltage", "volt", "energy", "energia"),
+            ),
+            "internal_temperature": best_any(
+                (("temperatur",), ("temperature",)),
+                ("intern", "caravan", "abitacolo"),
+                temperature_units,
+                ("frigo", "fridge", "inverter", "ester", "external"),
+            ),
+            "external_temperature": best_any(
+                (("temperatur",), ("temperature",)),
+                ("ester", "external", "outdoor", "fuori"),
+                temperature_units,
+                ("frigo", "fridge", "inverter"),
+            ),
+        }
+        return {key: value for key, value in metrics.items()}
+
     async def health(self) -> dict:
         try:
             states = await self.states()

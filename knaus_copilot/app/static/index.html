@@ -181,6 +181,49 @@
       gap: 12px;
       margin-bottom: 16px;
     }
+    .mini-board {
+      margin-bottom: 16px;
+      padding: 15px;
+      border: 1px solid rgba(0, 217, 255, .3);
+      border-right-color: rgba(255, 0, 200, .34);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(4, 15, 29, .93), rgba(10, 5, 25, .94));
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .2), inset 0 1px rgba(255,255,255,.025);
+    }
+    .mini-board-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+    .mini-board-title { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 1000; letter-spacing: .8px; text-transform: uppercase; }
+    .live-state { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .5px; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #65708a; box-shadow: 0 0 0 4px rgba(101,112,138,.1); }
+    .live-state.online .live-dot { background: var(--green); box-shadow: 0 0 0 4px rgba(0,230,118,.11), 0 0 13px rgba(0,230,118,.6); }
+    .mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+    .mini-card {
+      min-height: 112px;
+      padding: 12px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(88,113,156,.29);
+      border-radius: 13px;
+      background: linear-gradient(155deg, rgba(9, 22, 40, .88), rgba(4, 9, 19, .94));
+    }
+    .mini-card::after { content: ""; position: absolute; width: 70px; height: 70px; border-radius: 50%; right: -34px; top: -34px; background: rgba(0,217,255,.055); }
+    .mini-label { color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+    .mini-value { margin-top: 7px; font-size: 24px; line-height: 1; font-weight: 1000; }
+    .mini-sub { margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .battery-track { height: 5px; margin-top: 11px; overflow: hidden; border-radius: 99px; background: rgba(88,113,156,.25); }
+    .battery-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--pink), #ffd84d, var(--green)); transition: width .45s ease; }
+    .energy-flow { display: grid; grid-template-columns: 1fr 24px 1fr; align-items: center; gap: 5px; margin-top: 13px; }
+    .flow-node { text-align: center; }
+    .flow-node strong { display: block; font-size: 15px; }
+    .flow-node small { color: var(--muted); font-size: 8px; text-transform: uppercase; }
+    .flow-arrow { color: var(--cyan); text-align: center; animation: flow-pulse 1.8s ease-in-out infinite; }
+    @keyframes flow-pulse { 50% { color: var(--pink); transform: translateX(2px); } }
+    .temp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
+    .temp-pair strong { display: block; font-size: 18px; }
+    .temp-pair small { color: var(--muted); font-size: 8px; text-transform: uppercase; }
+    .guardian-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(88,113,156,.18); }
+    .guardian-row:first-of-type { margin-top: 8px; }
+    .guardian-name { color: var(--muted); font-size: 9px; text-transform: uppercase; }
+    .guardian-value { font-size: 10px; font-weight: 1000; text-align: right; }
     .control-btn {
       min-height: 62px;
       color: #fff;
@@ -326,6 +369,7 @@
       button { min-height: 50px; }
       #messages { height: 46vh; }
       .quick-controls { grid-template-columns: 1fr; }
+      .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .settings-grid, .settings-actions { grid-template-columns: 1fr; }
       .ai-link { grid-template-columns: 1fr; }
       .ai-wire { grid-template-columns: 1fr; }
@@ -333,6 +377,10 @@
       .ai-wire-track::after { inset: -45% 0 auto; width: 100%; height: 42%; animation-name: data-flow-mobile; }
       .sim-visual-grid { grid-template-columns: 1fr; }
       @keyframes data-flow-mobile { to { transform: translateY(350%); } }
+    }
+    @media (max-width: 480px) {
+      .mini-grid { grid-template-columns: 1fr; }
+      .mini-card { min-height: 96px; }
     }
   </style>
 </head>
@@ -466,6 +514,44 @@
           <button id="animals-toggle" class="control-btn animals" type="button">ANIMALI A BORDO DISATTIVO</button>
         </section>
 
+        <section class="mini-board" aria-label="Plancia di bordo compatta">
+          <div class="mini-board-head">
+            <div class="mini-board-title"><span class="cyan">◈</span> Quadro di bordo</div>
+            <div id="board-live" class="live-state"><span class="live-dot"></span><span id="board-live-text">IN ATTESA</span></div>
+          </div>
+          <div class="mini-grid">
+            <article class="mini-card">
+              <div class="mini-label">Batteria servizi</div>
+              <div id="board-soc" class="mini-value">—</div>
+              <div class="battery-track"><div id="board-soc-fill" class="battery-fill"></div></div>
+              <div id="board-current" class="mini-sub">Corrente non disponibile</div>
+            </article>
+            <article class="mini-card">
+              <div class="mini-label">Flusso energia</div>
+              <div class="energy-flow">
+                <div class="flow-node"><strong id="board-solar">—</strong><small>Solare</small></div>
+                <div class="flow-arrow">➜</div>
+                <div class="flow-node"><strong id="board-grid">—</strong><small>Rete</small></div>
+              </div>
+              <div class="mini-sub">Valori istantanei disponibili</div>
+            </article>
+            <article class="mini-card">
+              <div class="mini-label">Temperature</div>
+              <div class="temp-pair">
+                <div><strong id="board-temp-in">—</strong><small>Interna</small></div>
+                <div><strong id="board-temp-out">—</strong><small>Esterna</small></div>
+              </div>
+              <div class="mini-sub">Sensori Home Assistant</div>
+            </article>
+            <article class="mini-card">
+              <div class="mini-label">Guardiani</div>
+              <div class="guardian-row"><span class="guardian-name">Meteo</span><span id="board-weather" class="guardian-value">—</span></div>
+              <div class="guardian-row"><span class="guardian-name">Frigorifero</span><span id="board-fridge" class="guardian-value">—</span></div>
+              <div class="guardian-row"><span class="guardian-name">Autonomia AI</span><span id="board-autonomy" class="guardian-value">—</span></div>
+            </article>
+          </div>
+        </section>
+
         <section class="panel">
           <div class="panel-head"><div class="panel-icon">✦</div><h2>Assistente caravan</h2></div>
           <div id="messages" aria-live="polite">
@@ -479,7 +565,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v0.9.1 · CONSOLE ESSENZIALE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.3.0 · PLANCIA COMPATTA</span></footer>
     </div>
   </div>
 
@@ -638,6 +724,50 @@
       document.querySelector(`#${id}`).textContent = value;
     }
 
+    function dashboardValue(metric, digits = 0) {
+      if (!metric || ["unknown", "unavailable", "none", ""].includes(String(metric.state).toLowerCase())) return "—";
+      const numeric = Number(metric.state);
+      if (!Number.isFinite(numeric)) return "—";
+      return `${numeric.toFixed(digits)}${metric.unit ? ` ${metric.unit}` : ""}`;
+    }
+
+    function renderDashboard(data) {
+      const metrics = data.metrics || {};
+      const connected = Object.values(metrics).some(Boolean);
+      document.querySelector("#board-live").classList.toggle("online", connected);
+      setText("board-live-text", connected ? "DATI LIVE" : "SENSORI OFFLINE");
+      setText("board-soc", dashboardValue(metrics.battery_soc, 0));
+      const soc = Number(metrics.battery_soc?.state);
+      document.querySelector("#board-soc-fill").style.width = Number.isFinite(soc)
+        ? `${Math.max(0, Math.min(100, soc))}%`
+        : "0%";
+      const current = dashboardValue(metrics.battery_current, 1);
+      setText("board-current", current === "—" ? "Corrente non disponibile" : `Corrente batteria ${current}`);
+      setText("board-solar", dashboardValue(metrics.solar_power, 0));
+      setText("board-grid", dashboardValue(metrics.grid_power, 0));
+      setText("board-temp-in", dashboardValue(metrics.internal_temperature, 1));
+      setText("board-temp-out", dashboardValue(metrics.external_temperature, 1));
+      setText("board-weather", data.weather?.severity || "Non analizzato");
+      const fridgeMode = data.fridge?.user_mode === "observe_only"
+        ? "Solo osservazione"
+        : data.fridge?.authorized
+          ? "Controllo autorizzato"
+          : data.fridge?.status === "awaiting_details"
+            ? "Configurazione incompleta"
+            : "In osservazione";
+      setText("board-fridge", fridgeMode);
+      setText("board-autonomy", data.autonomy_enabled ? "Attiva" : "Bloccata");
+    }
+
+    async function refreshDashboard() {
+      try {
+        renderDashboard(await api("api/dashboard"));
+      } catch (_) {
+        document.querySelector("#board-live").classList.remove("online");
+        setText("board-live-text", "NON DISPONIBILE");
+      }
+    }
+
     function renderSettings(data) {
       setText("setting-version", data.version);
       setText("setting-ha", data.home_assistant.connected ? "Collegato" : "Non collegato");
@@ -727,6 +857,7 @@
           : "ANIMALI A BORDO DISATTIVO";
         animalsButton.classList.toggle("active", data.animals_on_board);
         renderSettings(data);
+        await refreshDashboard();
         if (!data.onboarding.completed && !onboardingShown) {
           onboardingShown = true;
           onboardingDialog.showModal();
@@ -899,6 +1030,7 @@
     });
 
     refresh();
+    window.setInterval(refreshDashboard, 30000);
   </script>
 </body>
 </html>
