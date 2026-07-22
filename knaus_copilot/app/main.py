@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.4.6"
+APP_VERSION = "1.4.7"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -781,13 +781,28 @@ async def chat(
         web_search = payload.web_search or any(
             term in normalized for term in search_terms
         )
+        runtime_context = {"animals_on_board": animals_on_board()}
+        if settings.privacy_mode == "contextual_cloud":
+            try:
+                current_location = await ha.location_snapshot()
+            except (httpx.HTTPError, ValueError) as exc:
+                logger.warning("Contesto GPS per Gemini non disponibile: %s", exc)
+            else:
+                if current_location.get("available"):
+                    runtime_context["location"] = {
+                        "latitude": current_location["latitude"],
+                        "longitude": current_location["longitude"],
+                        "accuracy_m": current_location.get("accuracy_m"),
+                        "last_updated": current_location.get("last_updated"),
+                        "source": "home_assistant_caravan_gps",
+                    }
         answer = await agent.chat(
             user_id,
             payload.message,
             await ha.states(),
             automatic=payload.automatic,
             web_search=web_search,
-            runtime_context={"animals_on_board": animals_on_board()},
+            runtime_context=runtime_context,
         )
     except Exception as exc:
         logger.exception("Errore durante la conversazione")
