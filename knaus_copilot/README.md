@@ -1,4 +1,4 @@
-# mistermif AI 1.4.8
+# mistermif AI 1.4.9
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.

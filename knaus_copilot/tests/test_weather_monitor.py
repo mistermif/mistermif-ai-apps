@@ -222,6 +222,35 @@ class WeatherMonitorTest(TestCase):
             observation,
         )
 
+    def test_tpms_pressure_is_not_mistaken_for_barometer(self):
+        states = [
+            {
+                "entity_id": "sensor.tpms_ruota_destra_pressione",
+                "state": "4.2",
+                "unit": "bar",
+            },
+            {
+                "entity_id": "sensor.pressione_atmosferica",
+                "state": "945",
+                "unit": "hPa",
+            },
+        ]
+        self.assertEqual([], WeatherMonitor.analyse_local(states))
+        observation = WeatherMonitor.extract_local_observation(states)
+        self.assertEqual(945.0, observation["pressure"])
+
+    def test_absolute_pressure_alone_does_not_raise_weather_alarm(self):
+        risks = WeatherMonitor.analyse_local(
+            [
+                {
+                    "entity_id": "sensor.barometro_pressione",
+                    "state": "900",
+                    "unit": "hPa",
+                }
+            ]
+        )
+        self.assertEqual([], risks)
+
     def test_falling_pressure_combined_with_external_change_is_urgent(self):
         risks = WeatherMonitor.analyse_local_trend(
             {

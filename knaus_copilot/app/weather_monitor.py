@@ -378,12 +378,6 @@ class WeatherMonitor:
                 risks.append(WeatherRisk("grandine", "urgenza", 85, "sensori locali", "rilevata"))
             if any(term in candidate for term in ("fulmin", "lightning")) and state in {"on", "true", "detected"}:
                 risks.append(WeatherRisk("temporale_sviluppato", "urgenza", 80, "sensori locali", "fulmini rilevati"))
-            if any(term in candidate for term in ("pression", "baro", "pressure")):
-                value = cls._number(item.get("state"))
-                if value is not None and value < 950:
-                    risks.append(WeatherRisk("pressione", "urgenza", 70, "barometro locale", f"{value:.0f} hPa"))
-                elif value is not None and value < 970:
-                    risks.append(WeatherRisk("pressione", "allerta", 35, "barometro locale", f"{value:.0f} hPa"))
         return risks
 
     @classmethod
@@ -406,11 +400,23 @@ class WeatherMonitor:
                 and any(term in candidate for term in ("umid", "humidity"))
             ):
                 observation["humidity"] = value
-            if "pressure" not in observation and any(
-                term in candidate for term in ("pression", "pressure", "barometr")
-            ):
+            if "pressure" not in observation and cls._is_barometric_pressure(item):
                 observation["pressure"] = value
         return observation
+
+    @staticmethod
+    def _is_barometric_pressure(item: dict[str, Any]) -> bool:
+        candidate = f'{item.get("entity_id", "")} {item.get("name", "")}'.casefold()
+        attributes = item.get("attributes") or {}
+        unit = str(
+            item.get("unit") or attributes.get("unit_of_measurement") or ""
+        ).strip().casefold()
+        clearly_atmospheric = any(
+            term in candidate
+            for term in ("barometr", "atmosfer", "atmospher", "sea_level")
+        )
+        pressure_named = any(term in candidate for term in ("pression", "pressure"))
+        return clearly_atmospheric or (pressure_named and unit in {"hpa", "mbar"})
 
     def record_local_observation(
         self, observation: dict[str, float]
