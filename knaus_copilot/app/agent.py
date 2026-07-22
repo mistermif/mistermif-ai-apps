@@ -24,7 +24,7 @@ from .cloud_usage import CloudUsage
 logger = logging.getLogger("mistermif-ai")
 
 GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-lite"
-GEMINI_SEARCH_FALLBACK_MODEL = "gemini-2.5-flash"
+GEMINI_SEARCH_FALLBACK_MODEL = "gemini-2.5-flash-lite"
 GEMINI_RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
 
 SIMPLE_MESSAGE_HINTS = (
