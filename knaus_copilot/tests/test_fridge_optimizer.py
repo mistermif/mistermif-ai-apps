@@ -81,6 +81,14 @@ class FridgeOptimizerTest(TestCase):
         self.assertIn("Modalità frigorifero: sola osservazione", followup)
         self.assertEqual(1, len(self.ha.notifications))
 
+    def test_unrelated_location_request_is_not_intercepted_in_observe_mode(self):
+        asyncio.run(self.optimizer.monitor_once())
+        self.optimizer.set_observe_only()
+        answer = self.optimizer.handle_message(
+            "Quale posizione stai usando per consigliarmi un ristorante qui vicino?"
+        )
+        self.assertIsNone(answer)
+
     def test_semantic_interpretation_can_enable_observation_but_not_control(self):
         asyncio.run(self.optimizer.monitor_once())
         answer = self.optimizer.apply_interpreted_intent(

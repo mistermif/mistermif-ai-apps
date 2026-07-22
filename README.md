@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.4.4** è una base già funzionante, installabile come app di Home
+La versione **1.4.5** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.4.4
+## Cosa funziona oggi — versione 1.4.5
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza

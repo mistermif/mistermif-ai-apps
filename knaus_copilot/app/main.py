@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.4.4"
+APP_VERSION = "1.4.5"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -599,28 +599,12 @@ async def chat(
     normalized = payload.message.casefold()
     fridge_answer = fridge_optimizer.handle_message(payload.message)
     fridge_status_snapshot = fridge_optimizer.public_status()
-    semantic_hints = (
-        "lascia",
-        "per ora",
-        "per adesso",
-        "niente",
-        "non tocc",
-        "non fare",
-        "preferisco",
-        "come prima",
-        "stai fermo",
-        "occupatene",
-    )
     semantic_candidate = (
         fridge_answer is not None
         and (
             fridge_answer.startswith("Per attivare")
             or fridge_answer.startswith("Ho identificato")
         )
-    ) or (
-        fridge_answer is None
-        and bool(fridge_status_snapshot.get("entities"))
-        and any(hint in normalized for hint in semantic_hints)
     )
     interpretation = None
     if semantic_candidate and agent.can_interpret_intent():
