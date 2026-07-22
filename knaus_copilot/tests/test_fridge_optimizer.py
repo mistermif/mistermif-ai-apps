@@ -57,6 +57,30 @@ class FridgeOptimizerTest(TestCase):
         self.assertEqual(1, len(self.ha.notifications))
         self.assertEqual([], self.ha.commands)
 
+    def test_observe_only_instruction_has_priority_over_missing_data(self):
+        self.ha.states = self.states[:2]
+        asyncio.run(self.optimizer.monitor_once())
+        answer = self.optimizer.handle_message(
+            "Per il momento sul frigorifero limitati ad osservare e basta, al massimo dammi suggerimenti"
+        )
+        self.assertIn("sola osservazione", answer)
+        result = asyncio.run(self.optimizer.monitor_once())
+        self.assertEqual("observing", result["status"])
+        self.assertEqual("observe_only", result["user_mode"])
+        self.assertFalse(result["authorized"])
+        self.assertEqual([], self.ha.commands)
+
+    def test_observe_only_is_understood_without_repeating_fridge_name(self):
+        asyncio.run(self.optimizer.monitor_once())
+        answer = self.optimizer.handle_message(
+            "Limitati ad osservare e basta e dammi solo suggerimenti"
+        )
+        self.assertIn("sola osservazione", answer)
+        asyncio.run(self.optimizer.monitor_once())
+        followup = self.optimizer.handle_message("Come va il frigorifero?")
+        self.assertIn("Modalità frigorifero: sola osservazione", followup)
+        self.assertEqual(1, len(self.ha.notifications))
+
     def test_explicit_authorization_is_scoped_and_boosts_at_40(self):
         asyncio.run(self.optimizer.monitor_once())
         answer = self.optimizer.handle_message(

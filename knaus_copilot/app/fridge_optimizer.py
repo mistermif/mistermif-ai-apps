@@ -153,11 +153,16 @@ class FridgeOptimizer:
             if current_parameters:
                 current["parameters"] = current_parameters
             self.profile["entities"] = current
-            self.profile["status"] = "awaiting_details"
+            observe_only = self.profile.get("user_mode") == "observe_only"
+            self.profile["status"] = "observing" if observe_only else "awaiting_details"
             signature_values = [str(value) for key, value in current.items() if key != "parameters"]
             signature_values.extend(str(value) for value in current_parameters.values())
             signature = "|".join(sorted(signature_values))
-            if signature and signature != self.profile.get("notified_signature"):
+            if (
+                not observe_only
+                and signature
+                and signature != self.profile.get("notified_signature")
+            ):
                 self.profile["notified_signature"] = signature
                 try:
                     await self.ha.send_notification(
@@ -172,18 +177,66 @@ class FridgeOptimizer:
 
     def handle_message(self, message: str) -> str | None:
         lowered = message.casefold()
-        if not any(word in lowered for word in ("frigo", "frigorif", "fridge", "ventol")):
+        fridge_context = any(
+            word in lowered for word in ("frigo", "frigorif", "fridge", "ventol")
+        )
+        observe_request = (
+            (
+                "osserv" in lowered
+                and any(
+                    word in lowered
+                    for word in ("solo", "soltanto", "limit", "basta", "sugger")
+                )
+            )
+            or any(
+                phrase in lowered
+                for phrase in (
+                    "non cambiare nulla",
+                    "non modificare nulla",
+                    "non intervenire",
+                    "solo suggerimenti",
+                    "soltanto suggerimenti",
+                )
+            )
+        )
+        has_discovery = bool(self.profile.get("entities"))
+        if observe_request and (fridge_context or has_discovery):
+            self.profile["authorized"] = False
+            self.profile["user_mode"] = "observe_only"
+            self.profile["status"] = "observing"
+            self.profile["last_action"] = "observe_only"
+            self._save()
+            return (
+                "Ricevuto e memorizzato: per il frigorifero rimango in sola "
+                "osservazione. Non cambierò parametri e non comanderò le ventole, "
+                "anche se mancano alcuni dati. Posso comunque mostrarti ciò che "
+                "rilevo e darti suggerimenti non operativi."
+            )
+        if not fridge_context:
             return None
         if self.profile.get("authorized") and any(
             phrase in lowered
             for phrase in ("revoco", "togli autorizzazione", "disattiva gestione")
         ):
             self.profile["authorized"] = False
-            self.profile["status"] = "awaiting_details"
+            self.profile["user_mode"] = "observe_only"
+            self.profile["status"] = "observing"
             self._save()
             return "Autorizzazione alle ventole frigorifero revocata. Il monitoraggio resta in sola osservazione."
         entity_ids = re.findall(r"\b(?:sensor|fan|number|input_number|select)\.[a-z0-9_]+\b", lowered)
         wants_authorize = any(word in lowered for word in ("autorizzo", "ti autorizzo", "prendi il controllo"))
+        if self.profile.get("user_mode") == "observe_only" and not wants_authorize:
+            sample = self.profile.get("last_sample") or {}
+            recommendation = self.profile.get("last_recommendation") or (
+                "Sto raccogliendo i dati disponibili; per ora non ho abbastanza "
+                "misure per formulare un suggerimento affidabile."
+            )
+            return (
+                "Modalità frigorifero: sola osservazione. "
+                f'Radiatore {sample.get("radiator_c", "n/d")} °C, interno '
+                f'{sample.get("internal_c", "n/d")} °C, esterno '
+                f'{sample.get("external_c", "n/d")} °C. {recommendation}'
+            )
         if self.profile.get("authorized") and not (entity_ids and wants_authorize):
             sample = self.profile.get("last_sample") or {}
             return (
@@ -245,6 +298,7 @@ class FridgeOptimizer:
             self.profile.update(
                 {
                     "authorized": True,
+                    "user_mode": "control",
                     "status": "monitoring",
                     "control_mode": mode,
                     "authorized_at": datetime.now(timezone.utc).isoformat(),
@@ -385,7 +439,8 @@ class FridgeOptimizer:
     async def monitor_once(self) -> dict[str, Any]:
         states = await self.ha.fridge_states()
         await self.inspect(states)
-        if not self.profile.get("authorized"):
+        observe_only = self.profile.get("user_mode") == "observe_only"
+        if not self.profile.get("authorized") and not observe_only:
             return self.public_status()
         by_id = {str(item["entity_id"]): item for item in states}
         entities = self.profile["entities"]
@@ -407,7 +462,31 @@ class FridgeOptimizer:
         external = sample["external_c"]
         action = "observe"
         mode = self.profile.get("control_mode") or entities.get("mode", "direct_pwm")
-        if None not in (radiator, internal, external):
+        if observe_only:
+            available = [value for value in (radiator, internal, external) if value is not None]
+            if radiator is not None and radiator >= 40.0:
+                recommendation = (
+                    f"Il radiatore è a {radiator:.1f} °C: suggerirei di verificare "
+                    "che le ventole siano attive e che le griglie siano libere."
+                )
+            elif internal is not None and internal >= 8.0:
+                recommendation = (
+                    f"La temperatura interna è {internal:.1f} °C: controllerei "
+                    "apertura porta, fonte energetica e ventilazione posteriore."
+                )
+            elif available:
+                recommendation = (
+                    "Non rilevo al momento una condizione che richieda un intervento; "
+                    "continuo a osservare i valori disponibili."
+                )
+            else:
+                recommendation = (
+                    "Le sonde utili risultano mancanti o non disponibili; resto in "
+                    "osservazione senza generare comandi o falsi allarmi."
+                )
+            self.profile["last_recommendation"] = recommendation
+            action = "observe_only"
+        elif None not in (radiator, internal, external):
             if not self.policy.runtime_enabled:
                 action = "control_blocked_by_autonomy"
             elif mode == "local_controller" and self._tuning_due():
@@ -446,12 +525,14 @@ class FridgeOptimizer:
             "entities": entities,
             "missing": missing,
             "authorized": bool(self.profile.get("authorized")),
+            "user_mode": self.profile.get("user_mode", "setup"),
             "base_rule": "100% a 40 °C sul radiatore superiore",
             "last_sample": self.profile.get("last_sample"),
             "last_action": self.profile.get("last_action", "none"),
             "control_mode": mode,
             "controller_targets": self.profile.get("controller_targets"),
             "migration_note": self.profile.get("migration_note"),
+            "last_recommendation": self.profile.get("last_recommendation"),
             "local_learning": True,
             "learning_confidence": self.profile.get("learning_confidence", 0.0),
         }

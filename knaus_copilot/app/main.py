@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)

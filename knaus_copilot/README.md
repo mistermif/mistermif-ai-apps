@@ -1,4 +1,4 @@
-# mistermif AI 1.1.0
+# mistermif AI 1.1.1
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -33,6 +33,8 @@ della caravan.
 - scoperta automatica dei componenti del frigorifero con richiesta in chat;
 - ottimizzazione vincolata dei parametri ESPHome giorno/notte oppure controllo
   PWM diretto negli impianti semplici, sempre con blocco generale.
+- modalità persistente di sola osservazione e suggerimenti, valida anche con
+  configurazione incompleta e senza alcun comando Home Assistant.
 
 La modalità iniziale è `observe` con privacy `local_only`. Gemini, Groq e OpenAI
 sono facoltativi. Con `contextual_cloud` l'utente può autorizzare posizione e

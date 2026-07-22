@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.1.0** è una base già funzionante, installabile come app di Home
+La versione **1.1.1** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.1.0
+## Cosa funziona oggi — versione 1.1.1
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
@@ -146,6 +146,9 @@ deterministiche e indipendenti dall'AI e da Internet.
 - affinamento locale dopo una cronologia sufficiente, senza modificare firmware
   o superare i valori ammessi dal controller;
 - blocco immediato del comando ventole tramite l'interruttore generale.
+- modalità persistente **sola osservazione**, selezionabile in linguaggio
+  naturale anche quando mancano sensori: nessun comando, ma lettura dei dati
+  disponibili e suggerimenti prudenti;
 
 ### Laboratorio esterno
 
@@ -407,6 +410,12 @@ L'autorizzazione è un confronto esatto e non può estendersi alle ventole
 dell'inverter. Il pulsante generale del potere
 decisionale blocca immediatamente anche questo comando. Stato e prova manuale
 sono disponibili tramite `GET /api/fridge` e `POST /api/fridge/check`.
+
+Scrivendo `limitati ad osservare e dammi solo suggerimenti` l'utente imposta
+una scelta persistente che ha precedenza sulla procedura di configurazione. Le
+entità mancanti vengono indicate come dati non disponibili, ma non impediscono
+all'assistente di recepire l'istruzione e non provocano ulteriori richieste di
+autorizzazione.
 
 La specifica dettagliata è disponibile in
 [`docs/FRIDGE_OPTIMIZATION_SPEC.md`](docs/FRIDGE_OPTIMIZATION_SPEC.md).
