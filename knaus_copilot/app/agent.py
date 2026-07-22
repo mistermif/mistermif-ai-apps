@@ -138,6 +138,11 @@ def asks_for_location(message: str) -> bool:
         "dove si trova la caravan",
         "dove si trova il camper",
         "gps funziona",
+        "posizione precisa",
+        "coordinate precise",
+        "localizzami",
+        "localizza la caravan",
+        "dimmi dove si trova",
     )
     if any(phrase in normalized for phrase in phrases):
         return True
@@ -190,8 +195,15 @@ Sei inoltre specializzato in campeggi, aree attrezzate e viaggi in caravan:
 - distingui sempre dati verificati, ricordi dell'utente e tue inferenze;
 - non inventare disponibilità, prezzi, regolamenti o servizi aggiornati;
 - per Park4night usa soltanto dati ottenuti tramite integrazione autorizzata,
-  forniti dall'utente o presenti in pagine pubbliche aperte dall'utente. Non
-  aggirare login, abbonamenti o limiti del servizio.
+  forniti dall'utente o presenti nelle sue pagine pubbliche indicizzate. Quando
+  l'utente cerca una sosta, consulta attivamente anche le pagine pubbliche di
+  Park4night tramite la ricerca disponibile e non dire che non puoi guardarlo
+  soltanto perché non esiste un'integrazione dedicata. Non aggirare login,
+  abbonamenti o limiti del servizio;
+- se manca il raggio di ricerca, chiedilo prima di proporre soste; quando è noto,
+  ordina sempre i risultati dalla distanza minore alla maggiore;
+- distingui parcheggio, area attrezzata e campeggio; segnala solo i vincoli
+  pertinenti, senza trasformare la risposta in una ramanzina sul campeggio libero.
 
 Sei specializzato anche in ricambi per caravan e camper:
 - prima di dichiarare compatibile un ricambio richiedi o verifica marca, modello,

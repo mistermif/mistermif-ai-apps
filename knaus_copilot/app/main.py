@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 from contextlib import asynccontextmanager, suppress
@@ -29,6 +30,11 @@ from .learning import ContextLearner
 from .memory import MemoryStore
 from .permissions import PermissionPolicy
 from .travel import TravelTracker
+from .stopover_search import (
+    build_stopover_prompt,
+    extract_radius_km,
+    is_stopover_search,
+)
 from .weather_monitor import WeatherMonitor
 from .workspace import WorkspaceError, WorkspaceManager
 
@@ -216,7 +222,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.4.9"
+APP_VERSION = "1.5.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -667,6 +673,87 @@ async def chat(
         else:
             answer = str(report["message"])
         return {"answer": answer, "user": display_name, "travel_report": report}
+    pending_key = (
+        "pending_stopover_search:"
+        + hashlib.sha256(user_id.encode("utf-8")).hexdigest()[:16]
+    )
+    pending_stopover = memory.get_json_setting(pending_key) or {}
+    stopover_request = is_stopover_search(payload.message)
+    radius_km = extract_radius_km(payload.message)
+    if stopover_request and radius_km is None:
+        memory.set_json_setting(
+            pending_key,
+            {"active": True, "request": payload.message},
+        )
+        answer = (
+            "Certo. In che raggio vuoi che cerchi dalla posizione GPS attuale? "
+            "Puoi rispondere, per esempio: 5, 10, 25 oppure 50 km. Cercherò anche "
+            "nelle pagine pubbliche di Park4night e ordinerò le proposte dalla più "
+            "vicina alla più lontana."
+        )
+        memory.add_message(user_id, "user", payload.message)
+        memory.add_message(user_id, "assistant", answer)
+        return {
+            "answer": answer,
+            "user": display_name,
+            "awaiting": "stopover_radius_km",
+        }
+    if stopover_request or (pending_stopover.get("active") and radius_km is not None):
+        radius_km = radius_km or 25
+        original_request = str(
+            pending_stopover.get("request") or payload.message
+        )
+        memory.set_json_setting(pending_key, {})
+        try:
+            current_location = await ha.location_snapshot()
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.warning("GPS non disponibile per ricerca soste: %s", exc)
+            current_location = {"available": False}
+        if not current_location.get("available"):
+            answer = (
+                "Per ordinare davvero le soste dalla più vicina mi serve una posizione "
+                "GPS valida. Al momento Home Assistant non me la fornisce: indicami una "
+                "località oppure riprova quando il GPS della caravan è aggiornato."
+            )
+            memory.add_message(user_id, "user", payload.message)
+            memory.add_message(user_id, "assistant", answer)
+            return {
+                "answer": answer,
+                "user": display_name,
+                "location_available": False,
+            }
+        search_prompt = build_stopover_prompt(
+            original_request,
+            radius_km,
+            float(current_location["latitude"]),
+            float(current_location["longitude"]),
+        )
+        try:
+            answer = await agent.chat(
+                user_id,
+                search_prompt,
+                await ha.states(),
+                web_search=True,
+                runtime_context={
+                    "routing": "grounded_stopover_search",
+                    "requested_radius_km": radius_km,
+                    "location": {
+                        "latitude": current_location["latitude"],
+                        "longitude": current_location["longitude"],
+                        "accuracy_m": current_location.get("accuracy_m"),
+                        "source": "home_assistant_caravan_gps",
+                    },
+                },
+            )
+        except Exception as exc:
+            logger.exception("Ricerca geolocalizzata delle soste non riuscita")
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            "answer": answer,
+            "user": display_name,
+            "resolved_by": "grounded_stopover_search",
+            "radius_km": radius_km,
+        }
     asks_location = asks_for_location(payload.message)
     if asks_location:
         try:
@@ -675,6 +762,14 @@ async def chat(
             logger.warning("Lettura locale GPS non riuscita: %s", exc)
             location = {"available": False, "reason": "home_assistant_non_raggiungibile"}
         if location.get("available"):
+            place = None
+            try:
+                place = await ha.reverse_geocode(
+                    float(location["latitude"]),
+                    float(location["longitude"]),
+                )
+            except (httpx.HTTPError, ValueError, TypeError) as exc:
+                logger.warning("Geocodifica inversa non riuscita: %s", exc)
             accuracy = location.get("accuracy_m")
             accuracy_text = (
                 f", precisione dichiarata circa {accuracy:g} m"
@@ -686,12 +781,19 @@ async def chat(
                 if location.get("last_updated")
                 else ""
             )
+            place_text = ""
+            if place and place.get("display_name"):
+                place_text = (
+                    f' Il punto mappato più vicino è: {place["display_name"]}.'
+                )
             answer = (
-                "Sì: Home Assistant mi fornisce una posizione GPS valida "
-                f'({location["latitude"]:.6f}, {location["longitude"]:.6f})'
-                f"{accuracy_text}{updated_text}. I sensori risultano leggibili; "
-                "la posizione viene verificata localmente e non la considero un guasto."
+                "Posizione GPS precisa della caravan: "
+                f'{location["latitude"]:.6f}, {location["longitude"]:.6f}'
+                f"{accuracy_text}{updated_text}.{place_text} "
+                "Le coordinate provengono da Home Assistant; il nome del luogo è "
+                "ricavato dalla mappa e può indicare l'oggetto cartografico più vicino."
             )
+            location["place"] = place
         else:
             answer = (
                 "Al momento non riesco a ricavare una coppia completa di coordinate "

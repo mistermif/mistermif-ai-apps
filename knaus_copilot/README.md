@@ -1,4 +1,4 @@
-# mistermif AI 1.4.9
+# mistermif AI 1.5.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -6,6 +6,9 @@ della caravan.
 - chat Ingress con memoria SQLite locale;
 - provider locale, OpenAI, Groq e Gemini;
 - Google Search opzionale per progetti Gemini compatibili, con citazioni;
+- posizione GPS precisa con nome del luogo da OpenStreetMap;
+- ricerca di soste entro un raggio scelto dall'utente, risultati pubblici
+  Park4night inclusi quando disponibili e ordinamento per distanza;
 - apprendimento energetico locale separato per contesto di sosta;
 - lettura filtrata degli stati Home Assistant;
 - intervista iniziale per mezzo, motrice ed equipaggio;
@@ -52,10 +55,10 @@ restano redatti anche quando presenti negli attributi annidati delle entità.
 Le azioni operative richiedono autorizzazioni separate e
 l'apprendimento non può modificare codice o parametri protetti.
 
-Il profilo Gemini gratuito consigliato usa `gemini-3.5-flash`, Search
-disattivato, 15 richieste giornaliere e 5 automatiche. Il piano gratuito non
-include Google Search Grounding per questo modello; la funzione va attivata solo
-su un progetto con fatturazione compatibile.
+Il profilo Gemini consigliato usa `gemini-3.5-flash`, 15 richieste giornaliere
+e 5 automatiche. Google Search è attivo per rendere verificabili meteo, soste e
+servizi; se il progetto Google AI Studio non offre Grounding, può essere
+disattivato nelle opzioni senza fermare le analisi locali.
 In caso di errore temporaneo `503`, l'app esegue brevi ritentativi e usa
 automaticamente `gemini-3.1-flash-lite` come fallback gratuito.
 Le richieste brevi vengono instradate sul modello Lite con ragionamento minimo;

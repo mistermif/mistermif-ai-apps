@@ -179,6 +179,45 @@ class HomeAssistantClient:
             "reason": None if valid else "coordinate_gps_non_disponibili",
         }
 
+    async def reverse_geocode(self, latitude: float, longitude: float) -> dict[str, Any]:
+        """Resolve validated GPS coordinates to the nearest public OSM address."""
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "format": "jsonv2",
+                    "lat": f"{latitude:.7f}",
+                    "lon": f"{longitude:.7f}",
+                    "zoom": 18,
+                    "addressdetails": 1,
+                    "accept-language": "it",
+                },
+                headers={
+                    "User-Agent": (
+                        "mistermif-ai/1.5.0 "
+                        "(Home Assistant caravan assistant; "
+                        "https://github.com/mistermif/mistermif-ai-apps)"
+                    )
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+        address = data.get("address") or {}
+        locality = next(
+            (
+                address.get(key)
+                for key in ("village", "town", "city", "municipality", "county")
+                if address.get(key)
+            ),
+            None,
+        )
+        return {
+            "display_name": data.get("display_name"),
+            "locality": locality,
+            "address": address,
+            "source": "OpenStreetMap Nominatim",
+        }
+
     async def fridge_states(self) -> list[dict[str, Any]]:
         """Return a minimal local-only view of possible refrigerator devices."""
         terms = ("frigo", "fridge", "frigorif", "refriger", "ventol", "fan", "pwm")

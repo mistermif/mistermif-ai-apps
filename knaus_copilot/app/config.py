@@ -168,7 +168,7 @@ class Settings:
             cloud_daily_limit=cloud_daily_limit,
             cloud_automatic_limit=cloud_automatic_limit,
             gemini_search_enabled=bool(
-                options.get("gemini_search_enabled", False)
+                options.get("gemini_search_enabled", True)
             ),
             workspace_enabled=bool(options.get("workspace_enabled", True)),
             max_context_entities=max_context_entities,

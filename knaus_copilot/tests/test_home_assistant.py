@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import patch
+
+import httpx
 
 from app.home_assistant import HomeAssistantClient
 from app.permissions import PermissionPolicy
@@ -36,6 +39,26 @@ class FakeDashboardClient(HomeAssistantClient):
 
     async def _raw_states(self):
         return self.test_states
+
+
+class FakeReverseClient:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        return False
+
+    async def get(self, url, **kwargs):
+        self.url = url
+        self.kwargs = kwargs
+        return httpx.Response(
+            200,
+            json={
+                "display_name": "Via Roma, Como, Lombardia, Italia",
+                "address": {"road": "Via Roma", "city": "Como"},
+            },
+            request=httpx.Request("GET", url),
+        )
 
 
 class DashboardSnapshotTest(unittest.IsolatedAsyncioTestCase):
@@ -136,3 +159,13 @@ class DashboardSnapshotTest(unittest.IsolatedAsyncioTestCase):
         result = await client.location_snapshot()
         self.assertFalse(result["available"])
         self.assertEqual("coordinate_gps_non_disponibili", result["reason"])
+
+    async def test_reverse_geocode_returns_nearest_osm_place(self):
+        fake = FakeReverseClient()
+        client = FakeDashboardClient([])
+        with patch("app.home_assistant.httpx.AsyncClient", return_value=fake):
+            result = await client.reverse_geocode(45.81, 9.08)
+        self.assertEqual("Como", result["locality"])
+        self.assertIn("Via Roma", result["display_name"])
+        self.assertEqual("OpenStreetMap Nominatim", result["source"])
+        self.assertEqual("45.8100000", fake.kwargs["params"]["lat"])

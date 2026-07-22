@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.4.9** è una base già funzionante, installabile come app di Home
+La versione **1.5.0** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.4.9
+## Cosa funziona oggi — versione 1.5.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza
@@ -88,8 +88,10 @@ deterministiche e indipendenti dall'AI e da Internet.
   vento e raffiche previste;
 - aggiornamento automatico della plancia ogni 30 secondi e rappresentazione
   neutra dei sensori `unknown`, `unavailable` o assenti;
-- verifica locale della posizione GPS quando viene richiesta in chat, separando
-  un dato temporaneamente assente da un vero guasto e senza consumare token AI;
+- verifica locale della posizione GPS quando viene richiesta in chat, con
+  coordinate complete e località leggibile ricavata da OpenStreetMap;
+- ricerca guidata di aree di sosta: chiede il raggio, consulta anche le pagine
+  pubbliche Park4night e ordina le proposte dalla più vicina alla più lontana;
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
 - ritentativi automatici e fallback gratuito da Gemini 3.5 Flash a
   Gemini 3.1 Flash-Lite in caso di errore temporaneo `503`;
@@ -102,7 +104,8 @@ deterministiche e indipendenti dall'AI e da Internet.
   credenziali, SSID, IP e contatti anche dai dati annidati;
 - sensori offline trattati come diagnosi incompleta, senza generare da soli
   falsi allarmi;
-- Google Search opzionale con fonti per meteo, ristoranti, campeggi e ricambi;
+- Google Search con fonti per meteo, ristoranti, campeggi, soste e ricambi,
+  disattivabile dall'utente se il progetto Gemini non la supporta;
 - budget giornalieri separati per richieste cloud totali e automatiche;
 - Groq Free supportato tramite Responses API compatibile;
 - lettura filtrata delle entità Home Assistant autorizzate;

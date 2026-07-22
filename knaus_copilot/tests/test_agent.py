@@ -18,6 +18,8 @@ class LocationIntentTest(unittest.TestCase):
             "Dove sei?",
             "Dove si trova la caravan?",
             "Vedi correttamente il GPS?",
+            "Puoi dirmi dove si trova con la posizione precisa?",
+            "Localizzami",
         )
         for question in questions:
             with self.subTest(question=question):

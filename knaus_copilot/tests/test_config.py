@@ -163,4 +163,4 @@ class SettingsTest(TestCase):
 
             self.assertEqual(15, settings.cloud_daily_limit)
             self.assertEqual(5, settings.cloud_automatic_limit)
-            self.assertFalse(settings.gemini_search_enabled)
+            self.assertTrue(settings.gemini_search_enabled)
