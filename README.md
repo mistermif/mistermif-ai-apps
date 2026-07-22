@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.5.2** è una base già funzionante, installabile come app di Home
+La versione **1.5.3** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.5.2
+## Cosa funziona oggi — versione 1.5.3
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza
@@ -95,8 +95,8 @@ deterministiche e indipendenti dall'AI e da Internet.
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
 - ritentativi automatici e fallback gratuito da Gemini 3.5 Flash a
   Gemini 3.1 Flash-Lite in caso di errore temporaneo `503`;
-- per le ricerche Google, fallback automatico a Gemini 2.5 Flash-Lite quando il
-  modello principale raggiunge il proprio limite;
+- per le ricerche Google, selezione automatica di un modello Gemini compatibile
+  quando il modello principale raggiunge il proprio limite;
 - risposta adattiva: modello Lite e ragionamento minimo per le richieste brevi,
   Gemini 3.5 e ragionamento più profondo per analisi e decisioni;
 - saluti e test rapidi isolati dai vecchi ricordi per evitare risposte fuori
@@ -149,6 +149,8 @@ deterministiche e indipendenti dall'AI e da Internet.
   tetto indipendente e non superabile di 10 chiamate al giorno;
 - diario GPS automatico con pianificazione in chat, soste, arrivo, report e
   esportazione CSV/GPX.
+- riquadro viaggio con contachilometri totale locale, parziale, velocità media e
+  massima, durata e numero di soste;
 - scoperta locale di sensori e comandi riconducibili al frigorifero;
 - notifica immediata e raccolta in chat di marca, modello e associazioni;
 - autorizzazione persistente limitata alle entità confermate del frigorifero,

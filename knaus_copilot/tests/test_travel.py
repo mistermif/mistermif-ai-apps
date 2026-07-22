@@ -59,3 +59,24 @@ class TravelTrackerTest(TestCase):
         distance = TravelTracker.haversine_km(45.0, 9.0, 45.1, 9.0)
         self.assertGreater(distance, 11.0)
         self.assertLess(distance, 11.2)
+
+    def test_dashboard_summary_has_total_partial_speed_and_stops(self):
+        with TemporaryDirectory() as directory:
+            memory = MemoryStore(Path(directory) / "memory.sqlite3")
+            tracker = TravelTracker(memory)
+            trip_id = memory.start_trip(45.0, 9.0, "Destinazione")
+            memory.update_trip_progress(
+                trip_id,
+                distance_km=12.5,
+                moving_seconds=900,
+                max_speed_kmh=82,
+                stop_count=2,
+                stationary_since=None,
+                metadata={"current_speed_kmh": 48},
+            )
+            summary = tracker.dashboard_summary()
+            self.assertEqual(12.5, summary["total_distance_km"])
+            self.assertEqual(12.5, summary["latest"]["distance_km"])
+            self.assertEqual(50.0, summary["latest"]["average_speed_kmh"])
+            self.assertEqual(82.0, summary["latest"]["max_speed_kmh"])
+            self.assertEqual(2, summary["latest"]["stops"])

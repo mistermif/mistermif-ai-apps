@@ -1,4 +1,4 @@
-# mistermif AI 1.5.2
+# mistermif AI 1.5.3
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -33,6 +33,8 @@ della caravan.
 - revisione Gemini solo per nuovi rischi o peggioramenti, massimo 10 al giorno;
 - avvisi persistenti e deduplicati, con Telegram per urgenze ed emergenze;
 - diario viaggi GPS automatico con soste, velocità, distanza, report, CSV e GPX.
+- contachilometri totale e parziale in plancia con velocità media/massima,
+  durata del viaggio e soste rilevate;
 - scoperta automatica dei componenti del frigorifero con richiesta in chat;
 - ottimizzazione vincolata dei parametri ESPHome giorno/notte oppure controllo
   PWM diretto negli impianti semplici, sempre con blocco generale.
@@ -61,8 +63,8 @@ servizi; se il progetto Google AI Studio non offre Grounding, può essere
 disattivato nelle opzioni senza fermare le analisi locali.
 In caso di errore temporaneo `503`, l'app esegue brevi ritentativi e usa
 automaticamente `gemini-3.1-flash-lite` come fallback gratuito.
-Per le ricerche con Google usa invece `gemini-2.5-flash-lite` come riserva: questo
-modello supporta il Grounding anche nel piano gratuito, entro i limiti Google.
+Per le ricerche con Google prova automaticamente i modelli compatibili disponibili
+nel progetto, privilegiando le varianti 2.5 gratuite entro i limiti Google.
 Le richieste brevi vengono instradate sul modello Lite con ragionamento minimo;
 le analisi complesse restano sul modello 3.5 e ricevono un contesto sensori
 selezionato localmente.

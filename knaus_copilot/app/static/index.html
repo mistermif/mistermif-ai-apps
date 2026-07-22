@@ -589,6 +589,13 @@
               </div>
               <div id="board-environment" class="mini-sub">Umidità e pressione in attesa</div>
             </article>
+            <article class="mini-card">
+              <div class="mini-label">Viaggio GPS</div>
+              <div id="board-odometer" class="mini-value">—</div>
+              <div id="board-trip-distance" class="mini-sub">Parziale non disponibile</div>
+              <div id="board-trip-speed" class="mini-sub">Media e massima in attesa</div>
+              <div id="board-trip-detail" class="mini-sub">Soste e durata in attesa</div>
+            </article>
           </div>
           <div class="guardian-strip">
             <div class="guardian-pill"><span class="guardian-name">Meteo</span><span id="board-weather" class="guardian-value">—</span></div>
@@ -610,7 +617,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.5.2 · PLANCIA LIVE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.5.3 · PLANCIA LIVE</span></footer>
     </div>
   </div>
 
@@ -863,6 +870,13 @@
         ? `rotate(${Number(windDirection)}deg)`
         : "rotate(0deg)";
       setText("board-environment", `Umidità ${compactNumber(humidity, "%", 0)} · Pressione ${compactNumber(pressure, "hPa", 0)}`);
+
+      const travel = data.travel || {};
+      const trip = travel.latest || {};
+      setText("board-odometer", travel.available ? `${Number(travel.total_distance_km || 0).toFixed(1)} km totali` : "0.0 km totali");
+      setText("board-trip-distance", trip.available ? `Parziale ${Number(trip.distance_km || 0).toFixed(1)} km · viaggio #${trip.id}` : "Nessun viaggio registrato");
+      setText("board-trip-speed", trip.available ? `Media ${Number(trip.average_speed_kmh || 0).toFixed(1)} km/h · Max ${Number(trip.max_speed_kmh || 0).toFixed(1)} km/h` : "Media — · Max —");
+      setText("board-trip-detail", trip.available ? `Soste ${Number(trip.stops || 0)} · ${Number(trip.duration_minutes || 0)} min · ${trip.status === "active" ? "in corso" : "concluso"}` : "Soste 0 · viaggio non avviato");
 
       setText("board-weather", data.weather?.severity || "Non analizzato");
       const fridgeMode = data.fridge?.user_mode === "observe_only"

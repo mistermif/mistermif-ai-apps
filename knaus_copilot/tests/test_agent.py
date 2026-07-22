@@ -5,7 +5,7 @@ import httpx
 
 from app.agent import (
     GEMINI_FALLBACK_MODEL,
-    GEMINI_SEARCH_FALLBACK_MODEL,
+    GEMINI_SEARCH_FALLBACK_MODELS,
     KnausAgent,
     SYSTEM_INSTRUCTIONS,
     asks_for_location,
@@ -119,6 +119,7 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
             [
                 response(429),
                 response(429),
+                response(404),
                 response(
                     200,
                     {
@@ -140,8 +141,8 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual("Soste trovate", answer)
-        self.assertEqual(3, len(client.urls))
-        self.assertIn(GEMINI_SEARCH_FALLBACK_MODEL, client.urls[-1])
+        self.assertEqual(4, len(client.urls))
+        self.assertIn(GEMINI_SEARCH_FALLBACK_MODELS[1], client.urls[-1])
         self.assertNotIn(
             "thinkingConfig",
             client.requests[-1]["json"]["generationConfig"],

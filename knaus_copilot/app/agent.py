@@ -24,7 +24,12 @@ from .cloud_usage import CloudUsage
 logger = logging.getLogger("mistermif-ai")
 
 GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-lite"
-GEMINI_SEARCH_FALLBACK_MODEL = "gemini-2.5-flash-lite"
+GEMINI_SEARCH_FALLBACK_MODELS = (
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-3-flash-preview",
+)
 GEMINI_RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
 
 SIMPLE_MESSAGE_HINTS = (
@@ -666,7 +671,7 @@ class KnausAgent:
             payload,
             allow_fallback=True,
             preferred_model=preferred_model,
-            alternate_model=(GEMINI_SEARCH_FALLBACK_MODEL if web_search else None),
+            alternate_models=(GEMINI_SEARCH_FALLBACK_MODELS if web_search else None),
         )
         if switched_model:
             logger.warning(
@@ -730,17 +735,18 @@ class KnausAgent:
         payload: dict[str, Any],
         allow_fallback: bool,
         preferred_model: str,
-        alternate_model: str | None = None,
+        alternate_models: tuple[str, ...] | None = None,
     ) -> tuple[httpx.Response, str, bool]:
         models = [preferred_model]
-        if alternate_model is None:
+        if alternate_models is None:
             alternate_model = (
                 self.model
                 if preferred_model == GEMINI_FALLBACK_MODEL
                 else GEMINI_FALLBACK_MODEL
             )
-        if allow_fallback and alternate_model not in models:
-            models.append(alternate_model)
+            alternate_models = (alternate_model,)
+        if allow_fallback:
+            models.extend(model for model in alternate_models if model not in models)
 
         last_response: httpx.Response | None = None
         async with httpx.AsyncClient(timeout=45) as client:
@@ -766,6 +772,11 @@ class KnausAgent:
                         json=request_payload,
                     )
                     last_response = response
+                    if (
+                        response.status_code in {400, 404}
+                        and model_index < len(models) - 1
+                    ):
+                        break
                     if response.status_code not in GEMINI_RETRYABLE_STATUSES:
                         return response, model, model_index > 0
                     if attempt < attempts - 1:

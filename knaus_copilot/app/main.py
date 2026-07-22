@@ -222,7 +222,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.5.2"
+APP_VERSION = "1.5.3"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -512,6 +512,7 @@ async def dashboard() -> dict:
     return {
         "metrics": await ha.dashboard_snapshot(),
         "weather": memory.get_json_setting("weather_monitor_state") or {},
+        "travel": travel_tracker.dashboard_summary(),
         "fridge": fridge_optimizer.public_status(),
         "autonomy_enabled": autonomy_enabled(),
         "animals_on_board": animals_on_board(),

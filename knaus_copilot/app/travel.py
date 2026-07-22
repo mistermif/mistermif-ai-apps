@@ -104,6 +104,7 @@ class TravelTracker:
                 "last_at": now.isoformat(),
                 "last_lat": latitude,
                 "last_lon": longitude,
+                "current_speed_kmh": speed,
             }
         )
         self.memory.update_trip_progress(
@@ -196,6 +197,22 @@ class TravelTracker:
             "max_speed_kmh": round(float(trip.get("max_speed_kmh") or 0), 1),
             "stops": int(trip.get("stop_count") or 0),
             "points": len(trip.get("points") or []),
+            "current_speed_kmh": round(
+                float((trip.get("metadata") or {}).get("current_speed_kmh") or 0),
+                1,
+            ),
+        }
+
+    def dashboard_summary(self) -> dict[str, Any]:
+        """Return local trip counters for the compact onboard dashboard."""
+        trips = self.memory.list_trips(limit=10000)
+        total_distance = sum(float(item.get("distance_km") or 0) for item in trips)
+        latest = self.report()
+        return {
+            "available": bool(trips),
+            "total_distance_km": round(total_distance, 1),
+            "trip_count": len(trips),
+            "latest": latest,
         }
 
     def export_csv(self, trip_id: int) -> str:
