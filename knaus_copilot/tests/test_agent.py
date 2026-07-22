@@ -295,6 +295,28 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
             {item["entity_id"] for item in selected},
         )
 
+    def test_location_dependent_advice_keeps_gps_context(self):
+        agent = self.make_agent()
+        states = [
+            {
+                "entity_id": "device_tracker.caravan_gps",
+                "name": "GPS Knaus",
+                "attributes": {"latitude": 45.8, "longitude": 8.96},
+            },
+            {"entity_id": "sensor.batteria_soc", "name": "Batteria SOC"},
+        ]
+        for question in (
+            "Consigliami un ristorante qui vicino",
+            "Che meteo è previsto in questa zona?",
+            "Cerca un campeggio nei dintorni",
+        ):
+            with self.subTest(question=question):
+                selected = agent._select_states(states, question, "low")
+                self.assertIn(
+                    "device_tracker.caravan_gps",
+                    {item["entity_id"] for item in selected},
+                )
+
     def test_system_prompt_does_not_treat_offline_data_as_an_emergency(self):
         self.assertIn(
             "da solo non dimostra un guasto, un pericolo o un'emergenza",
