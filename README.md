@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.5.0** è una base già funzionante, installabile come app di Home
+La versione **1.5.1** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.5.0
+## Cosa funziona oggi — versione 1.5.1
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza
@@ -95,6 +95,8 @@ deterministiche e indipendenti dall'AI e da Internet.
 - provider AI selezionabile: locale, OpenAI, Groq oppure Gemini;
 - ritentativi automatici e fallback gratuito da Gemini 3.5 Flash a
   Gemini 3.1 Flash-Lite in caso di errore temporaneo `503`;
+- per le ricerche Google, fallback automatico a Gemini 2.5 Flash quando il
+  modello principale raggiunge il proprio limite;
 - risposta adattiva: modello Lite e ragionamento minimo per le richieste brevi,
   Gemini 3.5 e ragionamento più profondo per analisi e decisioni;
 - saluti e test rapidi isolati dai vecchi ricordi per evitare risposte fuori

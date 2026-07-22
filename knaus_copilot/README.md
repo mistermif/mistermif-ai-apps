@@ -1,4 +1,4 @@
-# mistermif AI 1.5.0
+# mistermif AI 1.5.1
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -61,6 +61,8 @@ servizi; se il progetto Google AI Studio non offre Grounding, può essere
 disattivato nelle opzioni senza fermare le analisi locali.
 In caso di errore temporaneo `503`, l'app esegue brevi ritentativi e usa
 automaticamente `gemini-3.1-flash-lite` come fallback gratuito.
+Per le ricerche con Google usa invece `gemini-2.5-flash` come riserva: questo
+modello supporta il Grounding anche nel piano gratuito, entro i limiti Google.
 Le richieste brevi vengono instradate sul modello Lite con ragionamento minimo;
 le analisi complesse restano sul modello 3.5 e ricevono un contesto sensori
 selezionato localmente.

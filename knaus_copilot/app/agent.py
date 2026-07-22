@@ -24,6 +24,7 @@ from .cloud_usage import CloudUsage
 logger = logging.getLogger("mistermif-ai")
 
 GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-lite"
+GEMINI_SEARCH_FALLBACK_MODEL = "gemini-2.5-flash"
 GEMINI_RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
 
 SIMPLE_MESSAGE_HINTS = (
@@ -663,8 +664,9 @@ class KnausAgent:
         )
         response, effective_model, switched_model = await self._gemini_request(
             payload,
-            allow_fallback=not web_search,
+            allow_fallback=True,
             preferred_model=preferred_model,
+            alternate_model=(GEMINI_SEARCH_FALLBACK_MODEL if web_search else None),
         )
         if switched_model:
             logger.warning(
@@ -728,13 +730,15 @@ class KnausAgent:
         payload: dict[str, Any],
         allow_fallback: bool,
         preferred_model: str,
+        alternate_model: str | None = None,
     ) -> tuple[httpx.Response, str, bool]:
         models = [preferred_model]
-        alternate_model = (
-            self.model
-            if preferred_model == GEMINI_FALLBACK_MODEL
-            else GEMINI_FALLBACK_MODEL
-        )
+        if alternate_model is None:
+            alternate_model = (
+                self.model
+                if preferred_model == GEMINI_FALLBACK_MODEL
+                else GEMINI_FALLBACK_MODEL
+            )
         if allow_fallback and alternate_model not in models:
             models.append(alternate_model)
 
@@ -743,13 +747,23 @@ class KnausAgent:
             for model_index, model in enumerate(models):
                 attempts = 2 if model_index == 0 else 1
                 for attempt in range(attempts):
+                    request_payload = payload
+                    if model.startswith("gemini-2.5-"):
+                        request_payload = {
+                            **payload,
+                            "generationConfig": {
+                                key: value
+                                for key, value in payload["generationConfig"].items()
+                                if key != "thinkingConfig"
+                            },
+                        }
                     response = await client.post(
                         f"{self.base_url}/models/{model}:generateContent",
                         headers={
                             "x-goog-api-key": self.api_key,
                             "Content-Type": "application/json",
                         },
-                        json=payload,
+                        json=request_payload,
                     )
                     last_response = response
                     if response.status_code not in GEMINI_RETRYABLE_STATUSES:

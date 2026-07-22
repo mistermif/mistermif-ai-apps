@@ -5,6 +5,7 @@ import httpx
 
 from app.agent import (
     GEMINI_FALLBACK_MODEL,
+    GEMINI_SEARCH_FALLBACK_MODEL,
     KnausAgent,
     SYSTEM_INSTRUCTIONS,
     asks_for_location,
@@ -113,20 +114,38 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
                     web_search=False,
                 )
 
-    async def test_search_does_not_fallback_to_unsupported_free_grounding(self):
-        client = FakeAsyncClient([response(503) for _ in range(2)])
+    async def test_search_falls_back_to_free_grounding_model(self):
+        client = FakeAsyncClient(
+            [
+                response(429),
+                response(429),
+                response(
+                    200,
+                    {
+                        "candidates": [
+                            {"content": {"parts": [{"text": "Soste trovate"}]}}
+                        ]
+                    },
+                ),
+            ]
+        )
         with (
             patch("app.agent.httpx.AsyncClient", return_value=client),
             patch("app.agent.asyncio.sleep", AsyncMock()),
         ):
-            with self.assertRaisesRegex(RuntimeError, "temporaneamente sovraccarico"):
-                await self.make_agent()._gemini(
-                    [{"role": "user", "content": "meteo"}],
-                    web_search=True,
-                )
+            answer = await self.make_agent()._gemini(
+                [{"role": "user", "content": "soste"}],
+                web_search=True,
+                thinking_level="medium",
+            )
 
-        self.assertEqual(2, len(client.urls))
-        self.assertTrue(all(GEMINI_FALLBACK_MODEL not in url for url in client.urls))
+        self.assertEqual("Soste trovate", answer)
+        self.assertEqual(3, len(client.urls))
+        self.assertIn(GEMINI_SEARCH_FALLBACK_MODEL, client.urls[-1])
+        self.assertNotIn(
+            "thinkingConfig",
+            client.requests[-1]["json"]["generationConfig"],
+        )
 
     async def test_short_chat_uses_fast_lite_model_with_minimal_thinking(self):
         client = FakeAsyncClient(
