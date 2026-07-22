@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.4.7"
+APP_VERSION = "1.4.8"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -781,7 +781,10 @@ async def chat(
         web_search = payload.web_search or any(
             term in normalized for term in search_terms
         )
-        runtime_context = {"animals_on_board": animals_on_board()}
+        runtime_context = {
+            "animals_on_board": animals_on_board(),
+            "routing": "gemini_fallback_after_local_handlers",
+        }
         if settings.privacy_mode == "contextual_cloud":
             try:
                 current_location = await ha.location_snapshot()
@@ -807,7 +810,11 @@ async def chat(
     except Exception as exc:
         logger.exception("Errore durante la conversazione")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return {"answer": answer, "user": display_name}
+    return {
+        "answer": answer,
+        "user": display_name,
+        "resolved_by": "gemini_fallback",
+    }
 
 
 @app.get("/api/fridge")

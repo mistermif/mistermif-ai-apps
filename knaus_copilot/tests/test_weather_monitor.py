@@ -1,12 +1,85 @@
+import asyncio
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from app.memory import MemoryStore
+from app.cloud_usage import CloudUsage
 from app.weather_monitor import WeatherMonitor, WeatherRisk
 
 
+class FakeWeatherHA:
+    async def monitoring_states(self):
+        return []
+
+    async def location_snapshot(self):
+        return {
+            "available": True,
+            "latitude": 45.8037,
+            "longitude": 8.9594,
+            "accuracy_m": 4,
+        }
+
+    async def send_notification(self, *_args):
+        return None
+
+    async def send_telegram(self, *_args):
+        return None
+
+
 class WeatherMonitorTest(TestCase):
+    def test_gemini_weather_context_uses_validated_gps_and_forecast(self):
+        with TemporaryDirectory() as directory:
+            memory = MemoryStore(Path(directory) / "memory.sqlite3")
+            received = {}
+
+            async def evaluator(assessment, observation):
+                received["assessment"] = assessment
+                received["observation"] = observation
+                return {
+                    "severity": "allerta",
+                    "worsening": False,
+                    "confidence": 0.8,
+                    "summary": "Raffiche da monitorare",
+                    "recommendations": [],
+                }
+
+            async def forecast(_latitude, _longitude):
+                return {
+                    "current": {
+                        "time": "2026-07-22T20:00",
+                        "weather_code": 2,
+                        "wind_speed_10m": 25,
+                        "wind_gusts_10m": 52,
+                    },
+                    "hourly": {
+                        "weather_code": [2],
+                        "wind_gusts_10m": [52],
+                        "precipitation_probability": [10],
+                    },
+                }
+
+            monitor = WeatherMonitor(
+                memory,
+                FakeWeatherHA(),
+                "notify.test",
+                dpc_enabled=False,
+                ai_evaluator=evaluator,
+                ai_usage=CloudUsage(memory, 10, 10),
+            )
+            monitor.fetch_open_meteo = forecast
+            result = asyncio.run(monitor.monitor_once())
+
+            self.assertEqual("ok", result["sources"]["posizione_gps"])
+            self.assertEqual(
+                45.8037,
+                received["assessment"]["location"]["latitude"],
+            )
+            self.assertEqual(
+                "Parzialmente nuvoloso",
+                received["assessment"]["forecast"]["condition"],
+            )
+
     def test_forecast_summary_exposes_weather_and_wind(self):
         summary = WeatherMonitor.forecast_summary(
             {

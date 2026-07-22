@@ -233,8 +233,8 @@ class FridgeOptimizer:
     def handle_message(self, message: str) -> str | None:
         lowered = message.casefold()
         fridge_context = any(
-            word in lowered for word in ("frigo", "frigorif", "fridge", "ventol")
-        )
+            word in lowered for word in ("frigo", "frigorif", "fridge")
+        ) or ("ventol" in lowered and "inverter" not in lowered)
         observe_request = (
             (
                 "osserv" in lowered

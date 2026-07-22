@@ -89,6 +89,13 @@ class FridgeOptimizerTest(TestCase):
         )
         self.assertIsNone(answer)
 
+    def test_inverter_fan_question_is_not_claimed_by_fridge_module(self):
+        asyncio.run(self.optimizer.monitor_once())
+        answer = self.optimizer.handle_message(
+            "Come stanno funzionando le ventole dell'inverter?"
+        )
+        self.assertIsNone(answer)
+
     def test_semantic_interpretation_can_enable_observation_but_not_control(self):
         asyncio.run(self.optimizer.monitor_once())
         answer = self.optimizer.apply_interpreted_intent(

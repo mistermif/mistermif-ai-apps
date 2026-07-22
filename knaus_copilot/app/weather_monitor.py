@@ -30,7 +30,7 @@ class WeatherRisk:
 
 
 class WeatherMonitor:
-    """Deterministic weather supervisor. No LLM or cloud token is used."""
+    """Local-first weather supervisor with bounded AI escalation."""
 
     def __init__(
         self,
@@ -54,7 +54,18 @@ class WeatherMonitor:
 
     async def monitor_once(self) -> dict[str, Any]:
         states = await self.ha.monitoring_states()
-        location = self._location(states)
+        location_info: dict[str, Any] = {}
+        try:
+            location_info = await self.ha.location_snapshot()
+        except (httpx.HTTPError, RuntimeError, ValueError, TypeError):
+            logger.exception("Lettura GPS validata non disponibile per il meteo")
+        if location_info.get("available"):
+            location = (
+                float(location_info["latitude"]),
+                float(location_info["longitude"]),
+            )
+        else:
+            location = self._location(states)
         risks = self.analyse_local(states)
         sources = {"sensori_home_assistant": "ok" if states else "non disponibili"}
         local_observation = self.extract_local_observation(states)
@@ -66,6 +77,7 @@ class WeatherMonitor:
 
         if location is not None:
             latitude, longitude = location
+            sources["posizione_gps"] = "ok"
             try:
                 forecast = await self.fetch_open_meteo(latitude, longitude)
                 risks.extend(self.analyse_open_meteo(forecast))
@@ -112,8 +124,19 @@ class WeatherMonitor:
         else:
             try:
                 self.ai_usage.consume(automatic=True)
+                ai_context = dict(deterministic)
+                ai_context["location"] = (
+                    {
+                        "latitude": location[0],
+                        "longitude": location[1],
+                        "accuracy_m": location_info.get("accuracy_m"),
+                    }
+                    if location is not None
+                    else None
+                )
+                ai_context["forecast"] = forecast_summary
                 ai_review = await self.ai_evaluator(
-                    deterministic,
+                    ai_context,
                     {**local_observation, "trend": local_trend},
                 )
                 sources["gemini_meteo"] = "valutazione eseguita"
