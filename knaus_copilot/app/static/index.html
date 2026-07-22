@@ -449,6 +449,17 @@
                 <label for="crew-members">Equipaggio</label>
                 <input id="crew-members" maxlength="500" placeholder="Es. Mirco (pilota), Valentina, Fido (cane)">
               </div>
+              <div class="field">
+                <label for="base-name">Base o rimessaggio</label>
+                <input id="base-name" required maxlength="120" value="Casa" placeholder="Es. Casa, rimessaggio, deposito">
+              </div>
+              <div class="field">
+                <label for="base-radius">Raggio base (metri)</label>
+                <input id="base-radius" type="number" min="50" max="1000" value="200" required>
+              </div>
+              <div class="field full">
+                <label><input id="base-current" type="checkbox" checked> Usa la posizione GPS attuale come base</label>
+              </div>
             </div>
             <div class="onboarding-actions"><button type="submit">SALVA PROFILO LOCALE</button></div>
           </form>
@@ -499,6 +510,7 @@
               <div class="setting-row"><span>Registrazione</span><span id="setting-travel-enabled">—</span></div>
               <div class="setting-row"><span>Campionamento</span><span id="setting-travel-poll">—</span></div>
               <div class="setting-row"><span>Ultimo viaggio</span><span id="setting-travel-latest">—</span></div>
+              <button id="trip-delete-latest" type="button" hidden>ELIMINA ULTIMO VIAGGIO ERRATO</button>
             </section>
             <section class="settings-card full">
               <h3>Collegamento intelligente</h3>
@@ -617,7 +629,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.5.3 · PLANCIA LIVE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.5.4 · PLANCIA LIVE</span></footer>
     </div>
   </div>
 
@@ -942,6 +954,9 @@
           ? `#${data.travel_tracker.latest.id} · ${data.travel_tracker.latest.distance_km} km`
           : "Nessun viaggio"
       );
+      const deleteLatestTrip = document.querySelector("#trip-delete-latest");
+      deleteLatestTrip.hidden = !data.travel_tracker.latest?.available;
+      deleteLatestTrip.dataset.tripId = data.travel_tracker.latest?.id || "";
       setText(
         "setting-alerts",
         data.alert_levels.map(item => item.level).join(" · ")
@@ -966,7 +981,8 @@
         "setting-profile",
         `${profile.brand} ${profile.model}${profile.year ? ` · ${profile.year}` : ""}` +
         `${profile.tow_vehicle ? ` · Motrice: ${profile.tow_vehicle}` : ""}` +
-        `${crew ? ` · Equipaggio: ${crew}` : ""}`
+        `${crew ? ` · Equipaggio: ${crew}` : ""}` +
+        `${profile.base?.name ? ` · Base: ${profile.base.name} (${profile.base.radius_m || 200} m)` : ""}`
       );
     }
 
@@ -1024,11 +1040,31 @@
         document.querySelector("#crew-members").value = (profile.crew || [])
           .map(item => `${item.name} (${item.role})`)
           .join(", ");
+        document.querySelector("#base-name").value = profile.base?.name || "Casa";
+        document.querySelector("#base-radius").value = profile.base?.radius_m || 200;
+        document.querySelector("#base-current").checked = !profile.base?.latitude;
         updateTowField();
         settingsDialog.close();
         onboardingDialog.showModal();
       } catch (error) {
         add(`Profilo non disponibile: ${error.message}`, "assistant");
+      }
+    });
+
+    document.querySelector("#trip-delete-latest").addEventListener("click", async event => {
+      const tripId = event.currentTarget.dataset.tripId;
+      if (!tripId || !window.confirm(
+        `Eliminare il viaggio #${tripId} e tutti i suoi campioni GPS locali?`
+      )) return;
+      event.currentTarget.disabled = true;
+      try {
+        await api(`api/trips/${tripId}?confirmed=true`, {method: "DELETE"});
+        add(`Viaggio #${tripId} eliminato dal diario locale.`, "assistant");
+        await refresh();
+      } catch (error) {
+        add(`Viaggio non eliminato: ${error.message}`, "assistant");
+      } finally {
+        event.currentTarget.disabled = false;
       }
     });
 
@@ -1081,6 +1117,11 @@
             tow_vehicle: vehicleType.value === "caravan"
               ? document.querySelector("#tow-vehicle").value.trim()
               : null,
+            base_name: document.querySelector("#base-name").value.trim(),
+            base_radius_m: Number(document.querySelector("#base-radius").value),
+            base_use_current_location: document.querySelector("#base-current").checked,
+            base_latitude: null,
+            base_longitude: null,
             crew
           })
         });

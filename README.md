@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.5.3** è una base già funzionante, installabile come app di Home
+La versione **1.5.4** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.5.3
+## Cosa funziona oggi — versione 1.5.4
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza
@@ -475,9 +475,15 @@ cloud; la modalità `redacted_cloud` è opzionale e applica filtri preventivi.
 
 ## Apprendimento locale
 
-La versione corrente registra
-campioni locali e li associa a un'identità anonima della sosta derivata da GPS e
-orientamento. Campioni senza posizione non aumentano la confidenza e dati di
+La versione corrente registra campioni locali e li associa a un'identità
+anonima della sosta derivata da GPS e orientamento. Inoltre:
+
+- memorizza una base o rimessaggio locale con coordinate e raggio configurabile;
+- conferma le partenze usando più campioni GPS e uno spostamento reale;
+- applica filtri anti-deriva e non somma distanza quando il mezzo è fermo.
+
+I campioni sono associati alla posizione e all'orientamento. Campioni senza
+posizione non aumentano la confidenza e dati di
 luoghi diversi non vengono mescolati.
 
 L'apprendimento riguarda osservazioni e risultati: non modifica autonomamente

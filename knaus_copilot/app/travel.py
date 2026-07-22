@@ -13,6 +13,11 @@ from .memory import MemoryStore
 
 MOVING_KMH = 5.0
 STOPPED_KMH = 2.0
+START_SAMPLES = 4
+START_MIN_DISTANCE_KM = 0.10
+DEFAULT_BASE_RADIUS_M = 200
+MAX_GPS_ACCURACY_M = 100
+MAX_REASONABLE_SPEED_KMH = 140
 
 
 class TravelTracker:
@@ -22,6 +27,7 @@ class TravelTracker:
         self.memory = memory
         self.arrival_minutes = arrival_minutes
         self._moving_streak = 0
+        self._candidate_location: tuple[float, float] | None = None
 
     def capture_plan(self, message: str) -> dict[str, Any] | None:
         normalized = " ".join(message.strip().split())
@@ -45,14 +51,46 @@ class TravelTracker:
             return {"status": "gps_unavailable"}
         latitude, longitude = location
         speed = self._metric(states, ("gps", "veloc"), ("speed",)) or 0.0
+        accuracy = self._metric(states, ("gps", "accuracy"), ("gps", "precision"))
+        if accuracy is not None and accuracy > MAX_GPS_ACCURACY_M:
+            self._reset_start_candidate()
+            return {"status": "gps_inaccurate", "accuracy_m": accuracy}
+        speed = speed if 0 <= speed <= MAX_REASONABLE_SPEED_KMH else 0.0
         now = datetime.now(timezone.utc)
         active = self.memory.active_trip()
         newly_started = False
 
         if active is None:
-            self._moving_streak = self._moving_streak + 1 if speed >= MOVING_KMH else 0
-            if self._moving_streak < 2:
+            if speed < MOVING_KMH:
+                self._reset_start_candidate()
                 return {"status": "stationary", "speed_kmh": speed}
+            if self._at_base(latitude, longitude):
+                # A GPS receiver can report small speeds while the vehicle is parked.
+                # Keep the latest point as the departure origin, but require a fresh
+                # streak of samples after the vehicle has actually left the geofence.
+                self._candidate_location = location
+                self._moving_streak = 0
+                return {"status": "at_base", "speed_kmh": speed}
+            if self._candidate_location is None:
+                self._candidate_location = location
+                self._moving_streak = 1
+                return {"status": "movement_candidate", "speed_kmh": speed}
+            self._moving_streak += 1
+            candidate_distance = self.haversine_km(
+                self._candidate_location[0],
+                self._candidate_location[1],
+                latitude,
+                longitude,
+            )
+            if (
+                self._moving_streak < START_SAMPLES
+                or candidate_distance < START_MIN_DISTANCE_KM
+            ):
+                return {
+                    "status": "movement_candidate",
+                    "speed_kmh": speed,
+                    "candidate_distance_km": round(candidate_distance, 3),
+                }
             plan = self.memory.pending_travel_plan()
             trip_id = self.memory.start_trip(
                 latitude,
@@ -61,7 +99,7 @@ class TravelTracker:
                 plan_id=int(plan["id"]) if plan else None,
             )
             active = self.memory.active_trip()
-            self._moving_streak = 0
+            self._reset_start_candidate()
             if active is None:
                 return {"status": "error"}
             active["id"] = trip_id
@@ -76,7 +114,13 @@ class TravelTracker:
         distance = float(active.get("distance_km") or 0)
         if last_lat is not None and last_lon is not None:
             segment = self.haversine_km(last_lat, last_lon, latitude, longitude)
-            if segment <= 5.0:
+            implied_speed = segment / (elapsed / 3600) if elapsed > 0 else 0.0
+            plausible_limit = max(30.0, speed * 2.5 + 15.0)
+            if (
+                speed >= STOPPED_KMH
+                and segment <= 5.0
+                and implied_speed <= plausible_limit
+            ):
                 distance += segment
         moving_seconds = float(active.get("moving_seconds") or 0)
         if speed >= STOPPED_KMH:
@@ -163,6 +207,20 @@ class TravelTracker:
             "speed_kmh": round(speed, 1),
             "distance_km": round(distance, 2),
         }
+
+    def _reset_start_candidate(self) -> None:
+        self._moving_streak = 0
+        self._candidate_location = None
+
+    def _at_base(self, latitude: float, longitude: float) -> bool:
+        profile = self.memory.get_json_setting("vehicle_profile") or {}
+        base = profile.get("base") or {}
+        base_lat = self._number(base.get("latitude"))
+        base_lon = self._number(base.get("longitude"))
+        if base_lat is None or base_lon is None:
+            return False
+        radius_m = self._number(base.get("radius_m")) or DEFAULT_BASE_RADIUS_M
+        return self.haversine_km(base_lat, base_lon, latitude, longitude) * 1000 <= radius_m
 
     def report(self, trip_id: int | None = None) -> dict[str, Any]:
         trip = (

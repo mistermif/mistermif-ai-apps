@@ -222,7 +222,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.5.3"
+APP_VERSION = "1.5.4"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -299,6 +299,11 @@ class OnboardingRequest(BaseModel):
     year: int | None = Field(default=None, ge=1950, le=2100)
     tow_vehicle: str | None = Field(default=None, max_length=160)
     crew: list[CrewMember] = Field(default_factory=list, max_length=20)
+    base_name: str = Field(default="Base", min_length=1, max_length=120)
+    base_radius_m: int = Field(default=200, ge=50, le=1000)
+    base_latitude: float | None = Field(default=None, ge=-90, le=90)
+    base_longitude: float | None = Field(default=None, ge=-180, le=180)
+    base_use_current_location: bool = True
 
 
 def autonomy_enabled() -> bool:
@@ -541,6 +546,23 @@ async def save_onboarding(payload: OnboardingRequest) -> dict:
             status_code=422,
             detail="Per una caravan indica la motrice utilizzata",
         )
+    latitude = payload.base_latitude
+    longitude = payload.base_longitude
+    if payload.base_use_current_location and (latitude is None or longitude is None):
+        location = TravelTracker._location(await ha.monitoring_states())
+        if location is not None:
+            latitude, longitude = location
+    profile.pop("base_name", None)
+    profile.pop("base_radius_m", None)
+    profile.pop("base_latitude", None)
+    profile.pop("base_longitude", None)
+    profile.pop("base_use_current_location", None)
+    profile["base"] = {
+        "name": payload.base_name.strip(),
+        "radius_m": payload.base_radius_m,
+        "latitude": latitude,
+        "longitude": longitude,
+    }
     memory.set_json_setting("vehicle_profile", profile)
     memory.set_setting("onboarding_completed", "true")
     memory.add_memory(
@@ -567,6 +589,19 @@ async def save_onboarding(payload: OnboardingRequest) -> dict:
         len(payload.crew),
     )
     return {"completed": True}
+
+
+@app.delete("/api/trips/{trip_id}")
+async def delete_trip(trip_id: int, confirmed: bool = False) -> dict:
+    if not confirmed:
+        raise HTTPException(status_code=409, detail="Conferma esplicita richiesta")
+    trip = memory.trip_detail(trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="Viaggio non trovato")
+    if not memory.delete_trip(trip_id):
+        raise HTTPException(status_code=404, detail="Viaggio non trovato")
+    logger.warning("Viaggio locale eliminato con conferma esplicita: id=%d", trip_id)
+    return {"deleted": True, "trip_id": trip_id}
 
 
 @app.get("/api/memories")

@@ -33,9 +33,63 @@ class TravelTrackerTest(TestCase):
                     "state": "42",
                 },
             ]
-            self.assertEqual("stationary", tracker.observe(states)["status"])
+            self.assertEqual("movement_candidate", tracker.observe(states)["status"])
+            states[0]["attributes"]["latitude"] = 45.801
+            self.assertEqual("movement_candidate", tracker.observe(states)["status"])
+            states[0]["attributes"]["latitude"] = 45.802
+            self.assertEqual("movement_candidate", tracker.observe(states)["status"])
+            states[0]["attributes"]["latitude"] = 45.803
             self.assertEqual("started", tracker.observe(states)["status"])
             self.assertTrue(tracker.report()["available"])
+
+    def test_stationary_gps_drift_does_not_start_or_add_distance(self):
+        with TemporaryDirectory() as directory:
+            memory = MemoryStore(Path(directory) / "memory.sqlite3")
+            tracker = TravelTracker(memory)
+            states = [
+                {
+                    "entity_id": "sensor.caravan_sensor_gps_latitudine",
+                    "state": "45.8",
+                },
+                {
+                    "entity_id": "sensor.caravan_sensor_gps_longitudine",
+                    "state": "9.0",
+                },
+                {
+                    "entity_id": "sensor.caravan_sensor_gps_velocita",
+                    "state": "1.2",
+                },
+            ]
+            for offset in (0, 0.001, 0.003, 0.006):
+                states[0]["state"] = str(45.8 + offset)
+                self.assertEqual("stationary", tracker.observe(states)["status"])
+            self.assertFalse(tracker.report()["available"])
+
+    def test_base_geofence_blocks_false_departure(self):
+        with TemporaryDirectory() as directory:
+            memory = MemoryStore(Path(directory) / "memory.sqlite3")
+            memory.set_json_setting(
+                "vehicle_profile",
+                {"base": {"name": "Casa", "latitude": 45.8, "longitude": 9.0, "radius_m": 250}},
+            )
+            tracker = TravelTracker(memory)
+            states = [
+                {"entity_id": "sensor.caravan_sensor_gps_latitudine", "state": "45.8"},
+                {"entity_id": "sensor.caravan_sensor_gps_longitudine", "state": "9.0"},
+                {"entity_id": "sensor.caravan_sensor_gps_velocita", "state": "64.6"},
+            ]
+            self.assertEqual("at_base", tracker.observe(states)["status"])
+            for offset in (0.0002, 0.0004, 0.0006, 0.0008):
+                states[0]["state"] = str(45.8 + offset)
+                self.assertEqual("at_base", tracker.observe(states)["status"])
+            self.assertFalse(tracker.report()["available"])
+
+    def test_confirmed_trip_can_be_deleted(self):
+        with TemporaryDirectory() as directory:
+            memory = MemoryStore(Path(directory) / "memory.sqlite3")
+            trip_id = memory.start_trip(45.0, 9.0)
+            self.assertTrue(memory.delete_trip(trip_id))
+            self.assertIsNone(memory.trip_detail(trip_id))
 
     def test_csv_and_gpx_exports_are_local(self):
         with TemporaryDirectory() as directory:

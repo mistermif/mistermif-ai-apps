@@ -455,6 +455,26 @@ class MemoryStore:
                     (now, row["plan_id"]),
                 )
 
+    def delete_trip(self, trip_id: int) -> bool:
+        """Delete a trip and its local samples after an explicit confirmation."""
+        with self._lock, self._connect() as db:
+            row = db.execute(
+                "SELECT plan_id FROM trips WHERE id = ?", (trip_id,)
+            ).fetchone()
+            if not row:
+                return False
+            db.execute("DELETE FROM trip_points WHERE trip_id = ?", (trip_id,))
+            db.execute("DELETE FROM trips WHERE id = ?", (trip_id,))
+            if row["plan_id"] is not None:
+                db.execute(
+                    """
+                    UPDATE travel_plans SET status = 'planned', started_at = NULL,
+                        completed_at = NULL WHERE id = ?
+                    """,
+                    (row["plan_id"],),
+                )
+            return True
+
     def list_trips(self, limit: int = 100) -> list[dict[str, Any]]:
         with self._connect() as db:
             rows = db.execute(
