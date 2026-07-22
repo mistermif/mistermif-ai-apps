@@ -11,7 +11,7 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from .agent import KnausAgent
+from .agent import KnausAgent, asks_for_location
 from .alerts import public_alert_catalog
 from .automation_lab import (
     evaluate_snapshot,
@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.4.2"
+APP_VERSION = "1.4.3"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -683,26 +683,7 @@ async def chat(
         else:
             answer = str(report["message"])
         return {"answer": answer, "user": display_name, "travel_report": report}
-    asks_location = (
-        any(
-            phrase in normalized
-            for phrase in (
-                "mia posizione",
-                "nostra posizione",
-                "posizione della caravan",
-                "vedi la posizione",
-                "leggi la posizione",
-                "coordinate gps",
-                "dove sono",
-                "dove siamo",
-                "gps funziona",
-            )
-        )
-        or (
-            "gps" in normalized
-            and any(word in normalized for word in ("vedi", "leggi", "rilev", "funzion"))
-        )
-    )
+    asks_location = asks_for_location(payload.message)
     if asks_location:
         try:
             location = await ha.location_snapshot()

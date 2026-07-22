@@ -103,6 +103,32 @@ CORE_STATE_FRAGMENTS = (
 )
 
 
+def asks_for_location(message: str) -> bool:
+    """Recognize common natural-language requests for the current position."""
+    normalized = message.casefold()
+    phrases = (
+        "mia posizione",
+        "nostra posizione",
+        "posizione della caravan",
+        "posizione del camper",
+        "vedi la posizione",
+        "leggi la posizione",
+        "coordinate gps",
+        "dove sono",
+        "dove siamo",
+        "dove sei",
+        "dove ti trovi",
+        "dove si trova la caravan",
+        "dove si trova il camper",
+        "gps funziona",
+    )
+    if any(phrase in normalized for phrase in phrases):
+        return True
+    return "gps" in normalized and any(
+        word in normalized for word in ("vedi", "leggi", "rilev", "funzion")
+    )
+
+
 SYSTEM_INSTRUCTIONS = """
 Sei mistermif AI, assistente personale della caravan e dei suoi utenti.
 Rispondi in italiano, in modo concreto e trasparente.

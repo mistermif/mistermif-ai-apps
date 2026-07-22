@@ -3,7 +3,28 @@ from unittest.mock import AsyncMock, Mock, call, patch
 
 import httpx
 
-from app.agent import GEMINI_FALLBACK_MODEL, KnausAgent, SYSTEM_INSTRUCTIONS
+from app.agent import (
+    GEMINI_FALLBACK_MODEL,
+    KnausAgent,
+    SYSTEM_INSTRUCTIONS,
+    asks_for_location,
+)
+
+
+class LocationIntentTest(unittest.TestCase):
+    def test_natural_location_questions_are_recognized(self):
+        questions = (
+            "Sai dirmi dove ti trovi?",
+            "Dove sei?",
+            "Dove si trova la caravan?",
+            "Vedi correttamente il GPS?",
+        )
+        for question in questions:
+            with self.subTest(question=question):
+                self.assertTrue(asks_for_location(question))
+
+    def test_unrelated_where_question_is_not_location(self):
+        self.assertFalse(asks_for_location("Dove posso comprare gli pneumatici?"))
 
 
 class FakeAsyncClient:
