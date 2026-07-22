@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.4.0** è una base già funzionante, installabile come app di Home
+La versione **1.4.1** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.4.0
+## Cosa funziona oggi — versione 1.4.1
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza
@@ -136,7 +136,7 @@ deterministiche e indipendenti dall'AI e da Internet.
 - risultati delle simulazioni rappresentati con indicatori grafici di SOC,
   corrente, rete, solare, colonnina, severità e stato del self-check.
 - sorveglianza meteo deterministica ogni 30 minuti senza token AI;
-- fusione di sensori locali, Open-Meteo multimodello e Radar-DPC grandine;
+- fusione di sensori locali, Open-Meteo multimodello e Radar-DPC HRD;
 - deduplicazione persistente ed escalation soltanto quando il quadro peggiora;
 - monitoraggio locale di barometro, temperatura e umidità esterna, comprese le
   variazioni combinate nelle ultime ore;
@@ -334,8 +334,9 @@ contesto cloud filtrato.
 
 Il supervisore meteo lavora ogni 30 minuti senza usare un modello AI e quindi
 senza consumare token. Combina sensori Home Assistant, GPS, previsione
-multimodello Open-Meteo e, in Italia, il prodotto puntuale di probabilità di
-grandine del Radar-DPC. Windy Point Forecast può essere aggiunto solo con una
+multimodello Open-Meteo e, in Italia, il prodotto puntuale HRD del Radar-DPC,
+che combina precipitazioni intense, persistenza, convezione e probabilità di
+grandine. Windy Point Forecast può essere aggiunto solo con una
 chiave Professional: la chiave gratuita di test restituisce dati alterati e non
 viene mai usata per decisioni di sicurezza.
 

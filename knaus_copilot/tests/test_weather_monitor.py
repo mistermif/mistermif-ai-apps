@@ -78,6 +78,44 @@ class WeatherMonitorTest(TestCase):
         self.assertEqual("urgenza", WeatherMonitor.analyse_dpc_hail(50)[0].severity)
         self.assertEqual([], WeatherMonitor.analyse_dpc_hail(10))
 
+    def test_dpc_hrd_empty_collection_means_no_local_event(self):
+        self.assertEqual(
+            [],
+            WeatherMonitor.analyse_dpc_hrd(
+                {"type": "FeatureCollection", "features": []}
+            ),
+        )
+
+    def test_dpc_hrd_uses_hail_probability_when_exposed(self):
+        risks = WeatherMonitor.analyse_dpc_hrd(
+            {
+                "type": "FeatureCollection",
+                "features": [{"properties": {"poh": 55}}],
+            }
+        )
+        self.assertEqual("grandine", risks[0].kind)
+        self.assertEqual("urgenza", risks[0].severity)
+
+    def test_dpc_hrd_falls_back_to_severity(self):
+        risks = WeatherMonitor.analyse_dpc_hrd(
+            {
+                "type": "FeatureCollection",
+                "features": [{"properties": {"severity": 3}}],
+            }
+        )
+        self.assertEqual("temporale_sviluppato", risks[0].kind)
+        self.assertEqual("urgenza", risks[0].severity)
+
+    def test_dpc_hrd_does_not_treat_generic_value_as_hail(self):
+        risks = WeatherMonitor.analyse_dpc_hrd(
+            {
+                "type": "FeatureCollection",
+                "features": [{"properties": {"value": 80, "severity": 1}}],
+            }
+        )
+        self.assertEqual("temporale", risks[0].kind)
+        self.assertEqual("allerta", risks[0].severity)
+
     def test_windy_units_and_convective_risk(self):
         risks = WeatherMonitor.analyse_windy(
             {

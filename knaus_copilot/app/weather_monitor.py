@@ -77,17 +77,17 @@ class WeatherMonitor:
                 sources["open_meteo_multimodello"] = "errore"
             if self.dpc_enabled and self._inside_italy(latitude, longitude):
                 try:
-                    poh = await self.fetch_dpc_hail_probability(latitude, longitude)
-                    sources["radar_dpc_grandine"] = (
-                        "dato disponibile" if poh is not None else "nessun valore puntuale"
+                    hrd = await self.fetch_dpc_hrd(latitude, longitude)
+                    dpc_risks = self.analyse_dpc_hrd(hrd)
+                    risks.extend(dpc_risks)
+                    sources["radar_dpc_hrd"] = (
+                        "fenomeno rilevato" if dpc_risks else "nessun fenomeno puntuale"
                     )
-                    if poh is not None:
-                        risks.extend(self.analyse_dpc_hail(poh))
                 except (httpx.HTTPError, ValueError, TypeError):
                     logger.exception("Radar-DPC non disponibile")
-                    sources["radar_dpc_grandine"] = "errore"
+                    sources["radar_dpc_hrd"] = "errore"
             else:
-                sources["radar_dpc_grandine"] = "fuori Italia o disattivato"
+                sources["radar_dpc_hrd"] = "fuori Italia o disattivato"
             if self.windy_api_key:
                 try:
                     windy = await self.fetch_windy(latitude, longitude)
@@ -276,16 +276,22 @@ class WeatherMonitor:
         points = ("N", "NE", "E", "SE", "S", "SO", "O", "NO")
         return points[int((degrees % 360 + 22.5) // 45) % 8]
 
-    async def fetch_dpc_hail_probability(
+    async def fetch_dpc_hrd(
         self, latitude: float, longitude: float
-    ) -> float | None:
+    ) -> dict[str, Any]:
+        """Read the current DPC Heavy Rain Detection vector at the GPS point.
+
+        The former ``radar:poh`` WMS layer was removed from the public
+        capabilities in Radar-DPC v2. HRD remains queryable and already blends
+        precipitation intensity, persistence, convection and hail probability.
+        """
         delta = 0.08
         params = {
             "SERVICE": "WMS",
             "VERSION": "1.1.1",
             "REQUEST": "GetFeatureInfo",
-            "LAYERS": "radar:poh",
-            "QUERY_LAYERS": "radar:poh",
+            "LAYERS": "radar:hrd",
+            "QUERY_LAYERS": "radar:hrd",
             "STYLES": "",
             "SRS": "EPSG:4326",
             "BBOX": (
@@ -298,6 +304,7 @@ class WeatherMonitor:
             "Y": 50,
             "FEATURE_COUNT": 5,
             "INFO_FORMAT": "application/json",
+            "TILED": "true",
         }
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.get(
@@ -306,8 +313,11 @@ class WeatherMonitor:
             )
             response.raise_for_status()
             if "json" not in response.headers.get("content-type", "").casefold():
-                return None
-            return self._find_probability(response.json())
+                raise ValueError("Radar-DPC HRD non ha restituito JSON")
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError("Risposta Radar-DPC HRD non valida")
+            return payload
 
     async def fetch_windy(self, latitude: float, longitude: float) -> dict:
         """Fetch Windy Point Forecast when a production API key is configured."""
@@ -519,6 +529,72 @@ class WeatherMonitor:
             return [WeatherRisk("grandine", "allerta", 55, "Radar-DPC", f"probabilità puntuale {probability:.0f}%")]
         return []
 
+    @classmethod
+    def analyse_dpc_hrd(cls, payload: dict[str, Any]) -> list[WeatherRisk]:
+        """Translate current HRD features into conservative local risks."""
+        features = payload.get("features") or []
+        if not isinstance(features, list) or not features:
+            return []
+
+        probability = cls._find_hail_probability(features)
+        if probability is not None:
+            hail_risks = cls.analyse_dpc_hail(probability)
+            if hail_risks:
+                return hail_risks
+
+        severity_value: float | None = None
+        severity_text = ""
+        for feature in features:
+            if not isinstance(feature, dict):
+                continue
+            properties = feature.get("properties") or {}
+            if not isinstance(properties, dict):
+                continue
+            for key, value in properties.items():
+                normalized = str(key).casefold()
+                if any(term in normalized for term in ("severity", "severita", "indice", "index")):
+                    number = cls._number(value)
+                    if number is not None:
+                        severity_value = max(severity_value or number, number)
+                    elif value is not None:
+                        severity_text = f"{severity_text} {value}".strip().casefold()
+
+        urgent_words = ("high", "severe", "extreme", "alto", "elevato", "rosso")
+        warning_words = ("medium", "moderate", "medio", "arancio", "giallo")
+        if (severity_value is not None and severity_value >= 3) or any(
+            word in severity_text for word in urgent_words
+        ):
+            return [
+                WeatherRisk(
+                    "temporale_sviluppato",
+                    "urgenza",
+                    82,
+                    "Radar-DPC HRD",
+                    "area temporalesca intensa rilevata sulla posizione",
+                )
+            ]
+        if (severity_value is not None and severity_value >= 1) or any(
+            word in severity_text for word in warning_words
+        ):
+            return [
+                WeatherRisk(
+                    "temporale",
+                    "allerta",
+                    58,
+                    "Radar-DPC HRD",
+                    "fenomeno convettivo rilevato sulla posizione",
+                )
+            ]
+        return [
+            WeatherRisk(
+                "pioggia_intensa",
+                "allerta",
+                50,
+                "Radar-DPC HRD",
+                "area HRD rilevata sulla posizione",
+            )
+        ]
+
     @staticmethod
     def assess(risks: list[WeatherRisk]) -> dict[str, Any]:
         if not risks:
@@ -618,6 +694,27 @@ class WeatherMonitor:
                 if result is not None:
                     return result
         elif any(term in key for term in ("poh", "prob", "value", "gray_index")):
+            number = cls._number(value)
+            if number is not None and 0 <= number <= 100:
+                return number
+        return None
+
+    @classmethod
+    def _find_hail_probability(cls, value: Any, key: str = "") -> float | None:
+        """Find only explicitly hail-related percentages in an HRD feature."""
+        if isinstance(value, dict):
+            for child_key, child in value.items():
+                result = cls._find_hail_probability(
+                    child, str(child_key).casefold()
+                )
+                if result is not None:
+                    return result
+        elif isinstance(value, list):
+            for child in value:
+                result = cls._find_hail_probability(child, key)
+                if result is not None:
+                    return result
+        elif any(term in key for term in ("poh", "hail", "grandine")):
             number = cls._number(value)
             if number is not None and 0 <= number <= 100:
                 return number

@@ -78,7 +78,8 @@ Il controllo predefinito avviene ogni 30 minuti e non interroga l'AI. Usa:
 
 - sensori meteo, barometro e GPS già presenti in Home Assistant;
 - Open-Meteo Best Match, che combina più modelli previsionali;
-- Radar-DPC in Italia per il prodotto puntuale POH, probabilità di grandine;
+- Radar-DPC in Italia per il prodotto puntuale HRD, che combina precipitazioni
+  intense, persistenza, convezione e probabilità di grandine;
 - Windy Point Forecast soltanto quando è configurata una chiave Professional.
 
 Il barometro e i sensori esterni di temperatura e umidità vengono registrati

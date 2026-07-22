@@ -1,4 +1,4 @@
-# mistermif AI 1.4.0
+# mistermif AI 1.4.1
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -25,7 +25,7 @@ della caravan.
 - scheda grafica per simulazioni e self-check, più diagramma del ponte nelle
   impostazioni.
 - sorveglianza meteo autonoma ogni 30 minuti senza consumo di token AI;
-- fusione locale di sensori HA, Open-Meteo multimodello e Radar-DPC grandine;
+- fusione locale di sensori HA, Open-Meteo multimodello e Radar-DPC HRD;
 - andamento di barometro, temperatura e umidità esterna registrato localmente;
 - revisione Gemini solo per nuovi rischi o peggioramenti, massimo 10 al giorno;
 - avvisi persistenti e deduplicati, con Telegram per urgenze ed emergenze;
