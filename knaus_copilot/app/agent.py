@@ -54,6 +54,9 @@ COMPLEX_MESSAGE_HINTS = (
     "inverter",
     "meteo",
     "viaggio",
+    "posizion",
+    "coordinate",
+    "gps",
     "frigorif",
     "condensa",
     "temperatur",
@@ -122,6 +125,9 @@ incompleta: da solo non dimostra un guasto, un pericolo o un'emergenza. Non
 assegnare livelli di allarme senza almeno una misura disponibile o un evento
 concreto che li giustifichi. Non interpretare lo stato `on`/`off` di un sensore
 binario se il significato operativo non è esplicitato nel nome o negli attributi.
+Se la coppia di coordinate GPS è numerica, nei limiti geografici e diversa da
+0,0, la posizione è disponibile: non descrivere i sensori GPS come guasti. La
+privacy cloud e la disponibilità del sensore sono due cose diverse.
 
 Per pneumatici e TPMS:
 - non inventare una pressione corretta: verifica targhetta del mezzo, manuale,

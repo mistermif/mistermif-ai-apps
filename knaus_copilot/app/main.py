@@ -216,7 +216,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.3.1"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -675,6 +675,65 @@ async def chat(
         else:
             answer = str(report["message"])
         return {"answer": answer, "user": display_name, "travel_report": report}
+    asks_location = (
+        any(
+            phrase in normalized
+            for phrase in (
+                "mia posizione",
+                "nostra posizione",
+                "posizione della caravan",
+                "vedi la posizione",
+                "leggi la posizione",
+                "coordinate gps",
+                "dove sono",
+                "dove siamo",
+                "gps funziona",
+            )
+        )
+        or (
+            "gps" in normalized
+            and any(word in normalized for word in ("vedi", "leggi", "rilev", "funzion"))
+        )
+    )
+    if asks_location:
+        try:
+            location = await ha.location_snapshot()
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.warning("Lettura locale GPS non riuscita: %s", exc)
+            location = {"available": False, "reason": "home_assistant_non_raggiungibile"}
+        if location.get("available"):
+            accuracy = location.get("accuracy_m")
+            accuracy_text = (
+                f", precisione dichiarata circa {accuracy:g} m"
+                if isinstance(accuracy, (int, float))
+                else ""
+            )
+            updated_text = (
+                f', ultimo aggiornamento {location["last_updated"]}'
+                if location.get("last_updated")
+                else ""
+            )
+            answer = (
+                "Sì: Home Assistant mi fornisce una posizione GPS valida "
+                f'({location["latitude"]:.6f}, {location["longitude"]:.6f})'
+                f"{accuracy_text}{updated_text}. I sensori risultano leggibili; "
+                "la posizione viene verificata localmente e non la considero un guasto."
+            )
+        else:
+            answer = (
+                "Al momento non riesco a ricavare una coppia completa di coordinate "
+                "GPS da Home Assistant. Questo non significa automaticamente che il "
+                "sensore sia guasto: potrebbe essere offline, non ancora aggiornato o "
+                "avere un entity_id non riconosciuto."
+            )
+        memory.add_message(user_id, "user", payload.message)
+        memory.add_message(user_id, "assistant", answer)
+        return {
+            "answer": answer,
+            "user": display_name,
+            "location": location,
+            "resolved_locally": True,
+        }
     simulation = run_conversational_simulation(
         payload.message,
         animals_default=animals_on_board(),

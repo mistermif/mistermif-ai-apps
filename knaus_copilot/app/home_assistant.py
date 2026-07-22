@@ -112,6 +112,73 @@ class HomeAssistantClient:
                 result.append(item)
         return result
 
+    @staticmethod
+    def _number(value: Any) -> float | None:
+        try:
+            return float(str(value).replace(",", "."))
+        except (TypeError, ValueError):
+            return None
+
+    async def location_snapshot(self) -> dict[str, Any]:
+        """Read the caravan position locally without asking the language model."""
+        states = await self.monitoring_states()
+        latitude = None
+        longitude = None
+        latitude_entity = None
+        longitude_entity = None
+        updated = None
+        accuracy = None
+
+        for item in states:
+            attributes = item.get("attributes") or {}
+            lat = self._number(attributes.get("latitude"))
+            lon = self._number(attributes.get("longitude"))
+            if lat is None or lon is None:
+                continue
+            latitude, longitude = lat, lon
+            latitude_entity = longitude_entity = item.get("entity_id")
+            updated = item.get("last_updated")
+            accuracy = self._number(attributes.get("gps_accuracy"))
+            break
+
+        if latitude is None or longitude is None:
+            for item in states:
+                candidate = f'{item.get("entity_id", "")} {item.get("name", "")}'.casefold()
+                if not any(anchor in candidate for anchor in ("gps", "caravan", "knaus", "posizion")):
+                    continue
+                value = self._number(item.get("state"))
+                if value is None:
+                    continue
+                if latitude is None and any(term in candidate for term in ("latitude", "latitudine", "gps_lat")):
+                    latitude = value
+                    latitude_entity = item.get("entity_id")
+                    updated = item.get("last_updated") or updated
+                if longitude is None and any(term in candidate for term in ("longitude", "longitudine", "gps_lon")):
+                    longitude = value
+                    longitude_entity = item.get("entity_id")
+                    updated = item.get("last_updated") or updated
+
+        valid = (
+            latitude is not None
+            and longitude is not None
+            and -90 <= latitude <= 90
+            and -180 <= longitude <= 180
+            and not (latitude == 0 and longitude == 0)
+        )
+        return {
+            "available": valid,
+            "latitude": latitude if valid else None,
+            "longitude": longitude if valid else None,
+            "accuracy_m": accuracy if valid else None,
+            "last_updated": updated if valid else None,
+            "entities": [
+                entity
+                for entity in dict.fromkeys((latitude_entity, longitude_entity))
+                if entity
+            ],
+            "reason": None if valid else "coordinate_gps_non_disponibili",
+        }
+
     async def fridge_states(self) -> list[dict[str, Any]]:
         """Return a minimal local-only view of possible refrigerator devices."""
         terms = ("frigo", "fridge", "frigorif", "refriger", "ventol", "fan", "pwm")
