@@ -88,6 +88,7 @@ STATE_CONTEXT_GROUPS = {
             "dove",
             "posizion",
             "gps",
+            "coordinat",
             "campeggio",
             "viaggio",
             "ristorant",

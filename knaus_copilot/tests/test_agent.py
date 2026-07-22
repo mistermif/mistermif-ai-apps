@@ -309,6 +309,7 @@ class GeminiFallbackTests(unittest.IsolatedAsyncioTestCase):
             "Consigliami un ristorante qui vicino",
             "Che meteo è previsto in questa zona?",
             "Cerca un campeggio nei dintorni",
+            "Quali coordinate numeriche hai ricevuto nel contesto?",
         ):
             with self.subTest(question=question):
                 selected = agent._select_states(states, question, "low")
