@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.5
+
+- Rimosso il limite di 80 entità dall'inventario locale di Home Assistant.
+- L'assistente può ora indicizzare tutte le entità e selezionare dinamicamente
+  soltanto quelle pertinenti alla richiesta o al monitoraggio in corso.
+- Il limite configurabile resta applicato esclusivamente al contesto destinato
+  al modello AI, evitando invii massivi e consumo inutile di token.
+- Estesa la lettura locale in sola osservazione a tutti i domini Home Assistant,
+  senza ampliare in alcun modo i permessi di comando.
+- Rafforzati i filtri di privacy per IP pubblico, SSID, BSSID, MAC, token,
+  credenziali e parametri protetti.
+- Le impostazioni mostrano separatamente inventario HA locale e limite massimo
+  del contesto AI.
+
 ## 1.5.4
 
 - Aggiunta la base o rimessaggio all'intervista iniziale, usando il GPS corrente e un raggio configurabile.

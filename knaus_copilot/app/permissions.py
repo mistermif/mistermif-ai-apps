@@ -4,18 +4,6 @@ from dataclasses import dataclass
 from dataclasses import field
 
 
-READ_PREFIXES = (
-    "sensor.",
-    "binary_sensor.",
-    "weather.",
-    "device_tracker.caravan",
-    "climate.thermal_control",
-    "select.2_output_source_priority",
-    "input_boolean.energia_",
-    "input_number.energia_",
-    "input_select.energia_",
-)
-
 SENSITIVE_ENTITY_FRAGMENTS = (
     "bulk_charging_voltage",
     "float_charging_voltage",
@@ -26,6 +14,20 @@ SENSITIVE_ENTITY_FRAGMENTS = (
     "utility_charge_current",
     "ventilazione",
     "cooling_",
+    "external_ip",
+    "public_ip",
+    "wan_ip",
+    "ip_esterno",
+    "indirizzo_ip",
+    "ip_address",
+    "mac_address",
+    "bssid",
+    "ssid",
+    "password",
+    "passwd",
+    "token",
+    "secret",
+    "credential",
 )
 
 
@@ -37,10 +39,13 @@ class PermissionPolicy:
     fridge_control_entities: set[str] = field(default_factory=set)
 
     def can_read(self, entity_id: str) -> bool:
-        return entity_id.startswith(READ_PREFIXES)
+        # Reading state is non-mutating. Keep the complete HA inventory available
+        # to local reasoning; cloud and bridge disclosure are filtered separately.
+        domain, separator, object_id = entity_id.partition(".")
+        return bool(domain and separator and object_id)
 
-    def is_sensitive(self, entity_id: str) -> bool:
-        lowered = entity_id.lower()
+    def is_sensitive(self, entity_id: str, name: str = "") -> bool:
+        lowered = f"{entity_id} {name}".casefold()
         return any(fragment in lowered for fragment in SENSITIVE_ENTITY_FRAGMENTS)
 
     def can_execute(self, tool_name: str) -> bool:

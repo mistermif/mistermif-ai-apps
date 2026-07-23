@@ -42,24 +42,47 @@ class HomeAssistantClient:
         if not self.policy.can_read(entity_id):
             return None
         attributes = state.get("attributes") or {}
-        local_attributes = {}
+        local_attributes = {
+            key: attributes.get(key)
+            for key in (
+                "device_class",
+                "state_class",
+                "current_temperature",
+                "temperature",
+                "target_temp_high",
+                "target_temp_low",
+                "hvac_action",
+                "percentage",
+                "direction",
+                "preset_mode",
+            )
+            if attributes.get(key) is not None
+        }
         if entity_id.startswith("device_tracker.caravan"):
-            local_attributes = {
-                key: attributes.get(key)
-                for key in ("latitude", "longitude", "gps_accuracy")
-                if attributes.get(key) is not None
-            }
+            local_attributes.update(
+                {
+                    key: attributes.get(key)
+                    for key in ("latitude", "longitude", "gps_accuracy")
+                    if attributes.get(key) is not None
+                }
+            )
+        name = str(attributes.get("friendly_name", entity_id))
         return {
             "entity_id": entity_id,
             "state": state.get("state"),
-            "name": attributes.get("friendly_name", entity_id),
+            "name": name,
             "unit": attributes.get("unit_of_measurement"),
             "last_updated": state.get("last_updated"),
-            "sensitive": self.policy.is_sensitive(entity_id),
+            "sensitive": self.policy.is_sensitive(entity_id, name),
             "attributes": local_attributes,
         }
 
     async def states(self) -> list[dict[str, Any]]:
+        """Return the complete readable inventory for local reasoning.
+
+        ``max_entities`` is intentionally not applied here: it is the maximum
+        cloud context selected later by the agent, not an HA inventory limit.
+        """
         raw_states = await self._raw_states()
 
         visible = []
@@ -73,7 +96,7 @@ class HomeAssistantClient:
                 str(item["entity_id"]),
             )
         )
-        return visible[: self.max_entities]
+        return visible
 
     async def monitoring_states(self) -> list[dict[str, Any]]:
         """Return only local entities useful to weather and travel engines."""
@@ -194,7 +217,7 @@ class HomeAssistantClient:
                 },
                 headers={
                     "User-Agent": (
-                        "mistermif-ai/1.5.4 "
+                        "mistermif-ai/1.5.5 "
                         "(Home Assistant caravan assistant; "
                         "https://github.com/mistermif/mistermif-ai-apps)"
                     )
@@ -414,8 +437,20 @@ class HomeAssistantClient:
 
     async def health(self) -> dict:
         try:
-            states = await self.states()
-            return {"connected": bool(self.token), "visible_entities": len(states)}
+            raw_states = await self._raw_states()
+            states = [
+                item
+                for raw in raw_states
+                if (item := self._visible_state(raw)) is not None
+            ]
+            sensitive = sum(bool(item.get("sensitive")) for item in states)
+            return {
+                "connected": bool(self.token),
+                "total_entities": len(raw_states),
+                "visible_entities": len(states),
+                "sensitive_entities": sensitive,
+                "cloud_context_limit": self.max_entities,
+            }
         except (httpx.HTTPError, ValueError) as exc:
             return {"connected": False, "error": str(exc)}
 

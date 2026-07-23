@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.5.4** è una base già funzionante, installabile come app di Home
+La versione **1.5.5** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -22,7 +22,7 @@ separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
 | Area | Stato attuale | Cosa fa realmente |
 |---|---|---|
 | Chat e memoria | Operativa | Dialoga e conserva localmente conversazioni, profilo del mezzo e informazioni autorizzate |
-| Home Assistant | Operativa | Legge soltanto sensori ed entità ammessi dalla politica di sicurezza |
+| Home Assistant | Operativa | Indicizza localmente tutte le entità in sola lettura e sceglie dinamicamente quelle pertinenti |
 | Controllo apparati | Limitato | Può spegnere esclusivamente il climatizzatore configurato; Animali a bordo ne impedisce lo spegnimento |
 | Simulazioni energetiche | Operative | Simula batteria, solare, colonnina, PZEM, presa esterna e clima senza comandare dispositivi reali |
 | Generazione configurazioni | Operativa come bozza | Prepara plance, helper e automazioni dentro `/config/mistermif_ai`, con manifest e rollback |
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.5.4
+## Cosa funziona oggi — versione 1.5.5
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza
@@ -110,7 +110,10 @@ deterministiche e indipendenti dall'AI e da Internet.
   disattivabile dall'utente se il progetto Gemini non la supporta;
 - budget giornalieri separati per richieste cloud totali e automatiche;
 - Groq Free supportato tramite Responses API compatibile;
-- lettura filtrata delle entità Home Assistant autorizzate;
+- inventario locale completo delle entità Home Assistant, senza il precedente
+  limite di 80; la possibilità di leggerle non concede alcun comando;
+- selezione dinamica per argomento e richiesta, con un limite separato sul solo
+  contesto destinato all'AI;
 - memoria locale SQLite per conversazioni e note;
 - campionamento locale continuo ogni cinque minuti;
 - storico energetico separato per posizione e orientamento della sosta;

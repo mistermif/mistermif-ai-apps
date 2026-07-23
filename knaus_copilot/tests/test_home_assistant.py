@@ -62,6 +62,41 @@ class FakeReverseClient:
 
 
 class DashboardSnapshotTest(unittest.IsolatedAsyncioTestCase):
+    async def test_local_inventory_is_not_truncated_by_cloud_context_limit(self):
+        client = FakeDashboardClient(
+            [
+                raw(f"sensor.test_{index}", index, f"Test {index}", "W")
+                for index in range(12)
+            ]
+            + [raw("switch.presa_esterna", "on", "Presa esterna", None)]
+        )
+        client.max_entities = 10
+
+        states = await client.states()
+        health = await client.health()
+
+        self.assertEqual(13, len(states))
+        self.assertIn("switch.presa_esterna", {item["entity_id"] for item in states})
+        self.assertEqual(13, health["total_entities"])
+        self.assertEqual(13, health["visible_entities"])
+        self.assertEqual(10, health["cloud_context_limit"])
+
+    async def test_external_ip_is_marked_sensitive_for_bridge_filtering(self):
+        client = FakeDashboardClient(
+            [
+                raw(
+                    "sensor.archer_mr600_ip_esterno",
+                    "192.0.2.55",
+                    "IP esterno",
+                    None,
+                )
+            ]
+        )
+
+        states = await client.states()
+
+        self.assertTrue(states[0]["sensitive"])
+
     async def test_prefers_knaus_soc_over_link_quality(self):
         client = FakeDashboardClient(
             [

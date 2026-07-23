@@ -7,14 +7,22 @@ class PermissionPolicyTest(TestCase):
     def test_sensor_read_is_allowed(self):
         self.assertTrue(PermissionPolicy().can_read("sensor.livello_batteria_knaus"))
 
-    def test_unrelated_control_is_not_readable(self):
-        self.assertFalse(PermissionPolicy().can_read("switch.porta_garage"))
+    def test_complete_inventory_is_readable_without_authorizing_control(self):
+        policy = PermissionPolicy()
+        self.assertTrue(policy.can_read("switch.porta_garage"))
+        self.assertFalse(policy.can_control_entity("switch.porta_garage"))
 
     def test_sensitive_parameters_are_recognized(self):
         policy = PermissionPolicy()
         self.assertTrue(
             policy.is_sensitive(
                 "select.pow_hvm_2kw_12v_float_charging_voltage_lifepo4_12v"
+            )
+        )
+        self.assertTrue(
+            policy.is_sensitive(
+                "sensor.archer_mr600_ip_esterno",
+                "Indirizzo IP pubblico",
             )
         )
 

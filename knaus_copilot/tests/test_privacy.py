@@ -29,6 +29,24 @@ class PrivacyFilterTest(TestCase):
 
         self.assertEqual(["sensor.temperatura_interna"], [item["entity_id"] for item in result])
 
+    def test_drops_external_ip_entities_even_with_nonstandard_italian_name(self):
+        states = [
+            {
+                "entity_id": "sensor.archer_mr600_ip_esterno",
+                "name": "IP esterno modem",
+                "state": "192.0.2.55",
+            },
+            {
+                "entity_id": "sensor.batteria_soc",
+                "name": "Batteria",
+                "state": "77",
+            },
+        ]
+
+        result = self.privacy.sanitize_states(states)
+
+        self.assertEqual(["sensor.batteria_soc"], [item["entity_id"] for item in result])
+
     def test_keeps_sensitive_memories_local(self):
         memories = [
             {"category": "viaggio", "title": "Puglia", "content": "Percorso privato"},

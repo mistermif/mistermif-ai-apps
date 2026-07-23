@@ -1,4 +1,4 @@
-# mistermif AI 1.5.4
+# mistermif AI 1.5.5
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -10,7 +10,8 @@ della caravan.
 - ricerca di soste entro un raggio scelto dall'utente, risultati pubblici
   Park4night inclusi quando disponibili e ordinamento per distanza;
 - apprendimento energetico locale separato per contesto di sosta;
-- lettura filtrata degli stati Home Assistant;
+- inventario locale completo degli stati Home Assistant con selezione dinamica
+  del solo contesto utile e filtri separati per ponte e cloud;
 - intervista iniziale per mezzo, motrice ed equipaggio;
 - livelli emergenza, urgenza e allerta;
 - workspace isolato in `/config/mistermif_ai`;

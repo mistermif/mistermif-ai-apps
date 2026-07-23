@@ -244,6 +244,7 @@ class KnausAgent:
         base_url: str = "",
         cloud_usage: CloudUsage | None = None,
         gemini_search_enabled: bool = True,
+        max_context_entities: int = 80,
     ):
         self.model = model
         self.provider = provider
@@ -254,6 +255,7 @@ class KnausAgent:
         self.api_key = api_key
         self.cloud_usage = cloud_usage
         self.gemini_search_enabled = gemini_search_enabled
+        self.max_context_entities = max(10, min(200, max_context_entities))
         self.privacy = PrivacyFilter(
             allow_location=privacy_mode == "contextual_cloud"
         )
@@ -600,8 +602,8 @@ class KnausAgent:
             return "minimal"
         return "low"
 
-    @staticmethod
     def _select_states(
+        self,
         states: list[dict[str, Any]],
         message: str,
         thinking_level: str,
@@ -632,7 +634,10 @@ class KnausAgent:
             if score:
                 ranked.append((-score, index, state))
         ranked.sort(key=lambda item: (item[0], item[1]))
-        limit = 32 if thinking_level == "low" else 60
+        limit = min(
+            self.max_context_entities,
+            32 if thinking_level == "low" else 60,
+        )
         return [item[2] for item in ranked[:limit]]
 
     async def _gemini(

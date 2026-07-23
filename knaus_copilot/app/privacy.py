@@ -51,6 +51,13 @@ SENSITIVE_ENTITY_FRAGMENTS = (
     "ssid",
     "wifi",
     "ip_address",
+    "external_ip",
+    "public_ip",
+    "wan_ip",
+    "ip_esterno",
+    "indirizzo_ip",
+    "mac_address",
+    "bssid",
     "phone",
     "telefono",
 )

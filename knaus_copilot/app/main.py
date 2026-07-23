@@ -73,6 +73,7 @@ agent = KnausAgent(
     settings.ai_base_url,
     cloud_usage,
     settings.gemini_search_enabled,
+    settings.max_context_entities,
 )
 weather_ai_usage = CloudUsage(
     memory,
@@ -222,7 +223,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.5.4"
+APP_VERSION = "1.5.5"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)

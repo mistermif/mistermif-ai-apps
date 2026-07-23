@@ -69,6 +69,11 @@ class CollaborationService:
                 "confidence": learning.confidence,
             },
             "visible_states": public_states,
+            "inventory": {
+                "readable": len(states),
+                "shared_with_bridge": len(public_states),
+                "sensitive_omitted": len(states) - len(public_states),
+            },
             "sensitive_states_omitted": len(states) - len(public_states),
             "bridge_policy": {
                 "real_actions": False,

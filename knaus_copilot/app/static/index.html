@@ -475,7 +475,8 @@
               <h3>Sistema</h3>
               <div class="setting-row"><span>Versione</span><span id="setting-version">—</span></div>
               <div class="setting-row"><span>Home Assistant</span><span id="setting-ha">—</span></div>
-              <div class="setting-row"><span>Entità visibili</span><span id="setting-entities">—</span></div>
+              <div class="setting-row"><span>Inventario HA locale</span><span id="setting-entities">—</span></div>
+              <div class="setting-row"><span>Contesto AI massimo</span><span id="setting-context-limit">—</span></div>
               <div class="setting-row"><span>Workspace</span><span id="setting-workspace">—</span></div>
               <div class="setting-row"><span>Ponte Codex</span><span id="setting-bridge">—</span></div>
             </section>
@@ -629,7 +630,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.5.4 · PLANCIA LIVE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.5.5 · PLANCIA LIVE</span></footer>
     </div>
   </div>
 
@@ -915,6 +916,7 @@
       setText("setting-version", data.version);
       setText("setting-ha", data.home_assistant.connected ? "Collegato" : "Non collegato");
       setText("setting-entities", String(data.home_assistant.visible_entities || 0));
+      setText("setting-context-limit", String(data.home_assistant.cloud_context_limit || 0));
       setText("setting-workspace", data.workspace?.include_installed ? "Collegato" : "Da collegare");
       setText(
         "setting-bridge",
