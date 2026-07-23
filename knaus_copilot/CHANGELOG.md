@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.6
+
+- Esclusi dal ponte e dal cloud tracker personali, telecamere, immagini e
+  qualsiasi entità di rete con `ip` come componente del nome.
+- Conservato l'accesso locale al tracker GPS della caravan per meteo, viaggi e
+  assistenza contestuale autorizzata.
+
 ## 1.5.5
 
 - Rimosso il limite di 80 entità dall'inventario locale di Home Assistant.

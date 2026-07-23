@@ -46,6 +46,18 @@ class PermissionPolicy:
 
     def is_sensitive(self, entity_id: str, name: str = "") -> bool:
         lowered = f"{entity_id} {name}".casefold()
+        domain, _, object_id = entity_id.casefold().partition(".")
+        if domain in {"camera", "image", "person"}:
+            return True
+        if domain == "device_tracker" and not object_id.startswith("caravan"):
+            return True
+        normalized_tokens = {
+            token
+            for token in lowered.replace(".", "_").replace("-", "_").split("_")
+            if token
+        }
+        if "ip" in normalized_tokens:
+            return True
         return any(fragment in lowered for fragment in SENSITIVE_ENTITY_FRAGMENTS)
 
     def can_execute(self, tool_name: str) -> bool:

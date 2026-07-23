@@ -47,6 +47,19 @@ class PrivacyFilterTest(TestCase):
 
         self.assertEqual(["sensor.batteria_soc"], [item["entity_id"] for item in result])
 
+    def test_drops_personal_trackers_cameras_and_reversed_ip_names(self):
+        privacy = PrivacyFilter(allow_location=True)
+        states = [
+            {"entity_id": "device_tracker.caravan", "name": "Knaus", "state": "not_home"},
+            {"entity_id": "device_tracker.iphone_mirco", "name": "Telefono", "state": "home"},
+            {"entity_id": "camera.roulotte", "name": "Telecamera", "state": "recording"},
+            {"entity_id": "sensor.roulotte_ip_wan", "name": "IP WAN", "state": "192.0.2.1"},
+        ]
+
+        result = privacy.sanitize_states(states)
+
+        self.assertEqual(["device_tracker.caravan"], [item["entity_id"] for item in result])
+
     def test_keeps_sensitive_memories_local(self):
         memories = [
             {"category": "viaggio", "title": "Puglia", "content": "Percorso privato"},

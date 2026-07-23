@@ -217,7 +217,7 @@ class HomeAssistantClient:
                 },
                 headers={
                     "User-Agent": (
-                        "mistermif-ai/1.5.5 "
+                        "mistermif-ai/1.5.6 "
                         "(Home Assistant caravan assistant; "
                         "https://github.com/mistermif/mistermif-ai-apps)"
                     )

@@ -25,6 +25,11 @@ class PermissionPolicyTest(TestCase):
                 "Indirizzo IP pubblico",
             )
         )
+        self.assertTrue(policy.is_sensitive("sensor.roulotte_ip_wan"))
+        self.assertTrue(policy.is_sensitive("sensor.roulotte_ip_locale"))
+        self.assertTrue(policy.is_sensitive("device_tracker.iphone_mirco"))
+        self.assertTrue(policy.is_sensitive("camera.roulotte"))
+        self.assertFalse(policy.is_sensitive("device_tracker.caravan"))
 
     def test_observe_mode_cannot_execute_actions(self):
         self.assertFalse(PermissionPolicy("observe").can_execute("turn_off_climate"))

@@ -119,6 +119,11 @@ class PrivacyFilter:
 
     def entity_is_sensitive(self, entity_id: str, name: str = "") -> bool:
         candidate = f"{entity_id} {name}".casefold()
+        domain, _, object_id = entity_id.casefold().partition(".")
+        if domain in {"camera", "image", "person"}:
+            return True
+        if domain == "device_tracker" and not object_id.startswith("caravan"):
+            return True
         if self.allow_location and any(
             fragment in candidate
             for fragment in (
@@ -133,6 +138,13 @@ class PrivacyFilter:
             )
         ):
             return False
+        normalized_tokens = {
+            token
+            for token in candidate.replace(".", "_").replace("-", "_").split("_")
+            if token
+        }
+        if "ip" in normalized_tokens:
+            return True
         return any(fragment in candidate for fragment in SENSITIVE_ENTITY_FRAGMENTS)
 
     def sanitize_value(self, value: Any, key: str = "") -> Any:
