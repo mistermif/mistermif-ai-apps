@@ -40,6 +40,10 @@ class Settings:
     travel_tracker_enabled: bool = True
     travel_poll_seconds: int = 30
     travel_arrival_minutes: int = 120
+    travel_base_latitude: float | None = None
+    travel_base_longitude: float | None = None
+    travel_base_radius_km: float = 5.0
+    travel_stop_minutes: int = 10
 
     @classmethod
     def load(cls) -> "Settings":
@@ -125,6 +129,24 @@ class Settings:
         except (TypeError, ValueError):
             travel_arrival_minutes = 120
         travel_arrival_minutes = min(360, max(15, travel_arrival_minutes))
+        try:
+            travel_base_latitude = float(options["travel_base_latitude"])
+            travel_base_longitude = float(options["travel_base_longitude"])
+        except (KeyError, TypeError, ValueError):
+            travel_base_latitude = None
+            travel_base_longitude = None
+        try:
+            travel_base_radius_km = float(
+                options.get("travel_base_radius_km", 5.0)
+            )
+        except (TypeError, ValueError):
+            travel_base_radius_km = 5.0
+        travel_base_radius_km = min(50.0, max(0.5, travel_base_radius_km))
+        try:
+            travel_stop_minutes = int(options.get("travel_stop_minutes", 10))
+        except (TypeError, ValueError):
+            travel_stop_minutes = 10
+        travel_stop_minutes = min(120, max(5, travel_stop_minutes))
         raw_targets = options.get("telegram_targets", "")
         if isinstance(raw_targets, list):
             telegram_targets = tuple(
@@ -205,4 +227,8 @@ class Settings:
             ),
             travel_poll_seconds=travel_poll_seconds,
             travel_arrival_minutes=travel_arrival_minutes,
+            travel_base_latitude=travel_base_latitude,
+            travel_base_longitude=travel_base_longitude,
+            travel_base_radius_km=travel_base_radius_km,
+            travel_stop_minutes=travel_stop_minutes,
         )

@@ -69,5 +69,17 @@ configuration:
     name: "GPS polling seconds"
     description: "Movement polling interval; 30 seconds is recommended."
   travel_arrival_minutes:
-    name: "Arrival detection delay"
-    description: "Continuous stationary minutes before closing a trip."
+    name: "Legacy arrival compatibility"
+    description: "Kept for migration; the current version closes a journey on return to base."
+  travel_base_latitude:
+    name: "Base latitude"
+    description: "Private coordinate for the center of the base zone."
+  travel_base_longitude:
+    name: "Base longitude"
+    description: "Private coordinate for the center of the base zone."
+  travel_base_radius_km:
+    name: "Base zone radius"
+    description: "No tracking inside; leaving starts and returning closes the journey."
+  travel_stop_minutes:
+    name: "Minimum stop duration"
+    description: "Stationary minutes required to close one leg without ending the journey."

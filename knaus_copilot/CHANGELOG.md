@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0
+
+- Il viaggio parte soltanto dopo tre rilevazioni consecutive fuori dalla zona base configurata.
+- Il rientro stabile nella base chiude il viaggio; soste e pernottamenti chiudono solo la tratta corrente.
+- Aggiunte tratte persistenti e filtro anti-oscillazione GPS per evitare soste duplicate.
+- Ogni viaggio concluso genera JSON, CSV, GPX e resoconto Markdown datati in `/config/mistermif_ai/viaggi salvati/`.
+
 ## 1.5.6
 
 - Esclusi dal ponte e dal cloud tracker personali, telecamere, immagini e

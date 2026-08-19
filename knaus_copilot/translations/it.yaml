@@ -69,5 +69,17 @@ configuration:
     name: "Campionamento GPS in secondi"
     description: "Intervallo di lettura del movimento; consigliato 30 secondi."
   travel_arrival_minutes:
-    name: "Tempo per riconoscere l'arrivo"
-    description: "Minuti di sosta continua prima di chiudere automaticamente il viaggio."
+    name: "Compatibilità arrivo precedente"
+    description: "Parametro mantenuto per migrazione; la versione attuale chiude al rientro nella base."
+  travel_base_latitude:
+    name: "Latitudine base"
+    description: "Coordinata privata del centro della zona base."
+  travel_base_longitude:
+    name: "Longitudine base"
+    description: "Coordinata privata del centro della zona base."
+  travel_base_radius_km:
+    name: "Raggio zona base"
+    description: "Entro questo raggio non registra; l'uscita avvia e il rientro chiude il viaggio."
+  travel_stop_minutes:
+    name: "Durata minima sosta"
+    description: "Minuti fermi necessari per chiudere una tratta senza terminare il viaggio."

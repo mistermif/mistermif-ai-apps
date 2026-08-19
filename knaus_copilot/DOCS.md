@@ -97,10 +97,16 @@ urgenze e le emergenze aggiungono Telegram agli ID configurati in
 
 ## Diario viaggi
 
-Il registratore GPS parte dopo due misure consecutive almeno a 5 km/h. Registra
-un punto al minuto e calcola distanza, tempo in movimento, velocità media e
-massima e soste. Dopo 120 minuti fermo chiude il viaggio; la durata è regolabile
-con `travel_arrival_minutes`.
+Il registratore GPS non registra nulla dentro la zona base configurata. Dopo tre
+misure consecutive oltre `travel_base_radius_km` avvia il viaggio; dopo tre
+misure consecutive nuovamente dentro la zona base lo chiude. Una sosta di almeno
+`travel_stop_minutes` chiude soltanto la tratta corrente: soste notturne e
+permanenze in campeggio non terminano il viaggio complessivo.
+
+Alla chiusura crea una cartella datata in
+`/config/mistermif_ai/viaggi salvati/`, contenente resoconto Markdown, JSON,
+CSV e GPX. Il suffisso con l'ID impedisce sovrascritture quando più viaggi
+iniziano nello stesso giorno.
 
 Comandi chat utili:
 

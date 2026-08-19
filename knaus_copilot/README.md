@@ -1,4 +1,4 @@
-# mistermif AI 1.5.6
+# mistermif AI 1.6.0
 
 App personale Home Assistant per supervisione, memoria e assistenza intelligente
 della caravan.
@@ -96,8 +96,9 @@ delle app di Home Assistant.
 Le impostazioni predefinite attivano il meteo ogni 30 minuti e il GPS ogni 30
 secondi. `telegram_targets` accetta gli ID chat separati da virgola. Windy è
 opzionale e richiede una chiave Point Forecast Professional; la chiave gratuita
-di test non è adatta a dati reali. `travel_arrival_minutes` stabilisce dopo
-quanto tempo una sosta chiude automaticamente il viaggio (predefinito 120).
+di test non è adatta a dati reali. `travel_base_radius_km` stabilisce il raggio
+della zona base e `travel_stop_minutes` stabilisce dopo quanti minuti una sosta
+chiude la tratta corrente senza terminare il viaggio complessivo.
 
 Le decisioni meteo sono regole locali e consumano zero richieste Gemini,
 OpenAI o Groq quando il quadro è sereno o stabile. Se `weather_ai_enabled` è
