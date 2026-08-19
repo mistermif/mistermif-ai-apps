@@ -510,6 +510,8 @@
               <h3>Diario viaggi</h3>
               <div class="setting-row"><span>Registrazione</span><span id="setting-travel-enabled">—</span></div>
               <div class="setting-row"><span>Campionamento</span><span id="setting-travel-poll">—</span></div>
+              <div class="setting-row"><span>Zona base</span><span id="setting-travel-base">—</span></div>
+              <div class="setting-row"><span>Nuova tratta dopo</span><span id="setting-travel-stop">—</span></div>
               <div class="setting-row"><span>Ultimo viaggio</span><span id="setting-travel-latest">—</span></div>
               <button id="trip-delete-latest" type="button" hidden>ELIMINA ULTIMO VIAGGIO ERRATO</button>
             </section>
@@ -630,7 +632,7 @@
 
       </main>
 
-      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.5.6 · PLANCIA LIVE</span></footer>
+      <footer class="footer"><span><strong>MISTERMIF AI</strong> · Home Assistant App</span><span>v1.6.0 · PLANCIA LIVE</span></footer>
     </div>
   </div>
 
@@ -950,6 +952,13 @@
       );
       setText("setting-travel-enabled", data.travel_tracker.enabled ? "Attivo" : "Disattivato");
       setText("setting-travel-poll", `${data.travel_tracker.poll_seconds} s`);
+      setText(
+        "setting-travel-base",
+        data.travel_tracker.base_configured
+          ? `Configurata · raggio ${data.travel_tracker.base_radius_km} km`
+          : "Da configurare"
+      );
+      setText("setting-travel-stop", `${data.travel_tracker.stop_minutes} min`);
       setText(
         "setting-travel-latest",
         data.travel_tracker.latest?.available

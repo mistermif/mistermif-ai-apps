@@ -97,7 +97,14 @@ weather_monitor = WeatherMonitor(
     ),
     weather_ai_usage if settings.weather_ai_enabled else None,
 )
-travel_tracker = TravelTracker(memory, settings.travel_arrival_minutes)
+travel_tracker = TravelTracker(
+    memory,
+    base_latitude=settings.travel_base_latitude,
+    base_longitude=settings.travel_base_longitude,
+    base_radius_km=settings.travel_base_radius_km,
+    stop_minutes=settings.travel_stop_minutes,
+    archive_dir=settings.homeassistant_config_dir / "mistermif_ai" / "viaggi salvati",
+)
 fridge_optimizer = FridgeOptimizer(memory, ha, policy, settings.notification_service)
 
 
@@ -123,7 +130,7 @@ async def travel_loop() -> None:
     while True:
         try:
             result = travel_tracker.observe(await ha.monitoring_states())
-            if result.get("status") in {"started", "arrived"}:
+            if result.get("status") in {"started", "returned_to_base"}:
                 if result["status"] == "started":
                     message = (
                         "Partenza rilevata automaticamente. "
@@ -131,8 +138,8 @@ async def travel_loop() -> None:
                     )
                 else:
                     message = (
-                        "Arrivo rilevato dopo la sosta prolungata. "
-                        "Il diario del viaggio è stato chiuso e salvato."
+                        "Rientro nella zona base rilevato. Il diario del viaggio, "
+                        "le tratte e il resoconto finale sono stati chiusi e salvati."
                     )
                 await ha.send_notification(
                     settings.notification_service,
@@ -223,7 +230,7 @@ async def lifespan(_: FastAPI):
                 await task
 
 
-APP_VERSION = "1.5.6"
+APP_VERSION = "1.6.0"
 
 
 app = FastAPI(title="mistermif AI", version=APP_VERSION, lifespan=lifespan)
@@ -425,7 +432,12 @@ async def status() -> dict:
         "travel_tracker": {
             "enabled": settings.travel_tracker_enabled,
             "poll_seconds": settings.travel_poll_seconds,
-            "arrival_minutes": settings.travel_arrival_minutes,
+            "base_configured": (
+                settings.travel_base_latitude is not None
+                and settings.travel_base_longitude is not None
+            ),
+            "base_radius_km": settings.travel_base_radius_km,
+            "stop_minutes": settings.travel_stop_minutes,
             "latest": trip_state,
         },
         "fridge_optimizer": fridge_optimizer.public_status(),
@@ -676,8 +688,9 @@ async def chat(
     if plan is not None:
         answer = (
             f'Ho memorizzato la prossima destinazione: {plan["destination"]}. '
-            "Quando il GPS rileverà la partenza avvierò automaticamente il diario; "
-            "dopo una sosta prolungata riconoscerò l'arrivo e chiuderò il viaggio."
+            "Quando uscirai dalla zona base avvierò automaticamente il diario. "
+            "Le soste creeranno nuove tratte e il viaggio si chiuderà soltanto "
+            "quando rientrerai nella zona base."
         )
         memory.add_message(user_id, "user", payload.message)
         memory.add_message(user_id, "assistant", answer)

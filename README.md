@@ -14,7 +14,7 @@ configurabile e adattabile ad altri camper e caravan.
 
 ## Punto della situazione
 
-La versione **1.5.6** è una base già funzionante, installabile come app di Home
+La versione **1.6.0** è una base già funzionante, installabile come app di Home
 Assistant. Non può modificare liberamente la caravan:
 lavora entro una whitelist precisa, mantiene le protezioni rapide in locale e
 separa chiaramente funzioni operative, simulazioni e specifiche tecniche.
@@ -78,7 +78,7 @@ superiore capace di:
 Le protezioni elettriche e termiche urgenti restano automazioni locali,
 deterministiche e indipendenti dall'AI e da Internet.
 
-## Cosa funziona oggi — versione 1.5.6
+## Cosa funziona oggi — versione 1.6.0
 
 - interfaccia web integrabile nella barra laterale di Home Assistant;
 - plancia di bordo live sopra la chat con SOC, corrente, tensione e potenza
@@ -383,13 +383,16 @@ viaggi, profilo dell'equipaggio, token o chiavi. Gemini può proporre al massimo
 `allerta` o `urgenza`: non può dichiarare da solo un'emergenza e non sostituisce
 le protezioni locali.
 
-## Diario viaggi autonomo 0.9
+## Diario viaggi autonomo 1.0
 
-Il GPS viene letto localmente ogni 30 secondi. Due campioni consecutivi sopra
-5 km/h avviano un viaggio; una sosta prolungata, predefinita a due ore, chiude
-il diario e viene interpretata come arrivo. Distanza, durata totale, tempo in
-movimento e in sosta, velocità media e massima, numero di soste, temperatura,
-umidità e pressione rimangono nel database SQLite locale.
+Il GPS viene letto localmente ogni 30 secondi. Tre campioni consecutivi fuori
+dalla zona base avviano un viaggio; tre campioni consecutivi al rientro lo
+chiudono. Le soste prolungate chiudono soltanto una tratta, quindi pernottamenti
+e soggiorni non interrompono il viaggio complessivo. Distanza, durata totale,
+tempo in movimento, velocità, soste e ambiente rimangono nel database locale.
+
+Alla chiusura viene generata una cartella datata sotto
+`/config/mistermif_ai/viaggi salvati/` con resoconto Markdown, JSON, CSV e GPX.
 
 È possibile scrivere in chat `Venerdì parto per il Camping Club degli Amici`:
 la destinazione viene associata automaticamente alla partenza successiva.

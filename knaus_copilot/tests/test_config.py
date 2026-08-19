@@ -36,6 +36,38 @@ class SettingsTest(TestCase):
             self.assertTrue(settings.travel_tracker_enabled)
             self.assertEqual(30, settings.travel_poll_seconds)
             self.assertEqual(120, settings.travel_arrival_minutes)
+            self.assertIsNone(settings.travel_base_latitude)
+            self.assertIsNone(settings.travel_base_longitude)
+            self.assertEqual(5.0, settings.travel_base_radius_km)
+            self.assertEqual(10, settings.travel_stop_minutes)
+
+    def test_private_base_coordinates_are_loaded_from_addon_options(self):
+        with TemporaryDirectory() as directory:
+            options_file = Path(directory) / "options.json"
+            options_file.write_text(
+                json.dumps(
+                    {
+                        "travel_base_latitude": 45.8,
+                        "travel_base_longitude": 8.9,
+                        "travel_base_radius_km": 5,
+                        "travel_stop_minutes": 12,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "KNAUS_DATA_DIR": directory,
+                    "KNAUS_OPTIONS_FILE": str(options_file),
+                },
+                clear=True,
+            ):
+                settings = Settings.load()
+            self.assertEqual(45.8, settings.travel_base_latitude)
+            self.assertEqual(8.9, settings.travel_base_longitude)
+            self.assertEqual(5.0, settings.travel_base_radius_km)
+            self.assertEqual(12, settings.travel_stop_minutes)
 
     def test_codex_bridge_options_are_loaded_without_exposing_token(self):
         with TemporaryDirectory() as directory:

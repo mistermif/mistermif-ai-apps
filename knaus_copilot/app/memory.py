@@ -331,8 +331,9 @@ class MemoryStore:
         longitude: float,
         destination: str = "",
         plan_id: int | None = None,
+        started_at: str | None = None,
     ) -> int:
-        now = datetime.now(timezone.utc).isoformat()
+        now = started_at or datetime.now(timezone.utc).isoformat()
         with self._lock, self._connect() as db:
             cursor = db.execute(
                 """

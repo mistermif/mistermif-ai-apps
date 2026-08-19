@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -20,12 +20,17 @@ class TravelTrackerTest(TestCase):
     def test_gps_starts_trip_and_local_report_is_available(self):
         with TemporaryDirectory() as directory:
             memory = MemoryStore(Path(directory) / "memory.sqlite3")
-            tracker = TravelTracker(memory)
+            tracker = TravelTracker(
+                memory,
+                base_latitude=45.8,
+                base_longitude=9.0,
+                base_radius_km=5,
+            )
             states = [
                 {
                     "entity_id": "device_tracker.caravan",
                     "state": "not_home",
-                    "attributes": {"latitude": 45.8, "longitude": 9.0},
+                    "attributes": {"latitude": 45.86, "longitude": 9.0},
                 },
                 {
                     "entity_id": "sensor.caravan_sensor_gps_velocita",
@@ -33,19 +38,20 @@ class TravelTrackerTest(TestCase):
                     "state": "42",
                 },
             ]
-            self.assertEqual("movement_candidate", tracker.observe(states)["status"])
-            states[0]["attributes"]["latitude"] = 45.801
-            self.assertEqual("movement_candidate", tracker.observe(states)["status"])
-            states[0]["attributes"]["latitude"] = 45.802
-            self.assertEqual("movement_candidate", tracker.observe(states)["status"])
-            states[0]["attributes"]["latitude"] = 45.803
+            self.assertEqual("departure_candidate", tracker.observe(states)["status"])
+            self.assertEqual("departure_candidate", tracker.observe(states)["status"])
             self.assertEqual("started", tracker.observe(states)["status"])
             self.assertTrue(tracker.report()["available"])
 
     def test_stationary_gps_drift_does_not_start_or_add_distance(self):
         with TemporaryDirectory() as directory:
             memory = MemoryStore(Path(directory) / "memory.sqlite3")
-            tracker = TravelTracker(memory)
+            tracker = TravelTracker(
+                memory,
+                base_latitude=45.8,
+                base_longitude=9.0,
+                base_radius_km=5,
+            )
             states = [
                 {
                     "entity_id": "sensor.caravan_sensor_gps_latitudine",
@@ -62,8 +68,85 @@ class TravelTrackerTest(TestCase):
             ]
             for offset in (0, 0.001, 0.003, 0.006):
                 states[0]["state"] = str(45.8 + offset)
-                self.assertEqual("stationary", tracker.observe(states)["status"])
+                self.assertEqual("at_base", tracker.observe(states)["status"])
             self.assertFalse(tracker.report()["available"])
+
+    def test_return_to_base_closes_trip_and_creates_dated_archive(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            memory = MemoryStore(root / "memory.sqlite3")
+            clock = [datetime(2026, 8, 10, 8, 0, tzinfo=timezone.utc)]
+            tracker = TravelTracker(
+                memory,
+                base_latitude=45.8,
+                base_longitude=9.0,
+                base_radius_km=5,
+                archive_dir=root / "viaggi salvati",
+                now_provider=lambda: clock[0],
+            )
+            states = [
+                {
+                    "entity_id": "device_tracker.caravan",
+                    "state": "not_home",
+                    "attributes": {"latitude": 45.86, "longitude": 9.0},
+                },
+                {
+                    "entity_id": "sensor.caravan_sensor_gps_velocita",
+                    "name": "GPS Velocità",
+                    "state": "40",
+                },
+            ]
+            tracker.observe(states)
+            tracker.observe(states)
+            self.assertEqual("started", tracker.observe(states)["status"])
+            states[0]["attributes"]["latitude"] = 45.8
+            self.assertEqual("return_candidate", tracker.observe(states)["status"])
+            self.assertEqual("return_candidate", tracker.observe(states)["status"])
+            result = tracker.observe(states)
+            self.assertEqual("returned_to_base", result["status"])
+            self.assertEqual("completed", tracker.report()["status"])
+            archive = Path(result["archive_path"])
+            self.assertEqual("2026-08-10-viaggio-1", archive.name)
+            self.assertTrue((archive / "2026-08-10-viaggio-1-resoconto.md").exists())
+            self.assertTrue((archive / "2026-08-10-viaggio-1.gpx").exists())
+
+    def test_long_stop_creates_one_leg_but_keeps_journey_open(self):
+        with TemporaryDirectory() as directory:
+            memory = MemoryStore(Path(directory) / "memory.sqlite3")
+            clock = [datetime(2026, 8, 10, 8, 0, tzinfo=timezone.utc)]
+            tracker = TravelTracker(
+                memory,
+                base_latitude=45.8,
+                base_longitude=9.0,
+                base_radius_km=5,
+                stop_minutes=10,
+                now_provider=lambda: clock[0],
+            )
+            states = [
+                {"entity_id": "sensor.gps_latitudine", "state": "45.86"},
+                {"entity_id": "sensor.gps_longitudine", "state": "9.0"},
+                {"entity_id": "sensor.gps_velocita", "state": "40"},
+            ]
+            tracker.observe(states)
+            tracker.observe(states)
+            tracker.observe(states)
+            states[2]["state"] = "0"
+            clock[0] += timedelta(minutes=1)
+            tracker.observe(states)
+            clock[0] += timedelta(minutes=11)
+            self.assertEqual("stopped", tracker.observe(states)["status"])
+            detail = memory.active_trip()
+            self.assertIsNotNone(detail)
+            self.assertEqual(1, detail["stop_count"])
+            self.assertEqual(1, len(detail["metadata"]["legs"]))
+            self.assertIsNotNone(detail["metadata"]["legs"][0]["ended_at"])
+            for _ in range(3):
+                clock[0] += timedelta(seconds=30)
+                states[2]["state"] = "35"
+                tracker.observe(states)
+            detail = memory.active_trip()
+            self.assertEqual(2, len(detail["metadata"]["legs"]))
+            self.assertEqual("active", detail["status"])
 
     def test_base_geofence_blocks_false_departure(self):
         with TemporaryDirectory() as directory:

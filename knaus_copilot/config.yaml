@@ -1,5 +1,5 @@
 name: "mistermif AI"
-version: "1.5.6"
+version: "1.6.0"
 slug: "knaus_copilot"
 description: "Assistente AI personale per supervisione, memoria e diario della caravan."
 url: "https://github.com/mistermif/mistermif-ai-apps"
@@ -44,6 +44,8 @@ options:
   travel_tracker_enabled: true
   travel_poll_seconds: 30
   travel_arrival_minutes: 120
+  travel_base_radius_km: 5
+  travel_stop_minutes: 10
   max_context_entities: 80
   log_level: "info"
 schema:
@@ -72,5 +74,9 @@ schema:
   travel_tracker_enabled: bool
   travel_poll_seconds: "int(15,300)"
   travel_arrival_minutes: "int(15,360)"
+  travel_base_latitude: "float?"
+  travel_base_longitude: "float?"
+  travel_base_radius_km: "float(0.5,50)"
+  travel_stop_minutes: "int(5,120)"
   max_context_entities: "int(10,200)"
   log_level: "list(debug|info|warning|error)"
